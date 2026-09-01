@@ -1,56 +1,148 @@
-# Welcome to your Expo app 👋
+# 🐾 MascotaCare
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Aplicación móvil en **React Native (Expo)** para organizar la información de tus
+mascotas, sus actividades, citas veterinarias y recordatorios de cuidado.
 
-## Get started
+> ⚠️ **Disclaimer:** esta app es una herramienta de organización y **no sustituye**
+> la asesoría veterinaria profesional.
 
-1. Install dependencies
+---
 
-   ```bash
-   npm install
-   ```
+## 📌 Estado del proyecto — Avance 1 (APF1)
 
-2. Start the app
+Primer entregable: una **aplicación ejecutable** con un flujo inicial funcional,
+basada en **datos estáticos / estado local** (sin integraciones reales de API,
+base de datos ni hardware nativo; eso llega en avances posteriores).
 
-   ```bash
-   npx expo start
-   ```
+### ✅ Requerimientos cubiertos
 
-In the output, you'll find options to open the app in a
+| Requerimiento | Implementación |
+|---------------|----------------|
+| **Estructura y navegación** | `src/app/` (pantallas), `src/components/` (reusables), navegación con React Navigation (expo-router): Stack raíz + Bottom Tabs |
+| **Pantallas base** | Mis Mascotas, Detalle de Mascota, Añadir Mascota, Inicio, Citas, Perfil, Recordatorios, Login, Registro |
+| **Diseño responsivo** | Flexbox + `SafeAreaView` en todas las pantallas |
+| **Componentes reutilizables** | `PetCard`, `AppointmentCard`, `QuickActionCard`, `Badge`, `StatCard`, `MenuRow`, `ReminderCard`, `FAB`, `FormInput`, `AppHeader`, `PetImage` |
+| **Interacciones y estado** | `useState` para formularios, selección de especie, checklist de recordatorios |
+| **Formulario validado** | “Añadir nueva mascota” y “Registro” con validación lógica y mensajes de error visibles |
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### 🧭 Pantallas
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+- **Inicio** — saludo, acciones rápidas, mascotas y próximas citas.
+- **Mis Mascotas** — lista de mascotas con estado de salud (`PetCard`).
+- **Detalle de Mascota** — ficha completa (toca una tarjeta).
+- **Añadir Mascota** — formulario validado (botón ➕ o acción rápida).
+- **Citas** — lista de citas con color por estado.
+- **Perfil** — datos del usuario, estadísticas y menú.
+- **Recordatorios** — modal (campana 🔔) con checklist.
 
-## Get a fresh project
+### 🔗 Navegación
 
-When you're ready, run:
+- **Stack raíz** (`src/app/_layout.tsx`): grupos `(tabs)` (protegido por sesión),
+  `(auth)` (público) y modales.
+- **Bottom Tabs** (`src/app/(tabs)/_layout.tsx`): barra personalizada con píldora
+  azul en la pestaña activa (expo-router / React Navigation).
+
+---
+
+## 🚀 Cómo ejecutar localmente
+
+### Requisitos
+
+- **Node.js** >= 20 (recomendado 24)
+- **npm** >= 10
+- **Expo Go** (en el teléfono) **o** un emulador (Android/iOS)
+- (Opcional, solo para la API real) **PostgreSQL** 17
+
+### 1) Instalar dependencias
 
 ```bash
-npm run reset-project
+cd MascotaCare
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 2) Arrancar la app (Expo)
 
-### Other setup steps
+```bash
+npx expo start
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Luego:
+- Escanea el **código QR** con Expo Go (Android/iOS), o
+- Pulsa `a` para abrir el emulador Android, `i` para iOS, `w` para web.
 
-## Learn more
+### 3) Credenciales demo
 
-To learn more about developing your project with Expo, look at the following resources:
+Inicia sesión con:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```
+Correo:    ana.garcia@email.com
+Contraseña: 123456
+```
 
-## Join the community
+> La app **funciona sin servidor**: si la API no responde, usa automáticamente
+> los datos simulados (`src/data/mockData.ts`).
 
-Join our community of developers creating universal apps.
+### (Opcional) Arrancar la API local
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+La API Express + PostgreSQL ya está preparada para avances futuros:
+
+```bash
+cd server
+npm install
+npm start          # levanta en http://localhost:4000
+```
+
+Configura tus credenciales copiando `server/.env.example` → `server/.env`.
+En emulador Android la app apunta a `10.0.2.2:4000`; en un teléfono físico
+cambia `HOST` en `src/services/api.ts` por la IP LAN de tu PC.
+
+---
+
+## 📁 Estructura del proyecto
+
+```
+MascotaCare/
+├─ app.json / package.json / tsconfig.json
+├─ src/
+│  ├─ app/                 # Pantallas + navegación (expo-router)
+│  │  ├─ _layout.tsx       # Stack raíz (tabs protegidos, auth, modales)
+│  │  ├─ (tabs)/           # Index, Mascotas, Citas, Perfil + tab bar
+│  │  ├─ (auth)/           # Login, Registro
+│  │  ├─ mascota-detalle.tsx
+│  │  ├─ nueva-mascota.tsx
+│  │  └─ recordatorios.tsx
+│  ├─ components/          # Componentes reutilizables
+│  ├─ context/             # AuthContext (sesión + datos, con fallback mock)
+│  ├─ data/                # mockData.ts (datos simulados)
+│  ├─ services/            # api.ts (cliente HTTP)
+│  ├─ utils/               # Helpers de estados y fechas
+│  ├─ constants/           # theme.ts (paleta AppColors)
+│  └─ types.ts
+└─ server/                 # API Express (avances futuros)
+   ├─ src/                 # entrada + rutas (auth, mascotas, citas, recordatorios)
+   └─ db/schema.sql        # esquema PostgreSQL + seed
+```
+
+---
+
+## 🧪 Verificaciones
+
+```bash
+npx tsc --noEmit    # TypeScript sin errores
+npm run lint        # ESLint sin errores
+```
+
+---
+
+## 🗺️ Próximos avances (pendientes)
+
+- Conectar la app de forma persistente con la API + PostgreSQL.
+- Subir fotos reales de mascotas.
+- Agendar actividades/citas y guardarlas en la BD.
+- Notificaciones de recordatorios.
+
+---
+
+## 📄 Información de licencia
+
+Trabajo académico. Los datos de ejemplo son ficticios.
