@@ -51,7 +51,7 @@ base de datos ni hardware nativo; eso llega en avances posteriores).
 - **Node.js** >= 20 (recomendado 24)
 - **npm** >= 10
 - **Expo Go** (en el teléfono) **o** un emulador (Android/iOS)
-- (Opcional, solo para la API real) **PostgreSQL** 17
+- **(Solo para usar la BD/API)** **PostgreSQL** 17 instalado y corriendo
 
 ### 1) Instalar dependencias
 
@@ -82,19 +82,70 @@ Contraseña: 123456
 > La app **funciona sin servidor**: si la API no responde, usa automáticamente
 > los datos simulados (`src/data/mockData.ts`).
 
-### (Opcional) Arrancar la API local
+### (BD local) Cómo trabajar cada quien con su base de datos
 
-La API Express + PostgreSQL ya está preparada para avances futuros:
+Cada miembro del equipo configura **su propia base de datos** en su máquina.
+`npm install` **no** crea tablas: el esquema se aplica manualmente una sola vez.
+Sigue estos pasos en orden.
 
+**Paso 1 — Crear la base de datos (una vez)**
+Abre psql y crea la base:
+```bash
+psql -U <tu_usuario_postgres>
+CREATE DATABASE "MascotaCare";
+\q
+```
+
+**Paso 2 — Configurar credenciales (una vez)**
+Copia la plantilla a tu propio archivo y edítala con **tu** contraseña:
+```bash
+cd server
+copy .env.example .env     # Windows
+# o:  cp .env.example .env  # Mac/Linux
+```
+Abre `server/.env` y reemplaza los valores por los tuyos (usa `localhost`,
+puerto `5432`, tu usuario y tu contraseña real). Tu `.env` **no se sube al repo**
+(está en `.gitignore`); el `.env.example` comparte la estructura con valores de
+ejemplo como `tucontrasena`.
+
+**Paso 3 — Aplicar el esquema y los datos de ejemplo (una vez)**
+Desde la carpeta del proyecto, ejecuta el archivo SQL:
+```bash
+psql -U <tu_usuario_postgres> -d "MascotaCare" -f server/db/schema.sql
+```
+Esto crea las tablas (`Usuario`, `Mascota`, `CitaMedica`, `Recordatorio`) y
+rellena los datos demo (Ana García, Luna, Milo).
+
+> ⚠️ La schema es **idempotente** (se puede volver a ejecutar sin romper datos).
+
+**Paso 4 — Instalar dependencias del servidor (una vez)**
 ```bash
 cd server
 npm install
-npm start          # levanta en http://localhost:4000
 ```
 
-Configura tus credenciales copiando `server/.env.example` → `server/.env`.
-En emulador Android la app apunta a `10.0.2.2:4000`; en un teléfono físico
-cambia `HOST` en `src/services/api.ts` por la IP LAN de tu PC.
+**Paso 5 — Levantar la API (cada vez que quieras usar la BD)**
+```bash
+npm start          # escucha en http://localhost:4000
+```
+Comprueba que responda abriendo `http://localhost:4000/api/estado`:
+debería devolver `{"estado":"ok","nombre":"MascotaCare API"}`. Cualquier otra
+ruta (como la raíz `http://localhost:4000`) devuelve `{"error":"Ruta no encontrada."}`
+— es normal, el servidor no tiene página inicial.
+
+**Paso 6 — Arrancar la app (en otra terminal)**
+```bash
+cd MascotaCare
+npx expo start
+```
+
+Si la API está **encendida**, la app usa la BD real. Si está **apagada**, usa
+los datos simulados automáticamente (modo demo). El login y el registro solo
+guardan en la BD real cuando el servidor está levantado.
+
+> 📱 **Dispositivo físico:** en el emulador Android la app apunta a
+> `10.0.2.2:4000` (tu PC). En un teléfono físico cambia `HOST` en
+> `src/services/api.ts` por la IP LAN de tu PC.
 
 ---
 
