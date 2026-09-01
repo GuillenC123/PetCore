@@ -1,20 +1,18 @@
-# 🐾 MascotaCare
+#  MascotaCare
 
 Aplicación móvil en **React Native (Expo)** para organizar la información de tus
 mascotas, sus actividades, citas veterinarias y recordatorios de cuidado.
 
-> ⚠️ **Disclaimer:** esta app es una herramienta de organización y **no sustituye**
-> la asesoría veterinaria profesional.
 
 ---
 
-## 📌 Estado del proyecto — Avance 1 (APF1)
+##  Estado del proyecto — Avance 1 (APF1)
 
 Primer entregable: una **aplicación ejecutable** con un flujo inicial funcional,
 basada en **datos estáticos / estado local** (sin integraciones reales de API,
 base de datos ni hardware nativo; eso llega en avances posteriores).
 
-### ✅ Requerimientos cubiertos
+###  Requerimientos cubiertos
 
 | Requerimiento | Implementación |
 |---------------|----------------|
@@ -25,7 +23,7 @@ base de datos ni hardware nativo; eso llega en avances posteriores).
 | **Interacciones y estado** | `useState` para formularios, selección de especie, checklist de recordatorios |
 | **Formulario validado** | “Añadir nueva mascota” y “Registro” con validación lógica y mensajes de error visibles |
 
-### 🧭 Pantallas
+###  Pantallas
 
 - **Inicio** — saludo, acciones rápidas, mascotas y próximas citas.
 - **Mis Mascotas** — lista de mascotas con estado de salud (`PetCard`).
@@ -173,27 +171,3 @@ MascotaCare/
    ├─ src/                 # entrada + rutas (auth, mascotas, citas, recordatorios)
    └─ db/schema.sql        # esquema PostgreSQL + seed
 ```
-
----
-
-## 🧪 Verificaciones
-
-```bash
-npx tsc --noEmit    # TypeScript sin errores
-npm run lint        # ESLint sin errores
-```
-
----
-
-## 🗺️ Próximos avances (pendientes)
-
-- Conectar la app de forma persistente con la API + PostgreSQL.
-- Subir fotos reales de mascotas.
-- Agendar actividades/citas y guardarlas en la BD.
-- Notificaciones de recordatorios.
-
----
-
-## 📄 Información de licencia
-
-Trabajo académico. Los datos de ejemplo son ficticios.
