@@ -26,6 +26,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import FormInput from '@/components/FormInput';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
+import { validarTexto, validarCorreo, validarPassword } from '@/utils/validaciones';
 
 export default function RegistroScreen() {
   // Estado de cada campo del formulario.
@@ -43,16 +44,13 @@ export default function RegistroScreen() {
   // --- Validación de todos los campos (reglas de negocio de la UI) ---
   const validar = () => {
     const err: Record<string, string> = {};
+    const errorNombre = validarTexto(nombre, 120, 2);
+    if (errorNombre) err.nombre = errorNombre;
+    const errorCorreo = validarCorreo(correo);
+    if (errorCorreo) err.correo = errorCorreo;
+    const errorPassword = validarPassword(password);
+    if (errorPassword) err.password = errorPassword;
 
-    if (nombre.trim().length < 2) {
-      err.nombre = 'El nombre debe tener al menos 2 caracteres.';
-    }
-    if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(correo.trim())) {
-      err.correo = 'Ingresa un correo válido.';
-    }
-    if (password.length < 6) {
-      err.password = 'La contraseña debe tener al menos 6 caracteres.';
-    }
     if (confirmar !== password) {
       err.confirmar = 'Las contraseñas no coinciden.';
     }

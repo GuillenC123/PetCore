@@ -14,6 +14,8 @@ const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
 
 const pool = require('../db');
+const validar = require('../middleware/validar');
+const esquemas = require('../validation/esquemas');
 
 dotenv.config();
 
@@ -37,23 +39,9 @@ function firmarToken(usuario) {
 // ---------------------------------------------------------------------------
 // REGISTRO
 // ---------------------------------------------------------------------------
-router.post('/registro', async (req, res) => {
+router.post('/registro', validar(esquemas.registro, { obligatorios: ['nombre', 'correo', 'password'] }), async (req, res) => {
   try {
     const { nombre, correo, password } = req.body;
-
-    // --- Validación de campos (reglas de negocio del lado servidor) ---
-    if (!nombre || !correo || !password) {
-      return res.status(400).json({ error: 'Todos los campos son obligatorios.' });
-    }
-    if (typeof nombre !== 'string' || nombre.trim().length < 2) {
-      return res.status(400).json({ error: 'El nombre debe tener al menos 2 caracteres.' });
-    }
-    if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(correo)) {
-      return res.status(400).json({ error: 'El correo no tiene un formato válido.' });
-    }
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres.' });
-    }
 
     // Comprueba que el correo no esté ya registrado.
     const existe = await pool.query('SELECT id FROM Usuario WHERE correo = $1', [correo.toLowerCase()]);
@@ -76,6 +64,9 @@ router.post('/registro', async (req, res) => {
     // Responde 201 con el usuario y su token de sesión.
     res.status(201).json({ usuario, token: firmarToken(usuario) });
   } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({ error: 'Ya existe una cuenta con este correo.' });
+    }
     console.error('Error en registro:', err);
     res.status(500).json({ error: 'Error interno del servidor.' });
   }
@@ -84,14 +75,9 @@ router.post('/registro', async (req, res) => {
 // ---------------------------------------------------------------------------
 // LOGIN
 // ---------------------------------------------------------------------------
-router.post('/login', async (req, res) => {
+router.post('/login', validar(esquemas.login, { obligatorios: ['correo', 'password'] }), async (req, res) => {
   try {
     const { correo, password } = req.body;
-
-    // --- Validación mínima de entrada ---
-    if (!correo || !password) {
-      return res.status(400).json({ error: 'Correo y contraseña son obligatorios.' });
-    }
 
     // Busca al usuario por su correo.
     const resultado = await pool.query(

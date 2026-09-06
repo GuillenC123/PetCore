@@ -3,6 +3,29 @@
 Aplicación móvil en **React Native (Expo)** para organizar la información de tus
 mascotas, sus actividades, citas veterinarias y recordatorios de cuidado.
 
+## Validaciones
+
+- `src/utils/validaciones.ts`: reglas reutilizables para login, registro y nueva
+  mascota, con mensajes por campo mediante `FormInput`.
+- `server/src/validation/`: reglas de tipos, longitudes acordes con PostgreSQL,
+  estados, IDs BIGINT positivos, fechas y booleanos; normaliza textos y correos.
+- `server/src/middleware/validar.js`: aplica los esquemas antes de ejecutar las
+  rutas. Devuelve HTTP 400 con `{ error, errores }` cuando un campo es inválido.
+  Los campos desconocidos se ignoran y las actualizaciones requieren al menos
+  un campo editable con valor. Los campos omitidos se conservan; los textos
+  opcionales admiten cadena vacía. `null` no borra campos en los UPDATE actuales.
+- La edad conserva su formato textual (`3 años`, `6 meses`). Las citas requieren
+  fecha/hora ISO con zona (`2026-09-06T10:30:00-05:00`) y los recordatorios usan
+  fechas reales `AAAA-MM-DD`. Las contraseñas requieren al menos 6 caracteres y
+  como máximo 72 bytes UTF-8, el límite de bcrypt.
+- La API impide reabrir citas canceladas/completadas mediante una condición
+  atómica en el UPDATE y responde HTTP 409. Este control no cubre escrituras SQL
+  realizadas directamente fuera de la API.
+
+Ejecuta `npm test --prefix server` para probar las rutas HTTP con PostgreSQL
+simulado (no requiere una base de datos ni modifica datos reales). Ejecuta
+`npx tsc --noEmit` y `npm run lint` para comprobar el código de la aplicación.
+
 
 ---
 

@@ -30,6 +30,7 @@ import FormInput from '@/components/FormInput';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import type { EstadoMascota } from '@/types';
+import { validarTexto } from '@/utils/validaciones';
 
 // Especies disponibles para el selector rápido.
 const ESPECIES = ['Perro', 'Gato', 'Otro'] as const;
@@ -54,16 +55,12 @@ export default function NuevaMascotaScreen() {
   // -------------------------------------------------------------------------
   const validar = () => {
     const err: Record<string, string> = {};
-
-    if (nombre.trim().length < 2) {
-      err.nombre = 'El nombre debe tener al menos 2 caracteres.';
-    }
-    if (!raza.trim()) {
-      err.raza = 'La raza es obligatoria.';
-    }
-    if (!edad.trim()) {
-      err.edad = 'La edad es obligatoria (ej. "3 años").';
-    }
+    const errorNombre = validarTexto(nombre, 120, 2);
+    if (errorNombre) err.nombre = errorNombre;
+    const errorRaza = validarTexto(raza, 120);
+    if (errorRaza) err.raza = errorRaza;
+    const errorEdad = validarTexto(edad, 60);
+    if (errorEdad) err.edad = errorEdad;
 
     setErrores(err);
     return Object.keys(err).length === 0;

@@ -26,6 +26,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import FormInput from '@/components/FormInput';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
+import { validarCorreo, validarPassword } from '@/utils/validaciones';
 
 export default function LoginScreen() {
   // Estado de los campos del formulario.
@@ -40,21 +41,11 @@ export default function LoginScreen() {
 
   // --- Validación de campos (reglas de negocio de la UI) ---
   const validar = () => {
-    const err: { correo?: string; password?: string } = {};
-
-    // Correo: si no está vacío debe tener formato válido.
-    if (correo.trim()) {
-      if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(correo.trim())) {
-        err.correo = 'Ingresa un correo electrónico válido (ej. nombre@dominio.com).';
-      }
-    } else {
-      err.correo = 'El correo electrónico es obligatorio.';
-    }
-    if (!password) {
-      err.password = 'La contraseña es obligatoria.';
-    } else if (password.length < 6) {
-      err.password = 'La contraseña debe tener al menos 6 caracteres.';
-    }
+    const err: Record<string, string> = {};
+    const errorCorreo = validarCorreo(correo);
+    if (errorCorreo) err.correo = errorCorreo;
+    const errorPassword = validarPassword(password);
+    if (errorPassword) err.password = errorPassword;
 
     setErrores(err);
     return Object.keys(err).length === 0;

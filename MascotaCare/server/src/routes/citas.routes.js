@@ -10,16 +10,17 @@
 
 const { Router } = require('express');
 const pool = require('../db');
+const validar = require('../middleware/validar');
+const esquemas = require('../validation/esquemas');
 
 const router = Router();
 
-// Valores permitidos para el estado de una cita.
-const ESTADOS = ['confirmado', 'pendiente', 'programado', 'cancelado', 'completado'];
+router.use('/:id', validar(esquemas.paramsId, { origen: 'params', obligatorios: ['id'] }));
 
 // ---------------------------------------------------------------------------
 // LISTAR CITAS
 // ---------------------------------------------------------------------------
-router.get('/', async (req, res) => {
+router.get('/', validar(esquemas.filtroCitas, { origen: 'query' }), async (req, res) => {
   try {
     const { mascota_id } = req.query;
 
@@ -33,7 +34,7 @@ router.get('/', async (req, res) => {
       WHERE c.usuario_id = $1`;
 
     if (mascota_id) {
-      parametros.push(Number(mascota_id));
+      parametros.push(mascota_id);
       sql += ` AND c.mascota_id = $${parametros.length}`;
     }
 
@@ -50,19 +51,9 @@ router.get('/', async (req, res) => {
 // ---------------------------------------------------------------------------
 // CREAR CITA
 // ---------------------------------------------------------------------------
-router.post('/', async (req, res) => {
+router.post('/', validar(esquemas.crearCita, { obligatorios: ['titulo', 'mascota_id', 'fecha_hora'] }), async (req, res) => {
   try {
     const { titulo, mascota_id, fecha_hora, doctor, clinica, estado } = req.body;
-
-    // --- Validación de negocio ---
-    if (!titulo || !mascota_id || !fecha_hora) {
-      return res
-        .status(400)
-        .json({ error: 'Título, mascota y fecha son obligatorios.' });
-    }
-    if (estado && !ESTADOS.includes(estado)) {
-      return res.status(400).json({ error: 'Estado inválido.' });
-    }
 
     // Verifica que la mascota pertenezca al usuario autenticado.
     const mascota = await pool.query(
@@ -90,13 +81,9 @@ router.post('/', async (req, res) => {
 // ---------------------------------------------------------------------------
 // ACTUALIZAR CITA (estado y/o datos)
 // ---------------------------------------------------------------------------
-router.put('/:id', async (req, res) => {
+router.put('/:id', validar(esquemas.cita, { parcial: true }), async (req, res) => {
   try {
     const { titulo, fecha_hora, doctor, clinica, estado } = req.body;
-
-    if (estado && !ESTADOS.includes(estado)) {
-      return res.status(400).json({ error: 'Estado inválido.' });
-    }
 
     const resultado = await pool.query(
       `UPDATE CitaMedica SET
@@ -106,11 +93,21 @@ router.put('/:id', async (req, res) => {
           clinica    = COALESCE($6, clinica),
           estado     = COALESCE($7, estado)
        WHERE id = $1 AND usuario_id = $2
+         AND (estado NOT IN ('cancelado', 'completado')
+              OR $7::estado_cita IS NULL
+              OR $7::estado_cita IN ('cancelado', 'completado'))
        RETURNING id, titulo, fecha_hora, doctor, clinica, estado, mascota_id`,
       [req.params.id, req.usuario.id, titulo, fecha_hora ? new Date(fecha_hora) : null, doctor, clinica, estado]
     );
 
     if (resultado.rowCount === 0) {
+      const existente = await pool.query(
+        'SELECT id FROM CitaMedica WHERE id = $1 AND usuario_id = $2',
+        [req.params.id, req.usuario.id]
+      );
+      if (existente.rowCount > 0) {
+        return res.status(409).json({ error: 'Una cita cancelada o completada no puede volver a un estado activo.' });
+      }
       return res.status(404).json({ error: 'Cita no encontrada.' });
     }
 

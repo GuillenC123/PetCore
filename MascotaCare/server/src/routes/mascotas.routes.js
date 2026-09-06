@@ -13,11 +13,12 @@
 
 const { Router } = require('express');
 const pool = require('../db');
+const validar = require('../middleware/validar');
+const esquemas = require('../validation/esquemas');
 
 const router = Router();
 
-// Map entre el valor de la app y su equivalente en la BD (enum state).
-const ESTADOS = ['saludable', 'vacuna_pendiente', 'en_tratamiento'];
+router.use('/:id', validar(esquemas.paramsId, { origen: 'params', obligatorios: ['id'] }));
 
 // ---------------------------------------------------------------------------
 // LISTAR MASCOTAS
@@ -64,19 +65,9 @@ router.get('/:id', async (req, res) => {
 // ---------------------------------------------------------------------------
 // CREAR MASCOTA
 // ---------------------------------------------------------------------------
-router.post('/', async (req, res) => {
+router.post('/', validar(esquemas.mascota, { obligatorios: ['nombre', 'raza', 'especie', 'edad'] }), async (req, res) => {
   try {
     const { nombre, raza, especie, edad, estado, imagen } = req.body;
-
-    // --- Validación (reglas de negocio) ---
-    if (!nombre || !raza || !especie || !edad) {
-      return res
-        .status(400)
-        .json({ error: 'Nombre, raza, especie y edad son obligatorios.' });
-    }
-    if (estado && !ESTADOS.includes(estado)) {
-      return res.status(400).json({ error: 'Estado inválido.' });
-    }
 
     const resultado = await pool.query(
       `INSERT INTO Mascota (usuario_id, nombre, raza, especie, edad, estado, imagen)
@@ -95,13 +86,9 @@ router.post('/', async (req, res) => {
 // ---------------------------------------------------------------------------
 // ACTUALIZAR MASCOTA
 // ---------------------------------------------------------------------------
-router.put('/:id', async (req, res) => {
+router.put('/:id', validar(esquemas.mascota, { parcial: true }), async (req, res) => {
   try {
     const { nombre, raza, especie, edad, estado, imagen } = req.body;
-
-    if (estado && !ESTADOS.includes(estado)) {
-      return res.status(400).json({ error: 'Estado inválido.' });
-    }
 
     // Con COALESCE solo actualizamos los campos enviados; el resto se conserva.
     const resultado = await pool.query(

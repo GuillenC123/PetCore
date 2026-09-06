@@ -39,6 +39,17 @@ app.use('/api/mascotas', authMiddleware, mascotasRouter);
 app.use('/api/citas', authMiddleware, citasRouter);
 app.use('/api/recordatorios', authMiddleware, recordatoriosRouter);
 
+// Errores del parser JSON también deben poder mostrarse desde services/api.ts.
+app.use((err, _req, res, next) => {
+  if (err.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'El cuerpo debe contener JSON válido.' });
+  }
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({ error: 'El cuerpo de la solicitud es demasiado grande.' });
+  }
+  next(err);
+});
+
 // Manejador de errores 404 para rutas inexistentes.
 app.use((_req, res) => {
   res.status(404).json({ error: 'Ruta no encontrada.' });

@@ -106,12 +106,10 @@ CREATE TABLE IF NOT EXISTS CitaMedica (
 
 -- REGLA DE NEGOCIO: Una cita cancelada/completada solo puede pasar a otro
 -- estado "no activo", nunca volver a pendiente/programado/confirmado.
+-- Se aplica atómicamente en el UPDATE de server/src/routes/citas.routes.js.
+-- Un CHECK de la fila nueva no puede comparar el estado anterior; se retira
+-- la restricción antigua, que era tautológica y no protegía las transiciones.
 ALTER TABLE CitaMedica DROP CONSTRAINT IF EXISTS chk_cita_estado_final;
-ALTER TABLE CitaMedica ADD CONSTRAINT chk_cita_estado_final
-    CHECK (
-        estado NOT IN ('cancelado', 'completado')
-        OR estado IN ('completado', 'cancelado')
-    );
 
 -- Índice para listar citas por usuario ordenadas por fecha.
 CREATE INDEX IF NOT EXISTS idx_cita_usuario ON CitaMedica (usuario_id, fecha_hora);

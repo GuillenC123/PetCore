@@ -8,13 +8,17 @@
 
 const { Router } = require('express');
 const pool = require('../db');
+const validar = require('../middleware/validar');
+const esquemas = require('../validation/esquemas');
 
 const router = Router();
+
+router.use('/:id', validar(esquemas.paramsId, { origen: 'params', obligatorios: ['id'] }));
 
 // ---------------------------------------------------------------------------
 // LISTAR RECORDATORIOS
 // ---------------------------------------------------------------------------
-router.get('/', async (req, res) => {
+router.get('/', validar(esquemas.filtroRecordatorios, { origen: 'query' }), async (req, res) => {
   try {
     // Parámetro "solo_pendientes=true" devuelve únicamente los no completados.
     const soloPendientes = req.query.solo_pendientes === 'true';
@@ -45,7 +49,7 @@ router.get('/', async (req, res) => {
 // ---------------------------------------------------------------------------
 // ACTUALIZAR RECORDATORIO (marcar completado, editar texto, etc.)
 // ---------------------------------------------------------------------------
-router.put('/:id', async (req, res) => {
+router.put('/:id', validar(esquemas.recordatorio, { parcial: true }), async (req, res) => {
   try {
     const { completado, titulo, descripcion, vence_en } = req.body;
 
