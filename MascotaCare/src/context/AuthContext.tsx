@@ -79,6 +79,8 @@ interface AuthContextValue {
   tacharRecordatorio: (id: number, completado: boolean) => Promise<void>;
   /** Añade una mascota al estado local (aporta el id automáticamente). */
   agregarMascota: (datos: Omit<Mascota, 'id'>) => Mascota;
+  /** Actualiza el perfil en memoria durante la sesión, sin llamar a la API. */
+  actualizarPerfil: (datos: Pick<Usuario, 'nombre' | 'correo'>) => void;
 }
 
 // Valor inicial por defecto del contexto (para TypeScript).
@@ -101,6 +103,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Contador para generar ids de mascotas creadas localmente (evita colisiones
   // con los ids reales de la BD, que son bajos; usamos un arranque alto).
   const proximoId = React.useRef(1000);
+
+  const actualizarPerfil = React.useCallback((datos: Pick<Usuario, 'nombre' | 'correo'>) => {
+    setUsuario((actual) => actual ? {
+      ...actual,
+      nombre: datos.nombre.normalize('NFC').trim(),
+      correo: datos.correo.trim().toLowerCase(),
+    } : actual);
+  }, []);
 
   /**
    * Añade una mascota al estado local de la app. La nueva mascota recibe un id
@@ -274,6 +284,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     cargarDatos,
     tacharRecordatorio,
     agregarMascota,
+    actualizarPerfil,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

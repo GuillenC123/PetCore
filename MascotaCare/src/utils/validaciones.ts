@@ -12,6 +12,17 @@ export function validarCorreo(valor: string): string | undefined {
   }
 }
 
+/** Nombre personal: letras Unicode (incluidas tildes y ñ) y espacios. */
+export function validarNombrePerfil(valor: string): string | undefined {
+  const nombre = valor.normalize('NFC').trim();
+  if (validarTexto(nombre, 120, 2)) {
+    return 'El nombre es obligatorio y debe tener entre 2 y 120 caracteres.';
+  }
+  if (!/^\p{L}[\p{L}\p{M} ]*$/u.test(nombre)) {
+    return 'El nombre solo puede contener letras, espacios y tildes.';
+  }
+}
+
 export function validarPassword(valor: string): string | undefined {
   // bcrypt admite hasta 72 bytes; contar caracteres no basta para tildes/emojis.
   const bytes = [...valor].reduce((total, caracter) => {

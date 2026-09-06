@@ -38,11 +38,17 @@ export default function PerfilScreen() {
   // Acciones de cada opción del menú.
   const manejarOpcion = (tipo: MenuOptionType) => {
     switch (tipo) {
+      case 'edit':
+        router.push('/editar-perfil');
+        break;
+      case 'notifications':
+        router.push('/recordatorios');
+        break;
+      case 'help':
+        router.push('/ayuda');
+        break;
       case 'logout':
         logout(); // cierra la sesión (redirige a login por el stack protegido).
-        break;
-      default:
-        // Por ahora las demás opciones están vacías (solo estructurales).
         break;
     }
   };

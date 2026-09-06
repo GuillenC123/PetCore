@@ -43,6 +43,8 @@ function RootNavigator() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="mascota-detalle" />
         <Stack.Screen name="nueva-mascota" />
+        <Stack.Screen name="editar-perfil" />
+        <Stack.Screen name="ayuda" />
       </Stack.Protected>
 
       {/* Grupo público: acceso/registro. */}
