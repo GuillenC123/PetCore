@@ -79,6 +79,7 @@ interface AuthContextValue {
   tacharRecordatorio: (id: number, completado: boolean) => Promise<void>;
   /** Añade una mascota al estado local (aporta el id automáticamente). */
   agregarMascota: (datos: Omit<Mascota, 'id'>) => Mascota;
+  agregarCita: (datos: { mascota_id: number; motivo: string; fecha_hora: string }) => void;
   /** Actualiza el perfil en memoria durante la sesión, sin llamar a la API. */
   actualizarPerfil: (datos: Pick<Usuario, 'nombre' | 'correo'>) => void;
 }
@@ -103,6 +104,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Contador para generar ids de mascotas creadas localmente (evita colisiones
   // con los ids reales de la BD, que son bajos; usamos un arranque alto).
   const proximoId = React.useRef(1000);
+  const proximaVisitaId = React.useRef(-1);
+
+  // Las visitas creadas en este avance se conservan durante la sesión.
+  const agregarCita = React.useCallback((datos: { mascota_id: number; motivo: string; fecha_hora: string }) => {
+    const mascota = mascotas.find((m) => m.id === datos.mascota_id);
+    if (!mascota) throw new Error('Selecciona una mascota registrada.');
+    const fecha = new Date(datos.fecha_hora);
+    const motivo = datos.motivo.trim();
+    if (!motivo || motivo.length > 1000) throw new Error('Escribe un motivo de hasta 1000 caracteres.');
+    if (!Number.isFinite(fecha.getTime()) || fecha.getTime() <= Date.now()) {
+      throw new Error('Selecciona una fecha y hora futuras.');
+    }
+    const id = proximaVisitaId.current--;
+    setCitas((prev) => [...prev, {
+      id, mascota_id: mascota.id, mascota_nombre: mascota.nombre,
+      titulo: motivo, fecha_hora: fecha.toISOString(),
+      doctor: null, clinica: null, estado: 'programado',
+    }]);
+    setRecordatorios((prev) => [...prev, {
+      id, mascota_id: mascota.id, mascota_nombre: mascota.nombre,
+      titulo: 'Visita veterinaria', descripcion: motivo, tipo: 'cita',
+      vence_en: fecha.toISOString(), completado: false,
+    }]);
+  }, [mascotas]);
 
   const actualizarPerfil = React.useCallback((datos: Pick<Usuario, 'nombre' | 'correo'>) => {
     setUsuario((actual) => actual ? {
@@ -247,7 +272,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         prev.map((r) => (r.id === id ? { ...r, completado } : r))
       );
 
-      if (token && conectado) {
+      if (token && conectado && id > 0) {
         try {
           await apiTacharRecordatorio(token, id, completado);
         } catch {
@@ -284,6 +309,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     cargarDatos,
     tacharRecordatorio,
     agregarMascota,
+    agregarCita,
     actualizarPerfil,
   };
 

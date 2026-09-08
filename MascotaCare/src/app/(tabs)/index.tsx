@@ -21,6 +21,7 @@ import PetCard from '@/components/PetCard';
 import QuickActionCard from '@/components/QuickActionCard';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
+import { obtenerProximasCitas } from '@/utils/citas';
 
 export default function HomeScreen() {
   // Lee del contexto el usuario y los datos de la app.
@@ -31,7 +32,7 @@ export default function HomeScreen() {
   // Número de eventos próximos (citas + recordatorios pendientes).
   const { recordatorios } = useAuth();
   const pendientes = recordatorios.filter((r) => !r.completado).length;
-  const eventos = citas.length + pendientes;
+  const proximasCitas = obtenerProximasCitas(citas);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -46,7 +47,7 @@ export default function HomeScreen() {
         <View style={styles.greeting}>
           <Text style={styles.hola}>¡Hola, {primerNombre}!</Text>
           <Text style={styles.parrafo}>
-            Tus mascotas están al día. Tienes {eventos} eventos próximos.
+            Tienes {proximasCitas.length} visitas próximas y {pendientes} recordatorios pendientes.
           </Text>
         </View>
 
@@ -62,7 +63,7 @@ export default function HomeScreen() {
             label="Agendar Cita"
             circleColor="#DCFCE7"
             iconColor={AppColors.success}
-            onPress={() => router.push('/citas')}
+            onPress={() => router.push('/nueva-cita')}
           />
         </View>
 
@@ -89,8 +90,8 @@ export default function HomeScreen() {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Próximas Citas</Text>
         </View>
-        {citas.length > 0 ? (
-          <AppointmentCard cita={citas[0]} />
+        {proximasCitas.length > 0 ? (
+          <AppointmentCard cita={proximasCitas[0]} />
         ) : (
           <Text style={styles.empty}>No tienes citas próximas.</Text>
         )}

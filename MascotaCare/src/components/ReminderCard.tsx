@@ -13,6 +13,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppColors } from '@/constants/theme';
 import type { Recordatorio } from '@/types';
+import { formatearFechaCita } from '@/utils/estados';
 
 interface ReminderCardProps {
   recordatorio: Recordatorio;
@@ -31,6 +32,10 @@ export default function ReminderCard({ recordatorio, onToggle }: ReminderCardPro
       {/* Contenido principal y subtítulo. */}
       <View style={styles.info}>
         <Text style={styles.titulo}>{recordatorio.titulo}</Text>
+        {!!recordatorio.mascota_nombre && <Text style={styles.subtitulo}>{recordatorio.mascota_nombre}</Text>}
+        {recordatorio.tipo === 'cita' && recordatorio.vence_en && Number.isFinite(Date.parse(recordatorio.vence_en)) && (
+          <Text style={styles.subtitulo}>{formatearFechaCita(recordatorio.vence_en)}</Text>
+        )}
         <View style={styles.subtituloRow}>
           {/* Ícono de alerta solo cuando el recordatorio es urgente. */}
           {esUrgente && <Ionicons name="alert-circle" size={14} color={AppColors.danger} />}

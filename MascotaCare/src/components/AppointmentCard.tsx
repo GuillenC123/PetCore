@@ -29,9 +29,10 @@ export default function AppointmentCard({ cita }: AppointmentCardProps) {
 
   return (
     <View style={[styles.card, { borderLeftColor: colorAcento }]}>
+      {!!cita.mascota_nombre && <Text style={styles.titulo}>{cita.mascota_nombre} · Visita veterinaria</Text>}
       {/* ---- Fila superior: título + badge ---- */}
       <View style={styles.filaTop}>
-        <Text style={styles.titulo} numberOfLines={1}>
+        <Text style={styles.titulo}>
           {cita.titulo}
         </Text>
         <Badge label={estadoUI.label} tone={estadoUI.tone} />

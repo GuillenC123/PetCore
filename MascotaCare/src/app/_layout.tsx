@@ -43,6 +43,7 @@ function RootNavigator() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="mascota-detalle" />
         <Stack.Screen name="nueva-mascota" />
+        <Stack.Screen name="nueva-cita" />
         <Stack.Screen name="editar-perfil" />
         <Stack.Screen name="ayuda" />
       </Stack.Protected>
