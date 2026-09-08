@@ -8,7 +8,7 @@ export function validarTexto(valor: string, maximo: number, minimo = 1): string 
 
 export function validarCorreo(valor: string): string | undefined {
   if (validarTexto(valor, 254) || !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(valor.trim())) {
-    return 'Ingresa un correo válido de hasta 254 caracteres.';
+    return 'Ingresa un correo válido';
   }
 }
 
