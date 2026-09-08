@@ -16,6 +16,7 @@
 // ============================================================================
 
 import * as React from 'react';
+import { validarFichaSalud, type DatosFichaSalud } from '@/utils/salud';
 import { completarRecordatorio, fechaRecordatorio } from '@/utils/recordatorios';
 
 import { MOCK_EMAIL, MOCK_PASSWORD, mockData } from '@/data/mockData';
@@ -84,6 +85,7 @@ interface AuthContextValue {
   agregarMascota: (datos: Omit<Mascota, 'id'>) => Mascota;
   agregarCita: (datos: { mascota_id: number; motivo: string; fecha_hora: string }) => void;
   actualizarPesoMascota: (id: number, peso: number | null) => void;
+  actualizarFichaSalud: (id: number, datos: DatosFichaSalud) => void;
   /** Actualiza el perfil en memoria durante la sesión, sin llamar a la API. */
   actualizarPerfil: (datos: Pick<Usuario, 'nombre' | 'correo'>) => void;
 }
@@ -109,6 +111,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // con los ids reales de la BD, que son bajos; usamos un arranque alto).
   const proximoId = React.useRef(1000);
   const proximaVisitaId = React.useRef(-1);
+  const actualizarFichaSalud = React.useCallback((id: number, datos: DatosFichaSalud) => {
+    const error = validarFichaSalud(datos);
+    if (error) throw new Error(error);
+    if (!mascotas.some((m) => m.id === id)) throw new Error('Mascota no encontrada.');
+    setMascotas((prev) => prev.map((m) => m.id === id ? { ...m, ...datos,
+      edad: datos.edad.trim(), alergias: datos.alergias.trim(), condiciones: datos.condiciones.trim(),
+    } : m));
+  }, [mascotas]);
   const recordatoriosLocales = React.useRef(new Set<number>());
 
   const guardarRecordatorio = React.useCallback((datos: Omit<Recordatorio, 'id' | 'completado'>, id?: number) => {
@@ -348,6 +358,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     agregarMascota,
     agregarCita,
     actualizarPesoMascota,
+    actualizarFichaSalud,
     actualizarPerfil,
   };
 

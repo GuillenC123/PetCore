@@ -1,95 +1,53 @@
-// ============================================================================
-// (tabs)/mascotas.tsx - Pantalla de Mascotas
-// ----------------------------------------------------------------------------
-// Muestra la lista de mascotas con sus etiquetas de estado de salud visibles.
-// Incluye la cabecera general, un título con subtítulo, la lista de PetCards
-// (con showStatus = true) y el FAB para añadir mascotas.
-// ============================================================================
-
 import { router } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import AppHeader from '@/components/AppHeader';
-import FAB from '@/components/FAB';
-import PetCard from '@/components/PetCard';
+import HealthRecord from '@/components/HealthRecord';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 
-export default function MascotasScreen() {
+export default function FichaSaludScreen() {
   const { mascotas } = useAuth();
-
+  const [seleccionada, setSeleccionada] = useState<number | null>(null);
+  const mascota = mascotas.find((m) => m.id === seleccionada) ?? mascotas[0];
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}>
-        {/* Cabecera general (huella + campana). */}
-        <AppHeader onPressBell={() => router.push('/recordatorios')} />
-
-        {/* Título y subtítulo de la pantalla. */}
-        <View style={styles.titleBlock}>
-          <Text style={styles.title}>Mis Mascotas</Text>
-          <Text style={styles.subtitle}>Gestiona el cuidado de tus compañeros.</Text>
-        </View>
-
-        {/* Lista de mascotas con sus etiquetas de estado. */}
-        <View style={styles.list}>
-          {mascotas.length === 0 ? (
-            <Text style={styles.empty}>
-              Aún no tienes mascotas. Toca el botón + para añadir.
-            </Text>
-          ) : (
-            mascotas.map((m) => (
-              <PetCard
-                key={m.id}
-                mascota={m}
-                showStatus
-                onPress={() => router.push(`/mascota-detalle?id=${m.id}`)}
-              />
-            ))
-          )}
-        </View>
-      </ScrollView>
-
-      {/* FAB para añadir una nueva mascota. */}
-      <FAB onPress={() => router.push('/nueva-mascota')} />
+      <KeyboardAvoidingView style={styles.safe} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <AppHeader onPressBell={() => router.push('/recordatorios')} />
+          <Text style={styles.title}>Ficha de salud</Text>
+          <Text style={styles.description}>Consulta y actualiza la información de salud de cada mascota.</Text>
+          {mascota ? <>
+            <Text style={styles.label}>Selecciona una mascota</Text>
+            <View style={styles.options}>
+              {mascotas.map((m) => <Pressable key={m.id} accessibilityRole="radio" accessibilityState={{ checked: m.id === mascota.id }}
+                onPress={() => setSeleccionada(m.id)} style={[styles.option, m.id === mascota.id && styles.active]}>
+                <Text style={styles.label}>{m.nombre}</Text>
+              </Pressable>)}
+            </View>
+            <HealthRecord key={mascota.id} mascota={mascota} />
+          </> : <View style={styles.empty}>
+            <Text style={styles.label}>Registra tu primera mascota</Text>
+            <Text style={styles.description}>Podrás completar su ficha de salud después de añadirla.</Text>
+            <Pressable accessibilityRole="button" style={styles.option} onPress={() => router.push('/nueva-mascota')}>
+              <Text style={styles.label}>Añadir mascota</Text>
+            </Pressable>
+          </View>}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: AppColors.background,
-  },
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 100,
-    gap: 16,
-  },
-  titleBlock: {
-    gap: 4,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: AppColors.text,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: AppColors.textSecondary,
-  },
-  list: {
-    gap: 12,
-  },
-  empty: {
-    fontSize: 14,
-    color: AppColors.textSecondary,
-    marginTop: 8,
-  },
+  safe: { flex: 1, backgroundColor: AppColors.background },
+  content: { padding: 20, paddingBottom: 40, gap: 16, width: '100%', maxWidth: 800, alignSelf: 'center' },
+  title: { fontSize: 24, fontWeight: '800', color: AppColors.text },
+  description: { fontSize: 14, lineHeight: 21, color: AppColors.textSecondary },
+  label: { fontSize: 15, fontWeight: '600', color: AppColors.text },
+  options: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  option: { borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#D1D5DB', backgroundColor: AppColors.surface },
+  active: { backgroundColor: AppColors.infoSoft, borderColor: '#0369A1' },
+  empty: { gap: 12 },
 });

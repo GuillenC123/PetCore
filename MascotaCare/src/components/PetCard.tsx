@@ -14,6 +14,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppColors } from '@/constants/theme';
 import type { Mascota } from '@/types';
 import { configurarEstadoMascota } from '@/utils/estados';
+import { edadMascota } from '@/utils/salud';
 import Badge from './Badge';
 import PetImage from './PetImage';
 
@@ -40,7 +41,7 @@ export default function PetCard({ mascota, showStatus = true, onPress }: PetCard
       <View style={styles.info}>
         <Text style={styles.nombre}>{mascota.nombre}</Text>
         <Text style={styles.raza}>
-          {mascota.raza} · {mascota.edad}
+          {mascota.raza} · {edadMascota(mascota)}
         </Text>
         {/* El badge del estado solo aparece cuando showStatus es true. */}
         {showStatus && <Badge label={salud.label} tone={salud.tone} />}

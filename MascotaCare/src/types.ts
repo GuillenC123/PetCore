@@ -48,6 +48,10 @@ export interface Mascota {
   edad: string;
   /** Peso en kilogramos; ausente para mascotas que aún no lo registraron. */
   peso?: number | null;
+  nacimiento?: string | null;
+  sexo?: 'macho' | 'hembra' | 'desconocido';
+  alergias?: string;
+  condiciones?: string;
   estado: EstadoMascota;
   /** URI o null si no hay foto subida. */
   imagen: string | null;

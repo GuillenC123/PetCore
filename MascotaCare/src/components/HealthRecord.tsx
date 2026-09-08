@@ -1,0 +1,110 @@
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import type { Mascota } from '@/types';
+import { useAuth } from '@/context/AuthContext';
+import { AppColors } from '@/constants/theme';
+import { edadMascota } from '@/utils/salud';
+import { validarPeso } from '@/utils/validaciones';
+import { configurarEstadoMascota } from '@/utils/estados';
+import Badge from './Badge';
+import PetImage from './PetImage';
+import FormInput from './FormInput';
+
+const SEXOS = { desconocido: 'Sin registrar', macho: 'Macho', hembra: 'Hembra' } as const;
+
+export default function HealthRecord({ mascota }: { mascota: Mascota }) {
+  const [editando, setEditando] = useState(false);
+  const [guardado, setGuardado] = useState(false);
+  const salud = configurarEstadoMascota(mascota.estado);
+  return (
+    <View style={styles.card}>
+      <View style={styles.identity}>
+        <PetImage url={mascota.imagen} nombre={mascota.nombre} size={64} />
+        <View style={styles.identityText}>
+          <Text style={styles.title}>{mascota.nombre}</Text>
+          <Text style={styles.text}>{mascota.especie} · {mascota.raza}</Text>
+          <Badge label={salud.label} tone={salud.tone} />
+        </View>
+      </View>
+      {editando ? <Editor mascota={mascota} cancelar={() => setEditando(false)} guardar={() => { setEditando(false); setGuardado(true); }} /> : <>
+        <Dato label={mascota.nacimiento ? 'Nacimiento' : 'Edad aproximada'} valor={mascota.nacimiento ?? mascota.edad} />
+        {!!mascota.nacimiento && <Dato label="Edad" valor={edadMascota(mascota)} />}
+        <Dato label="Sexo" valor={SEXOS[mascota.sexo ?? 'desconocido']} />
+        <Dato label="Peso" valor={mascota.peso != null ? `${mascota.peso.toLocaleString('es-PE')} kg` : ''} />
+        <Dato label="Alergias" valor={mascota.alergias} />
+        <Dato label="Condiciones registradas" valor={mascota.condiciones} />
+        {guardado && <Text accessibilityRole="alert" style={styles.text}>Ficha guardada para esta sesión.</Text>}
+        <Boton label="Editar ficha de salud" onPress={() => { setEditando(true); setGuardado(false); }} />
+      </>}
+    </View>
+  );
+}
+
+function Editor({ mascota, cancelar, guardar }: { mascota: Mascota; cancelar: () => void; guardar: () => void }) {
+  const { actualizarFichaSalud } = useAuth();
+  const [usaNacimiento, setUsaNacimiento] = useState(!!mascota.nacimiento);
+  const [nacimiento, setNacimiento] = useState(mascota.nacimiento ?? '');
+  const [edad, setEdad] = useState(edadMascota(mascota));
+  const [sexo, setSexo] = useState(mascota.sexo ?? 'desconocido');
+  const [peso, setPeso] = useState(mascota.peso?.toString() ?? '');
+  const [alergias, setAlergias] = useState(mascota.alergias ?? '');
+  const [condiciones, setCondiciones] = useState(mascota.condiciones ?? '');
+  const [error, setError] = useState('');
+  const enviar = () => {
+    const errorPeso = validarPeso(peso);
+    if (errorPeso) { setError(errorPeso); return; }
+    try {
+      actualizarFichaSalud(mascota.id, { nacimiento: usaNacimiento ? nacimiento.trim() : null, edad,
+        sexo, peso: peso.trim() ? Number(peso.trim().replace(',', '.')) : null, alergias, condiciones });
+      guardar();
+    } catch (err) { setError(err instanceof Error ? err.message : 'No se pudo guardar la ficha.'); }
+  };
+  return <View style={styles.form}>
+    <Text style={styles.label}>Nacimiento o edad aproximada</Text>
+    <View style={styles.options}>
+      <Opcion label="Conozco el nacimiento" activo={usaNacimiento} onPress={() => setUsaNacimiento(true)} />
+      <Opcion label="Edad aproximada" activo={!usaNacimiento} onPress={() => setUsaNacimiento(false)} />
+    </View>
+    {usaNacimiento ? <FormInput accessibilityLabel="Fecha de nacimiento" placeholder="DD/MM/AAAA" maxLength={10} value={nacimiento} onChangeText={setNacimiento} />
+      : <FormInput accessibilityLabel="Edad aproximada" placeholder="Ej. 2 años y 3 meses" maxLength={60} value={edad} onChangeText={setEdad} />}
+    <Text style={styles.label}>Sexo</Text>
+    <View style={styles.options}>{(Object.entries(SEXOS) as [keyof typeof SEXOS, string][]).map(([value, label]) =>
+      <Opcion key={value} label={label} activo={sexo === value} onPress={() => setSexo(value)} />)}</View>
+    <Text style={styles.label}>Peso en kg (opcional)</Text>
+    <FormInput accessibilityLabel="Peso en kilogramos" placeholder="Ej. 4,5" keyboardType="decimal-pad" value={peso} onChangeText={setPeso} />
+    <Text style={styles.label}>Alergias</Text>
+    <FormInput accessibilityLabel="Alergias" placeholder="Escribe las alergias conocidas" multiline maxLength={1000} value={alergias} onChangeText={setAlergias} />
+    <Text style={styles.label}>Condiciones registradas</Text>
+    <FormInput accessibilityLabel="Condiciones registradas" placeholder="Anota las condiciones registradas por su veterinario" multiline maxLength={1000} value={condiciones} onChangeText={setCondiciones} />
+    <Text style={styles.text}>Los campos vacíos se mostrarán como “Sin registrar”. Los cambios se conservan durante esta sesión.</Text>
+    {!!error && <Text style={styles.error} accessibilityRole="alert">{error}</Text>}
+    <Boton label="Guardar ficha" onPress={enviar} />
+    <Boton label="Cancelar" onPress={cancelar} />
+  </View>;
+}
+
+function Dato({ label, valor }: { label: string; valor?: string }) {
+  return <View style={styles.data}><Text style={styles.label}>{label}</Text><Text style={styles.text}>{valor?.trim() || 'Sin registrar'}</Text></View>;
+}
+function Opcion({ label, activo, onPress }: { label: string; activo: boolean; onPress: () => void }) {
+  return <Pressable accessibilityRole="radio" accessibilityState={{ checked: activo }} onPress={onPress} style={[styles.option, activo && styles.active]}><Text style={styles.text}>{label}</Text></Pressable>;
+}
+function Boton({ label, onPress }: { label: string; onPress: () => void }) {
+  return <Pressable accessibilityRole="button" onPress={onPress} style={styles.button}><Text style={styles.buttonText}>{label}</Text></Pressable>;
+}
+const styles = StyleSheet.create({
+  card: { padding: 18, borderRadius: 18, backgroundColor: AppColors.surface, gap: 16 },
+  identity: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  identityText: { flex: 1, gap: 6 },
+  title: { fontSize: 22, fontWeight: '800', color: AppColors.text },
+  text: { fontSize: 15, lineHeight: 22, color: AppColors.textSecondary },
+  label: { fontSize: 15, fontWeight: '700', color: AppColors.text },
+  data: { gap: 5, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#EEF0F3' },
+  form: { gap: 12 },
+  options: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  option: { padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#D1D5DB' },
+  active: { backgroundColor: AppColors.infoSoft, borderColor: '#0369A1' },
+  button: { padding: 14, borderRadius: 12, backgroundColor: '#0369A1', alignItems: 'center' },
+  buttonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
+  error: { color: '#B91C1C', fontSize: 14 },
+});

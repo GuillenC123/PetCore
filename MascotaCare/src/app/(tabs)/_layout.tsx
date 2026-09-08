@@ -82,7 +82,7 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 // Mapa de cada pestaña (route.name) a su ícono (Ionicons).
 const TAB_ICONOS: Record<string, keyof typeof Ionicons.glyphMap> = {
   index: 'home',
-  mascotas: 'paw',
+  mascotas: 'medical',
   citas: 'calendar',
   perfil: 'person',
 };
@@ -93,7 +93,7 @@ export default function TabsLayout() {
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{ headerShown: false }}>
       <Tabs.Screen name="index" options={{ title: 'Inicio' }} />
-      <Tabs.Screen name="mascotas" options={{ title: 'Mascotas' }} />
+      <Tabs.Screen name="mascotas" options={{ title: 'Ficha de salud' }} />
       <Tabs.Screen name="citas" options={{ title: 'Citas' }} />
       <Tabs.Screen name="perfil" options={{ title: 'Perfil' }} />
     </Tabs>
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
-    paddingHorizontal: 16,
+    paddingHorizontal: 6,
     paddingVertical: 6,
     borderRadius: 18,
   },

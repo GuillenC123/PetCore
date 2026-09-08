@@ -13,7 +13,12 @@ const secciones: {
   {
     titulo: 'Inicio',
     icono: 'home-outline',
-    descripcion: 'Consulta el resumen de tus mascotas, próximas citas y recordatorios pendientes. Usa la barra inferior para cambiar entre Inicio, Mascotas, Citas y Perfil.',
+    descripcion: 'Consulta el resumen de tus mascotas, próximas citas y recordatorios pendientes. Usa la barra inferior para cambiar entre Inicio, Ficha de salud, Citas y Perfil.',
+  },
+  {
+    titulo: 'Ficha de salud',
+    icono: 'medical-outline',
+    descripcion: 'Selecciona una mascota y pulsa Editar ficha de salud para registrar nacimiento o edad aproximada, sexo, peso, alergias y condiciones. Guarda los cambios antes de cambiar de mascota. Los datos se conservan durante la sesión.',
   },
   {
     titulo: 'Añadir y consultar mascotas',

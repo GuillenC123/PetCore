@@ -22,6 +22,7 @@ import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { configurarEstadoMascota } from '@/utils/estados';
 import { validarPeso } from '@/utils/validaciones';
+import { edadMascota } from '@/utils/salud';
 
 export default function MascotaDetalleScreen() {
   // Lee el id pasado en la URL (ej. el FAB navega a /mascota-detalle?id=1).
@@ -80,7 +81,7 @@ export default function MascotaDetalleScreen() {
           <Separador />
           <Fila icon="paw-outline" etiqueta="Especie" valor={mascota.especie} />
           <Separador />
-          <Fila icon="hourglass-outline" etiqueta="Edad" valor={mascota.edad} />
+          <Fila icon="hourglass-outline" etiqueta="Edad" valor={edadMascota(mascota)} />
           <Separador />
           <Fila icon="scale-outline" etiqueta="Peso" valor={mascota.peso != null ? `${mascota.peso.toLocaleString('es-PE')} kg` : 'Sin registrar'} />
           <EditorPeso key={mascota.id} id={mascota.id} pesoActual={mascota.peso} />

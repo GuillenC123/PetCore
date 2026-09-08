@@ -80,7 +80,7 @@ export default function HomeScreen() {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Mis Mascotas</Text>
           <Text style={styles.link} onPress={() => router.push('/mascotas')}>
-            Ver todas
+            Ficha de salud
           </Text>
         </View>
         <View style={styles.list}>
