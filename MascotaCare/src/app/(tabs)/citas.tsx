@@ -15,11 +15,13 @@ import AppointmentCard from '@/components/AppointmentCard';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { obtenerProximasCitas } from '@/utils/citas';
+import { useAhora } from '@/hooks/use-ahora';
 
 export default function CitasScreen() {
   const { citas } = useAuth();
   const { creada } = useLocalSearchParams<{ creada?: string }>();
-  const proximas = obtenerProximasCitas(citas);
+  const ahora = useAhora();
+  const proximas = obtenerProximasCitas(citas, ahora);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>

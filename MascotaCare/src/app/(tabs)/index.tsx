@@ -22,17 +22,22 @@ import QuickActionCard from '@/components/QuickActionCard';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { obtenerProximasCitas } from '@/utils/citas';
+import { useAhora } from '@/hooks/use-ahora';
+import { estadoRecordatorio } from '@/utils/recordatorios';
 
 export default function HomeScreen() {
   // Lee del contexto el usuario y los datos de la app.
-  const { usuario, mascotas, citas } = useAuth();
+  const { usuario, mascotas, citas, recordatorios } = useAuth();
+  const ahora = useAhora();
 
   // Primer nombre del usuario para el saludo.
   const primerNombre = usuario?.nombre.split(' ')[0] ?? 'Amigo';
   // Número de eventos próximos (citas + recordatorios pendientes).
-  const { recordatorios } = useAuth();
   const pendientes = recordatorios.filter((r) => !r.completado).length;
-  const proximasCitas = obtenerProximasCitas(citas);
+  const proximasCitas = obtenerProximasCitas(citas, ahora);
+  const vencidos = recordatorios.filter((r) => estadoRecordatorio(r, ahora) === 'Vencido').length;
+  const hoy = recordatorios.filter((r) => estadoRecordatorio(r, ahora) === 'Hoy').length;
+  const sinFecha = recordatorios.filter((r) => estadoRecordatorio(r, ahora) === 'Sin fecha').length;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -47,8 +52,12 @@ export default function HomeScreen() {
         <View style={styles.greeting}>
           <Text style={styles.hola}>¡Hola, {primerNombre}!</Text>
           <Text style={styles.parrafo}>
-            Tienes {proximasCitas.length} visitas próximas y {pendientes} recordatorios pendientes.
+            {proximasCitas.length === 0 && pendientes === 0
+              ? 'No tienes visitas próximas ni recordatorios pendientes.'
+              : `Tienes ${proximasCitas.length} visitas próximas y ${pendientes} recordatorios pendientes.`}
           </Text>
+          {pendientes > 0 && <Text style={styles.parrafo}>{vencidos} vencidos · {hoy} por hacer hoy · {sinFecha} sin fecha.</Text>}
+          <Text style={styles.link} onPress={() => router.push('/recordatorios')}>Gestionar recordatorios</Text>
         </View>
 
         {/* ------ Acciones rápidas ------ */}

@@ -16,6 +16,7 @@
 // ============================================================================
 
 import * as React from 'react';
+import { completarRecordatorio, fechaRecordatorio } from '@/utils/recordatorios';
 
 import { MOCK_EMAIL, MOCK_PASSWORD, mockData } from '@/data/mockData';
 import {
@@ -77,6 +78,8 @@ interface AuthContextValue {
   logout: () => void;
   cargarDatos: () => Promise<void>;
   tacharRecordatorio: (id: number, completado: boolean) => Promise<void>;
+  guardarRecordatorio: (datos: Omit<Recordatorio, 'id' | 'completado'>, id?: number) => void;
+  posponerRecordatorio: (id: number, fecha: string) => void;
   /** Añade una mascota al estado local (aporta el id automáticamente). */
   agregarMascota: (datos: Omit<Mascota, 'id'>) => Mascota;
   agregarCita: (datos: { mascota_id: number; motivo: string; fecha_hora: string }) => void;
@@ -106,6 +109,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // con los ids reales de la BD, que son bajos; usamos un arranque alto).
   const proximoId = React.useRef(1000);
   const proximaVisitaId = React.useRef(-1);
+  const recordatoriosLocales = React.useRef(new Set<number>());
+
+  const guardarRecordatorio = React.useCallback((datos: Omit<Recordatorio, 'id' | 'completado'>, id?: number) => {
+    if (!datos.titulo.trim() || datos.titulo.trim().length > 120) throw new Error('Escribe un título de hasta 120 caracteres.');
+    const fecha = fechaRecordatorio(datos.vence_en);
+    if (!fecha || fecha.getTime() <= Date.now()) throw new Error('Elige una fecha y hora futuras.');
+    const mascota = mascotas.find((m) => m.id === datos.mascota_id);
+    if (datos.mascota_id !== null && !mascota) throw new Error('Selecciona una mascota registrada.');
+    const clave = id ?? proximaVisitaId.current--;
+    const cambios = { ...datos, titulo: datos.titulo.trim(), mascota_nombre: mascota?.nombre, vence_en: fecha.toISOString(), dia_repeticion: fecha.getDate() };
+    recordatoriosLocales.current.add(clave);
+    setRecordatorios((prev) => id === undefined
+      ? [...prev, { ...cambios, id: clave, completado: false }]
+      : prev.map((r) => r.id === id ? { ...r, ...cambios } : r));
+  }, [mascotas]);
+
+  const posponerRecordatorio = React.useCallback((id: number, fecha: string) => {
+    const nuevaFecha = fechaRecordatorio(fecha);
+    if (!nuevaFecha || nuevaFecha.getTime() <= Date.now()) throw new Error('Elige una fecha y hora futuras.');
+    recordatoriosLocales.current.add(id);
+    setRecordatorios((prev) => prev.map((r) => r.id === id && !r.completado ? { ...r, vence_en: nuevaFecha.toISOString(), dia_repeticion: nuevaFecha.getDate() } : r));
+  }, []);
 
   // Las visitas creadas en este avance se conservan durante la sesión.
   const agregarCita = React.useCallback((datos: { mascota_id: number; motivo: string; fecha_hora: string }) => {
@@ -127,6 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRecordatorios((prev) => [...prev, {
       id, mascota_id: mascota.id, mascota_nombre: mascota.nombre,
       titulo: 'Visita veterinaria', descripcion: motivo, tipo: 'cita',
+      cita_id: id,
       vence_en: fecha.toISOString(), completado: false,
     }]);
   }, [mascotas]);
@@ -277,11 +303,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const tacharRecordatorio = React.useCallback(
     async (id: number, completado: boolean) => {
       // Actualizamos el estado local inmediatamente (optimismo en la UI).
-      setRecordatorios((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, completado } : r))
-      );
+      const ahora = Date.now();
+      setRecordatorios((prev) => prev.map((r) => r.id === id ? completarRecordatorio(r, completado, ahora) : r));
 
-      if (token && conectado && id > 0) {
+      if (token && conectado && id > 0 && !recordatoriosLocales.current.has(id)) {
         try {
           await apiTacharRecordatorio(token, id, completado);
         } catch {
@@ -300,6 +325,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setMascotas([]);
     setCitas([]);
     setRecordatorios([]);
+    recordatoriosLocales.current.clear();
   }, []);
 
   // ==========================================================================
@@ -317,6 +343,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     cargarDatos,
     tacharRecordatorio,
+    guardarRecordatorio,
+    posponerRecordatorio,
     agregarMascota,
     agregarCita,
     actualizarPesoMascota,

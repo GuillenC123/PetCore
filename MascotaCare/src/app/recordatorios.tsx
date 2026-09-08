@@ -8,25 +8,39 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import ReminderCard from '@/components/ReminderCard';
+import ReminderForm from '@/components/ReminderForm';
+import { useAhora } from '@/hooks/use-ahora';
+import { fechaRecordatorio, ordenarRecordatorios } from '@/utils/recordatorios';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import type { Recordatorio } from '@/types';
 
 export default function RecordatoriosScreen() {
-  const { recordatorios, tacharRecordatorio } = useAuth();
+  const { recordatorios, tacharRecordatorio, posponerRecordatorio } = useAuth();
+  const ahora = useAhora();
+  const [editor, setEditor] = useState<Recordatorio | 'nuevo' | null>(null);
+  const [mensaje, setMensaje] = useState('');
 
   // Ordena: pendientes primero, completados al final.
-  const ordenados = [...recordatorios].sort(
-    (a, b) => Number(a.completado) - Number(b.completado)
-  );
+  const ordenados = ordenarRecordatorios(recordatorios);
+  const posponer = (r: Recordatorio, minutos: number) => {
+    const base = Math.max(Date.now(), fechaRecordatorio(r.vence_en)?.getTime() ?? 0);
+    const fecha = new Date(base);
+    if (minutos === 1440) fecha.setDate(fecha.getDate() + 1);
+    else fecha.setMinutes(fecha.getMinutes() + minutos);
+    posponerRecordatorio(r.id, fecha.toISOString());
+    setMensaje(r.cita_id !== undefined ? 'Aviso pospuesto. La fecha de la visita no cambia.' : 'Recordatorio pospuesto.');
+  };
 
   // Al tocar el checkbox, cambiamos el estado completado del recordatorio.
   const manejarToggle = (recordatorio: Recordatorio) => {
     tacharRecordatorio(recordatorio.id, !recordatorio.completado);
+    setMensaje(recordatorio.repeticion && recordatorio.repeticion !== 'ninguna' ? 'Realización registrada. Se programó la siguiente fecha.' : 'Recordatorio actualizado.');
   };
 
   const pendientes = recordatorios.filter((r) => !r.completado).length;
@@ -53,20 +67,31 @@ export default function RecordatoriosScreen() {
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
+        <Text style={styles.empty}>Los cambios se conservan durante esta sesión.</Text>
+        {!!mensaje && <Text accessibilityRole="alert" style={styles.empty}>{mensaje}</Text>}
+        {editor ? <ReminderForm key={editor === 'nuevo' ? 'nuevo' : editor.id} recordatorio={editor === 'nuevo' ? undefined : editor}
+          cerrar={(texto) => { setEditor(null); setMensaje(texto ?? ''); }} /> : <>
+        <Pressable accessibilityRole="button" style={styles.newButton} onPress={() => { setMensaje(''); setEditor('nuevo'); }}>
+          <Text style={styles.newText}>Crear recordatorio</Text>
+        </Pressable>
         {ordenados.length === 0 ? (
           <Text style={styles.empty}>No tienes recordatorios.</Text>
         ) : (
           ordenados.map((r) => (
-            <ReminderCard key={r.id} recordatorio={r} onToggle={manejarToggle} />
+            <ReminderCard key={r.id} recordatorio={r} onToggle={manejarToggle} ahora={ahora} onEdit={setEditor} onPostpone={posponer} />
           ))
         )}
+        </>}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  newButton: { padding: 16, borderRadius: 14, backgroundColor: '#0369A1', alignItems: 'center' },
+  newText: { color: '#FFFFFF', fontWeight: '700', fontSize: 16 },
   safe: {
     flex: 1,
     backgroundColor: AppColors.background,

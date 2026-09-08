@@ -14,18 +14,24 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppColors } from '@/constants/theme';
 import type { Recordatorio } from '@/types';
 import { formatearFechaCita } from '@/utils/estados';
+import { estadoRecordatorio, fechaRecordatorio, REPETICIONES } from '@/utils/recordatorios';
 
 interface ReminderCardProps {
   recordatorio: Recordatorio;
   /** Acción al tocar el checkbox (marcar como completado). */
   onToggle: (recordatorio: Recordatorio) => void;
+  ahora: number;
+  onEdit: (recordatorio: Recordatorio) => void;
+  onPostpone: (recordatorio: Recordatorio, minutos: number) => void;
 }
 
-export default function ReminderCard({ recordatorio, onToggle }: ReminderCardProps) {
+export default function ReminderCard({ recordatorio, onToggle, ahora, onEdit, onPostpone }: ReminderCardProps) {
   // El subtítulo en rojo con alerta corresponde a recordatorios que vencen hoy/mañana.
-  const esUrgente = /mañana|hoy/i.test(recordatorio.descripcion ?? '');
+  const estado = estadoRecordatorio(recordatorio, ahora);
+  const esUrgente = estado === 'Vencido' || estado === 'Hoy';
   // Color del borde izquierdo: verde oscuro si urgente, gris si no.
-  const colorBorde = esUrgente ? AppColors.successDark : AppColors.textMuted;
+  const colorBorde = esUrgente ? AppColors.danger : AppColors.textMuted;
+  const fecha = fechaRecordatorio(recordatorio.vence_en);
 
   return (
     <View style={[styles.card, { borderLeftColor: colorBorde }]}>
@@ -33,9 +39,9 @@ export default function ReminderCard({ recordatorio, onToggle }: ReminderCardPro
       <View style={styles.info}>
         <Text style={styles.titulo}>{recordatorio.titulo}</Text>
         {!!recordatorio.mascota_nombre && <Text style={styles.subtitulo}>{recordatorio.mascota_nombre}</Text>}
-        {recordatorio.tipo === 'cita' && recordatorio.vence_en && Number.isFinite(Date.parse(recordatorio.vence_en)) && (
-          <Text style={styles.subtitulo}>{formatearFechaCita(recordatorio.vence_en)}</Text>
-        )}
+        <Text style={[styles.subtitulo, esUrgente && { color: '#B91C1C' }]}>{estado}{fecha ? ` · ${formatearFechaCita(fecha.toISOString())}` : ''}</Text>
+        <Text style={styles.subtitulo}>{REPETICIONES[recordatorio.repeticion ?? 'ninguna']}</Text>
+        {!!recordatorio.ultima_realizacion && <Text style={styles.subtitulo}>Última realización: {formatearFechaCita(recordatorio.ultima_realizacion)}</Text>}
         <View style={styles.subtituloRow}>
           {/* Ícono de alerta solo cuando el recordatorio es urgente. */}
           {esUrgente && <Ionicons name="alert-circle" size={14} color={AppColors.danger} />}
@@ -44,11 +50,21 @@ export default function ReminderCard({ recordatorio, onToggle }: ReminderCardPro
             {recordatorio.descripcion}
           </Text>
         </View>
+        <View style={styles.actions}>
+          <Pressable accessibilityRole="button" onPress={() => onEdit(recordatorio)} style={styles.action}><Text style={styles.link}>Editar</Text></Pressable>
+          {!recordatorio.completado && <>
+            <Pressable accessibilityRole="button" onPress={() => onPostpone(recordatorio, 60)} style={styles.action}><Text style={styles.link}>Posponer 1 h</Text></Pressable>
+            <Pressable accessibilityRole="button" onPress={() => onPostpone(recordatorio, 1440)} style={styles.action}><Text style={styles.link}>Posponer 1 día</Text></Pressable>
+          </>}
+        </View>
+        {recordatorio.repeticion && recordatorio.repeticion !== 'ninguna' && <Text style={styles.subtitulo}>Completar programa la siguiente fecha.</Text>}
       </View>
 
       {/* Checkbox cuadrado: al marcarlo se completa el recordatorio. */}
       <Pressable
         onPress={() => onToggle(recordatorio)}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: recordatorio.completado }}
         style={[styles.checkbox, recordatorio.completado && styles.checkboxMarcado]}
         accessibilityLabel={`Marcar ${recordatorio.titulo}`}>
         {recordatorio.completado && (
@@ -60,6 +76,9 @@ export default function ReminderCard({ recordatorio, onToggle }: ReminderCardPro
 }
 
 const styles = StyleSheet.create({
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  action: { paddingVertical: 12, paddingHorizontal: 4 },
+  link: { color: '#0369A1', fontWeight: '600' },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -95,8 +114,8 @@ const styles = StyleSheet.create({
     color: AppColors.textSecondary,
   },
   checkbox: {
-    width: 26,
-    height: 26,
+    width: 44,
+    height: 44,
     borderRadius: 6,
     borderWidth: 2,
     borderColor: AppColors.textMuted,

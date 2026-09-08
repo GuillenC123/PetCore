@@ -75,6 +75,10 @@ export interface Cita {
 // ---------------------------------------------------------------------------
 
 export interface Recordatorio {
+  repeticion?: 'ninguna' | 'diaria' | 'semanal' | 'mensual';
+  ultima_realizacion?: string;
+  dia_repeticion?: number;
+  cita_id?: number;
   id: number;
   titulo: string;
   descripcion: string | null;
