@@ -30,7 +30,7 @@ import FormInput from '@/components/FormInput';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import type { EstadoMascota } from '@/types';
-import { validarTexto } from '@/utils/validaciones';
+import { validarPeso, validarTexto } from '@/utils/validaciones';
 
 // Especies disponibles para el selector rápido.
 const ESPECIES = ['Perro', 'Gato', 'Otro'] as const;
@@ -44,6 +44,7 @@ export default function NuevaMascotaScreen() {
   const [especie, setEspecie] = useState<Especie>('Perro');
   const [raza, setRaza] = useState('');
   const [edad, setEdad] = useState('');
+  const [peso, setPeso] = useState('');
 
   // Errores por campo (se limpian al editar; se rellenan al validar).
   const [errores, setErrores] = useState<Record<string, string>>({});
@@ -61,6 +62,8 @@ export default function NuevaMascotaScreen() {
     if (errorRaza) err.raza = errorRaza;
     const errorEdad = validarTexto(edad, 60);
     if (errorEdad) err.edad = errorEdad;
+    const errorPeso = validarPeso(peso);
+    if (errorPeso) err.peso = errorPeso;
 
     setErrores(err);
     return Object.keys(err).length === 0;
@@ -79,6 +82,7 @@ export default function NuevaMascotaScreen() {
       especie,
       raza: raza.trim(),
       edad: edad.trim(),
+      peso: peso.trim() ? Number(peso.trim().replace(',', '.')) : null,
       estado: 'saludable' as EstadoMascota,
       imagen: null,
     });
@@ -158,6 +162,16 @@ export default function NuevaMascotaScreen() {
               value={edad}
               onChangeText={setEdad}
               error={errores.edad}
+            />
+            <Text style={styles.label}>Peso en kg (opcional)</Text>
+            <FormInput
+              icon="scale-outline"
+              accessibilityLabel="Peso de la mascota en kilogramos"
+              placeholder="Ej. 4,5"
+              keyboardType="decimal-pad"
+              value={peso}
+              onChangeText={(valor) => { setPeso(valor); setErrores((prev) => ({ ...prev, peso: '' })); }}
+              error={errores.peso}
             />
           </View>
 

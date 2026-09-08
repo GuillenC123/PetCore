@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,7 +11,11 @@ import { interpretarFechaVisita } from '@/utils/citas';
 
 export default function NuevaCitaScreen() {
   const { mascotas, agregarCita } = useAuth();
-  const [mascotaId, setMascotaId] = useState<number | null>(null);
+  const params = useLocalSearchParams<{ mascotaId?: string }>();
+  const [mascotaId, setMascotaId] = useState<number | null>(() => {
+    const id = Number(params.mascotaId);
+    return mascotas.some((m) => m.id === id) ? id : null;
+  });
   const [motivo, setMotivo] = useState('');
   const [fecha, setFecha] = useState('');
   const [hora, setHora] = useState('');
@@ -50,6 +54,7 @@ export default function NuevaCitaScreen() {
         </View>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Text style={styles.description}>Anota cuándo llevarás a tu mascota a la veterinaria y el motivo de la visita.</Text>
+          <Text style={styles.description}>Al guardar, la mascota seleccionada aparecerá con estado Malestar en rojo.</Text>
           {mascotas.length === 0 ? (
             <View style={styles.group}>
               <Text style={styles.label}>Primero registra una mascota</Text>

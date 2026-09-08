@@ -26,6 +26,8 @@ export function configurarEstadoMascota(estado: EstadoMascota): EstadoMascotaUI 
   switch (estado) {
     case 'saludable':
       return { label: 'Saludable', tone: 'success' };
+    case 'malestar':
+      return { label: 'Malestar', tone: 'danger' };
     case 'vacuna_pendiente':
       return { label: 'Vacuna Pendiente', tone: 'danger' };
     case 'en_tratamiento':

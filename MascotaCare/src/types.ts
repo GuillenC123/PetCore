@@ -13,7 +13,7 @@
 // ---------------------------------------------------------------------------
 
 /** Estado de salud de una mascota. */
-export type EstadoMascota = 'saludable' | 'vacuna_pendiente' | 'en_tratamiento';
+export type EstadoMascota = 'saludable' | 'malestar' | 'vacuna_pendiente' | 'en_tratamiento';
 
 /** Estado de una cita veterinaria. */
 export type EstadoCita = 'confirmado' | 'pendiente' | 'programado' | 'cancelado' | 'completado';
@@ -46,6 +46,8 @@ export interface Mascota {
   especie: string;
   /** Edad en formato de texto (ej. "3 años"). */
   edad: string;
+  /** Peso en kilogramos; ausente para mascotas que aún no lo registraron. */
+  peso?: number | null;
   estado: EstadoMascota;
   /** URI o null si no hay foto subida. */
   imagen: string | null;

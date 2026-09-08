@@ -1,4 +1,14 @@
 /** Reglas de formularios alineadas con server/src/validation y schema.sql. */
+/** Peso opcional, expresado en kg, con punto o coma decimal. */
+export function validarPeso(valor: string): string | undefined {
+  const texto = valor.trim();
+  if (!texto) return;
+  const numero = Number(texto.replace(',', '.'));
+  if (!/^\d+(?:[.,]\d+)?$/.test(texto) || !Number.isFinite(numero) || numero <= 0) {
+    return 'Ingresa un peso mayor que cero en kg, por ejemplo 4,5.';
+  }
+}
+
 export function validarTexto(valor: string, maximo: number, minimo = 1): string | undefined {
   const longitud = [...valor.trim()].length;
   if (valor.includes('\0') || longitud < minimo || longitud > maximo) {

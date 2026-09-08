@@ -75,12 +75,12 @@ export default function HomeScreen() {
           </Text>
         </View>
         <View style={styles.list}>
-          {/* En Inicio se muestran sin las etiquetas de estado. */}
+          {/* El estado se mantiene visible también en Inicio. */}
           {mascotas.map((m) => (
             <PetCard
               key={m.id}
               mascota={m}
-              showStatus={false}
+              showStatus
               onPress={() => router.push(`/mascota-detalle?id=${m.id}`)}
             />
           ))}

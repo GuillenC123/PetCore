@@ -80,6 +80,7 @@ interface AuthContextValue {
   /** Añade una mascota al estado local (aporta el id automáticamente). */
   agregarMascota: (datos: Omit<Mascota, 'id'>) => Mascota;
   agregarCita: (datos: { mascota_id: number; motivo: string; fecha_hora: string }) => void;
+  actualizarPesoMascota: (id: number, peso: number | null) => void;
   /** Actualiza el perfil en memoria durante la sesión, sin llamar a la API. */
   actualizarPerfil: (datos: Pick<Usuario, 'nombre' | 'correo'>) => void;
 }
@@ -117,6 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Selecciona una fecha y hora futuras.');
     }
     const id = proximaVisitaId.current--;
+    setMascotas((prev) => prev.map((m) => m.id === mascota.id ? { ...m, estado: 'malestar' } : m));
     setCitas((prev) => [...prev, {
       id, mascota_id: mascota.id, mascota_nombre: mascota.nombre,
       titulo: motivo, fecha_hora: fecha.toISOString(),
@@ -128,6 +130,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       vence_en: fecha.toISOString(), completado: false,
     }]);
   }, [mascotas]);
+
+  const actualizarPesoMascota = React.useCallback((id: number, peso: number | null) => {
+    if (peso !== null && (!Number.isFinite(peso) || peso <= 0)) {
+      throw new Error('El peso debe ser mayor que cero.');
+    }
+    setMascotas((prev) => prev.map((m) => m.id === id ? { ...m, peso } : m));
+  }, []);
 
   const actualizarPerfil = React.useCallback((datos: Pick<Usuario, 'nombre' | 'correo'>) => {
     setUsuario((actual) => actual ? {
@@ -310,6 +319,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     tacharRecordatorio,
     agregarMascota,
     agregarCita,
+    actualizarPesoMascota,
     actualizarPerfil,
   };
 
