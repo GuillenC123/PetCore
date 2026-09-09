@@ -16,6 +16,7 @@
 // ============================================================================
 
 import * as React from 'react';
+import { crearTratamiento, registrarToma, type NuevoTratamiento } from '@/utils/tratamientos';
 import { validarFichaSalud, type DatosFichaSalud } from '@/utils/salud';
 import { completarRecordatorio, fechaRecordatorio } from '@/utils/recordatorios';
 
@@ -30,6 +31,8 @@ import {
 } from '@/services/api';
 import type {
   AuthResponse,
+  Tratamiento,
+  EstadoToma,
   Cita,
   Mascota,
   Recordatorio,
@@ -67,6 +70,9 @@ function mensajeServidorNoDisponible(): string {
 // ---------------------------------------------------------------------------
 
 interface AuthContextValue {
+  tratamientos: Tratamiento[];
+  agregarTratamiento: (datos: NuevoTratamiento) => void;
+  marcarToma: (tratamientoId: number, fecha: string, estado: EstadoToma) => void;
   usuario: Usuario | null;
   token: string | null;
   conectado: boolean;
@@ -106,6 +112,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [mascotas, setMascotas] = React.useState<Mascota[]>([]);
   const [citas, setCitas] = React.useState<Cita[]>([]);
   const [recordatorios, setRecordatorios] = React.useState<Recordatorio[]>([]);
+  const [tratamientos, setTratamientos] = React.useState<Tratamiento[]>([]);
+  const siguienteTratamiento = React.useRef(1);
+  const agregarTratamiento = React.useCallback((datos: NuevoTratamiento) => {
+    if (!mascotas.some((m) => m.id === datos.mascota_id)) throw new Error('Selecciona una mascota registrada.');
+    const tratamiento = crearTratamiento(datos, siguienteTratamiento.current);
+    siguienteTratamiento.current++;
+    setTratamientos((prev) => [...prev, tratamiento]);
+  }, [mascotas]);
+  const marcarToma = React.useCallback((id: number, fecha: string, estado: EstadoToma) => {
+    const tratamiento = tratamientos.find((t) => t.id === id);
+    if (!tratamiento) throw new Error('Tratamiento no encontrado.');
+    const ahora = Date.now();
+    registrarToma(tratamiento, fecha, estado, ahora);
+    setTratamientos((prev) => prev.map((t) => t.id === id ? registrarToma(t, fecha, estado, ahora) : t));
+  }, [tratamientos]);
 
   // Contador para generar ids de mascotas creadas localmente (evita colisiones
   // con los ids reales de la BD, que son bajos; usamos un arranque alto).
@@ -329,6 +350,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Cierra la sesión y limpia todos los datos de la app.
   const logout = React.useCallback(() => {
+    setTratamientos([]);
     setUsuario(null);
     setToken(null);
     setConectado(false);
@@ -342,6 +364,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Valor expuesto por el contexto.
   // ==========================================================================
   const value: AuthContextValue = {
+    tratamientos,
+    agregarTratamiento,
+    marcarToma,
     usuario,
     token,
     conectado,

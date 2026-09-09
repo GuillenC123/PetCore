@@ -21,6 +21,11 @@ const secciones: {
     descripcion: 'Selecciona una mascota y pulsa Editar ficha de salud para registrar nacimiento o edad aproximada, sexo, peso, alergias y condiciones. Guarda los cambios antes de cambiar de mascota. Los datos se conservan durante la sesión.',
   },
   {
+    titulo: 'Tratamientos y medicamentos',
+    icono: 'medkit-outline',
+    descripcion: 'En Ficha de salud, selecciona una mascota y pulsa Añadir tratamiento. Transcribe las indicaciones del veterinario, la fecha de inicio, duración y horarios diarios. Consulta las tomas por día y marca cada una como administrada u omitida cuando llegue su horario. Puedes deshacer un registro incorrecto. Los datos se conservan durante la sesión.',
+  },
+  {
     titulo: 'Añadir y consultar mascotas',
     icono: 'paw-outline',
     descripcion: 'Pulsa “Añadir Mascota” en Inicio o el botón +. Completa el nombre, especie, raza y edad, y pulsa “Guardar Mascota”. Toca la tarjeta de una mascota para ver su información y estado de salud.',

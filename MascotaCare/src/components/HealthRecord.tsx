@@ -9,6 +9,7 @@ import { configurarEstadoMascota } from '@/utils/estados';
 import Badge from './Badge';
 import PetImage from './PetImage';
 import FormInput from './FormInput';
+import Treatments from './Treatments';
 
 const SEXOS = { desconocido: 'Sin registrar', macho: 'Macho', hembra: 'Hembra' } as const;
 
@@ -35,6 +36,7 @@ export default function HealthRecord({ mascota }: { mascota: Mascota }) {
         <Dato label="Condiciones registradas" valor={mascota.condiciones} />
         {guardado && <Text accessibilityRole="alert" style={styles.text}>Ficha guardada para esta sesión.</Text>}
         <Boton label="Editar ficha de salud" onPress={() => { setEditando(true); setGuardado(false); }} />
+        <Treatments mascotaId={mascota.id} nombre={mascota.nombre} />
       </>}
     </View>
   );

@@ -108,3 +108,20 @@ export interface AuthResponse {
 export interface ApiError {
   error: string;
 }
+
+export type EstadoToma = 'pendiente' | 'administrada' | 'omitida';
+export interface Toma {
+  fecha_hora: string;
+  estado: EstadoToma;
+  registrada_en?: string;
+}
+export interface Tratamiento {
+  id: number;
+  mascota_id: number;
+  medicamento: string;
+  indicaciones: string;
+  inicio: string;
+  duracion_dias: number;
+  horarios: string[];
+  tomas: Toma[];
+}
