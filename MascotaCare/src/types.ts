@@ -48,6 +48,10 @@ export interface Mascota {
   edad: string;
   /** Peso en kilogramos; ausente para mascotas que aún no lo registraron. */
   peso?: number | null;
+  registros_peso?: RegistroPeso[];
+  carnet?: RegistroCarnet[];
+  observaciones?: ObservacionSalud[];
+  adjuntos_historial?: Record<string, AdjuntoSalud[]>;
   nacimiento?: string | null;
   sexo?: 'macho' | 'hembra' | 'desconocido';
   alergias?: string;
@@ -110,6 +114,28 @@ export interface ApiError {
 }
 
 export type EstadoToma = 'pendiente' | 'administrada' | 'omitida';
+export interface AdjuntoSalud { uri: string; nombre: string; mime: string }
+export interface ObservacionSalud {
+  id: number;
+  tipo: 'observacion' | 'consulta';
+  titulo: string;
+  descripcion: string;
+  fecha: string;
+}
+export interface RegistroCarnet {
+  id: number;
+  tipo: 'vacuna' | 'desparasitacion';
+  nombre: string;
+  fecha_aplicacion: string | null;
+  proxima_fecha: string | null;
+  comprobante: string | null;
+  anterior_id?: number;
+}
+export interface RegistroPeso {
+  /** Fecha local ISO, sin hora: AAAA-MM-DD. Un registro por día. */
+  fecha: string;
+  peso: number;
+}
 export interface Toma {
   fecha_hora: string;
   estado: EstadoToma;

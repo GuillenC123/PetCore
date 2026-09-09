@@ -94,7 +94,7 @@ export default function TabsLayout() {
       screenOptions={{ headerShown: false }}>
       <Tabs.Screen name="index" options={{ title: 'Inicio' }} />
       <Tabs.Screen name="mascotas" options={{ title: 'Ficha de salud' }} />
-      <Tabs.Screen name="citas" options={{ title: 'Citas' }} />
+      <Tabs.Screen name="citas" options={{ title: 'Agenda' }} />
       <Tabs.Screen name="perfil" options={{ title: 'Perfil' }} />
     </Tabs>
   );

@@ -16,6 +16,10 @@
 // ============================================================================
 
 import * as React from 'react';
+import { validarObservacion } from '@/utils/historial';
+import { validarCarnet } from '@/utils/carnet';
+import { interpretarFechaVisita } from '@/utils/citas';
+import { aplicarRegistroPeso, crearRegistroPeso, fechaPesoHoy } from '@/utils/peso';
 import { crearTratamiento, registrarToma, type NuevoTratamiento } from '@/utils/tratamientos';
 import { validarFichaSalud, type DatosFichaSalud } from '@/utils/salud';
 import { completarRecordatorio, fechaRecordatorio } from '@/utils/recordatorios';
@@ -31,6 +35,9 @@ import {
 } from '@/services/api';
 import type {
   AuthResponse,
+  ObservacionSalud,
+  AdjuntoSalud,
+  RegistroCarnet,
   Tratamiento,
   EstadoToma,
   Cita,
@@ -70,6 +77,10 @@ function mensajeServidorNoDisponible(): string {
 // ---------------------------------------------------------------------------
 
 interface AuthContextValue {
+  completarCita: (id: number) => void;
+  agregarObservacion: (mascotaId: number, datos: Omit<ObservacionSalud, 'id'>) => void;
+  adjuntarHistorial: (mascotaId: number, clave: string, adjuntos: AdjuntoSalud[]) => void;
+  guardarCarnet: (mascotaId: number, datos: Omit<RegistroCarnet, 'id'>, id?: number) => void;
   tratamientos: Tratamiento[];
   agregarTratamiento: (datos: NuevoTratamiento) => void;
   marcarToma: (tratamientoId: number, fecha: string, estado: EstadoToma) => void;
@@ -91,6 +102,7 @@ interface AuthContextValue {
   agregarMascota: (datos: Omit<Mascota, 'id'>) => Mascota;
   agregarCita: (datos: { mascota_id: number; motivo: string; fecha_hora: string }) => void;
   actualizarPesoMascota: (id: number, peso: number | null) => void;
+  registrarPeso: (id: number, peso: number, fecha: string) => void;
   actualizarFichaSalud: (id: number, datos: DatosFichaSalud) => void;
   /** Actualiza el perfil en memoria durante la sesión, sin llamar a la API. */
   actualizarPerfil: (datos: Pick<Usuario, 'nombre' | 'correo'>) => void;
@@ -132,6 +144,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // con los ids reales de la BD, que son bajos; usamos un arranque alto).
   const proximoId = React.useRef(1000);
   const proximaVisitaId = React.useRef(-1);
+  const siguienteObservacion = React.useRef(1);
+  const agregarObservacion = React.useCallback((mascotaId: number, datos: Omit<ObservacionSalud, 'id'>) => {
+    validarObservacion(datos);
+    if (!mascotas.some((m) => m.id === mascotaId)) throw new Error('Mascota no encontrada.');
+    const observacion = { ...datos, titulo: datos.titulo.trim(), descripcion: datos.descripcion.trim(), id: siguienteObservacion.current++ };
+    setMascotas((prev) => prev.map((m) => m.id === mascotaId ? { ...m, observaciones: [...(m.observaciones ?? []), observacion] } : m));
+  }, [mascotas]);
+  const adjuntarHistorial = React.useCallback((mascotaId: number, clave: string, adjuntos: AdjuntoSalud[]) => {
+    setMascotas((prev) => prev.map((m) => m.id === mascotaId ? { ...m, adjuntos_historial: {
+      ...m.adjuntos_historial, [clave]: [...(m.adjuntos_historial?.[clave] ?? []), ...adjuntos],
+    } } : m));
+  }, []);
+  const completarCita = React.useCallback((id: number) => {
+    const cita = citas.find((c) => c.id === id);
+    if (!cita || cita.estado === 'cancelado' || Date.parse(cita.fecha_hora) > Date.now()) throw new Error('La visita aún no puede marcarse como realizada.');
+    setCitas((prev) => prev.map((c) => c.id === id ? { ...c, estado: 'completado' } : c));
+    setRecordatorios((prev) => prev.map((r) => r.cita_id === id ? { ...r, completado: true } : r));
+  }, [citas]);
+  const siguienteCarnet = React.useRef(1);
+  const guardarCarnet = React.useCallback((mascotaId: number, datos: Omit<RegistroCarnet, 'id'>, id?: number) => {
+    const error = validarCarnet(datos);
+    if (error) throw new Error(error);
+    const mascota = mascotas.find((m) => m.id === mascotaId);
+    if (!mascota) throw new Error('Mascota no encontrada.');
+    if (id !== undefined && !mascota.carnet?.some((r) => r.id === id)) throw new Error('Registro no encontrado.');
+    if (datos.anterior_id !== undefined && !mascota.carnet?.some((r) => r.id === datos.anterior_id)) throw new Error('Aplicación anterior no encontrada.');
+    if (datos.anterior_id !== undefined) {
+      const anterior = mascota.carnet!.find((r) => r.id === datos.anterior_id)!;
+      if (!datos.fecha_aplicacion || !anterior.fecha_aplicacion || datos.anterior_id === id ||
+          interpretarFechaVisita(datos.fecha_aplicacion, '00:00')! <= interpretarFechaVisita(anterior.fecha_aplicacion, '00:00')!) {
+        throw new Error('La nueva aplicación debe ser posterior a la anterior.');
+      }
+      if (mascota.carnet!.some((r) => r.id !== id && r.anterior_id === datos.anterior_id)) throw new Error('La siguiente aplicación ya está registrada.');
+    }
+    const siguiente = mascota.carnet?.find((r) => id !== undefined && r.anterior_id === id);
+    if (siguiente && (!datos.fecha_aplicacion || interpretarFechaVisita(datos.fecha_aplicacion, '00:00')! >= interpretarFechaVisita(siguiente.fecha_aplicacion!, '00:00')!)) {
+      throw new Error('Conserva una fecha anterior a la siguiente aplicación registrada.');
+    }
+    const registro = { ...datos, nombre: datos.nombre.trim(), id: id ?? siguienteCarnet.current++ };
+    setMascotas((prev) => prev.map((m) => m.id === mascotaId ? { ...m, carnet: id === undefined
+      ? [...(m.carnet ?? []), registro] : (m.carnet ?? []).map((r) => r.id === id ? registro : r) } : m));
+  }, [mascotas]);
+  const registrarPeso = React.useCallback((id: number, peso: number, fecha: string) => {
+    if (!mascotas.some((m) => m.id === id)) throw new Error('Mascota no encontrada.');
+    const registro = crearRegistroPeso(peso, fecha);
+    setMascotas((prev) => prev.map((m) => m.id === id ? aplicarRegistroPeso(m, registro) : m));
+  }, [mascotas]);
   const actualizarFichaSalud = React.useCallback((id: number, datos: DatosFichaSalud) => {
     const error = validarFichaSalud(datos);
     if (error) throw new Error(error);
@@ -192,7 +251,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (peso !== null && (!Number.isFinite(peso) || peso <= 0)) {
       throw new Error('El peso debe ser mayor que cero.');
     }
-    setMascotas((prev) => prev.map((m) => m.id === id ? { ...m, peso } : m));
+    const registro = peso !== null ? crearRegistroPeso(peso, fechaPesoHoy()) : null;
+    setMascotas((prev) => prev.map((m) => m.id === id ? registro ? aplicarRegistroPeso(m, registro) : { ...m, peso: m.registros_peso?.length ? m.peso : null } : m));
   }, []);
 
   const actualizarPerfil = React.useCallback((datos: Pick<Usuario, 'nombre' | 'correo'>) => {
@@ -210,7 +270,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * sincronizará con la API.
    */
   const agregarMascota = React.useCallback((datos: Omit<Mascota, 'id'>): Mascota => {
-    const nueva: Mascota = { ...datos, id: proximoId.current++ };
+    const base: Mascota = { ...datos, id: proximoId.current++ };
+    const nueva = datos.peso != null ? aplicarRegistroPeso(base, crearRegistroPeso(datos.peso, fechaPesoHoy())) : base;
     setMascotas((prev) => [nueva, ...prev]);
     return nueva;
   }, []);
@@ -364,6 +425,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Valor expuesto por el contexto.
   // ==========================================================================
   const value: AuthContextValue = {
+    completarCita,
+    agregarObservacion,
+    adjuntarHistorial,
+    guardarCarnet,
     tratamientos,
     agregarTratamiento,
     marcarToma,
@@ -383,6 +448,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     agregarMascota,
     agregarCita,
     actualizarPesoMascota,
+    registrarPeso,
     actualizarFichaSalud,
     actualizarPerfil,
   };

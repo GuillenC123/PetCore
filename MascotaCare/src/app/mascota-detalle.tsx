@@ -112,7 +112,7 @@ function EditorPeso({ id, pesoActual }: { id: number; pesoActual?: number | null
   const [guardado, setGuardado] = useState(false);
 
   const guardar = () => {
-    const mensaje = validarPeso(peso);
+    const mensaje = peso.trim() ? validarPeso(peso) : 'Ingresa el peso en kg.';
     setError(mensaje);
     if (mensaje) return;
     actualizarPesoMascota(id, peso.trim() ? Number(peso.trim().replace(',', '.')) : null);
@@ -124,7 +124,7 @@ function EditorPeso({ id, pesoActual }: { id: number; pesoActual?: number | null
     <View style={{ gap: 10 }}>
       {editando ? (
         <>
-          <Text style={styles.cardTexto}>Peso en kg (opcional)</Text>
+          <Text style={styles.cardTexto}>Peso en kg. Se registrará con la fecha de hoy.</Text>
           <FormInput accessibilityLabel="Peso en kilogramos" placeholder="Ej. 4,5" keyboardType="decimal-pad"
             value={peso} onChangeText={(valor) => { setPeso(valor); setError(undefined); }} error={error} />
           <Pressable accessibilityRole="button" style={styles.action} onPress={guardar}>

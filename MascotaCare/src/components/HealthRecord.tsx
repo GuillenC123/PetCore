@@ -4,12 +4,14 @@ import type { Mascota } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { AppColors } from '@/constants/theme';
 import { edadMascota } from '@/utils/salud';
-import { validarPeso } from '@/utils/validaciones';
 import { configurarEstadoMascota } from '@/utils/estados';
 import Badge from './Badge';
 import PetImage from './PetImage';
 import FormInput from './FormInput';
 import Treatments from './Treatments';
+import WeightTracker from './WeightTracker';
+import VaccineRecord from './VaccineRecord';
+import HealthTimeline from './HealthTimeline';
 
 const SEXOS = { desconocido: 'Sin registrar', macho: 'Macho', hembra: 'Hembra' } as const;
 
@@ -36,7 +38,10 @@ export default function HealthRecord({ mascota }: { mascota: Mascota }) {
         <Dato label="Condiciones registradas" valor={mascota.condiciones} />
         {guardado && <Text accessibilityRole="alert" style={styles.text}>Ficha guardada para esta sesión.</Text>}
         <Boton label="Editar ficha de salud" onPress={() => { setEditando(true); setGuardado(false); }} />
+        <WeightTracker mascota={mascota} />
+        <VaccineRecord mascota={mascota} />
         <Treatments mascotaId={mascota.id} nombre={mascota.nombre} />
+        <HealthTimeline mascota={mascota} />
       </>}
     </View>
   );
@@ -48,16 +53,13 @@ function Editor({ mascota, cancelar, guardar }: { mascota: Mascota; cancelar: ()
   const [nacimiento, setNacimiento] = useState(mascota.nacimiento ?? '');
   const [edad, setEdad] = useState(edadMascota(mascota));
   const [sexo, setSexo] = useState(mascota.sexo ?? 'desconocido');
-  const [peso, setPeso] = useState(mascota.peso?.toString() ?? '');
   const [alergias, setAlergias] = useState(mascota.alergias ?? '');
   const [condiciones, setCondiciones] = useState(mascota.condiciones ?? '');
   const [error, setError] = useState('');
   const enviar = () => {
-    const errorPeso = validarPeso(peso);
-    if (errorPeso) { setError(errorPeso); return; }
     try {
       actualizarFichaSalud(mascota.id, { nacimiento: usaNacimiento ? nacimiento.trim() : null, edad,
-        sexo, peso: peso.trim() ? Number(peso.trim().replace(',', '.')) : null, alergias, condiciones });
+        sexo, peso: mascota.peso ?? null, alergias, condiciones });
       guardar();
     } catch (err) { setError(err instanceof Error ? err.message : 'No se pudo guardar la ficha.'); }
   };
@@ -73,7 +75,7 @@ function Editor({ mascota, cancelar, guardar }: { mascota: Mascota; cancelar: ()
     <View style={styles.options}>{(Object.entries(SEXOS) as [keyof typeof SEXOS, string][]).map(([value, label]) =>
       <Opcion key={value} label={label} activo={sexo === value} onPress={() => setSexo(value)} />)}</View>
     <Text style={styles.label}>Peso en kg (opcional)</Text>
-    <FormInput accessibilityLabel="Peso en kilogramos" placeholder="Ej. 4,5" keyboardType="decimal-pad" value={peso} onChangeText={setPeso} />
+    <Text style={styles.text}>{mascota.peso != null ? `${mascota.peso} kg` : 'Sin registrar'}. Actualízalo en Seguimiento de peso, indicando la fecha de medición.</Text>
     <Text style={styles.label}>Alergias</Text>
     <FormInput accessibilityLabel="Alergias" placeholder="Escribe las alergias conocidas" multiline maxLength={1000} value={alergias} onChangeText={setAlergias} />
     <Text style={styles.label}>Condiciones registradas</Text>

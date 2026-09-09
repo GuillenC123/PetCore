@@ -11,17 +11,11 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AppHeader from '@/components/AppHeader';
-import AppointmentCard from '@/components/AppointmentCard';
+import CareAgenda from '@/components/CareAgenda';
 import { AppColors } from '@/constants/theme';
-import { useAuth } from '@/context/AuthContext';
-import { obtenerProximasCitas } from '@/utils/citas';
-import { useAhora } from '@/hooks/use-ahora';
 
 export default function CitasScreen() {
-  const { citas } = useAuth();
   const { creada } = useLocalSearchParams<{ creada?: string }>();
-  const ahora = useAhora();
-  const proximas = obtenerProximasCitas(citas, ahora);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -34,8 +28,8 @@ export default function CitasScreen() {
 
         {/* Título y subtítulo. */}
         <View style={styles.titleBlock}>
-          <Text style={styles.title}>Próximas Citas</Text>
-          <Text style={styles.subtitle}>Recuerda cuándo llevar a tus mascotas a la veterinaria.</Text>
+          <Text style={styles.title}>Agenda de cuidados</Text>
+          <Text style={styles.subtitle}>Visitas, medicamentos y recordatorios en un solo lugar.</Text>
         </View>
         {creada === '1' && (
           <View style={styles.notice}>
@@ -51,11 +45,7 @@ export default function CitasScreen() {
 
         {/* Lista de citas (cada una con su borde y badge de estado). */}
         <View style={styles.list}>
-          {proximas.length === 0 ? (
-            <Text style={styles.empty}>No tienes citas programadas.</Text>
-          ) : (
-            proximas.map((c) => <AppointmentCard key={c.id} cita={c} />)
-          )}
+          <CareAgenda key={creada ?? 'agenda'} initialFilter={creada === '1' ? 'Todos' : 'Hoy'} />
         </View>
       </ScrollView>
     </SafeAreaView>

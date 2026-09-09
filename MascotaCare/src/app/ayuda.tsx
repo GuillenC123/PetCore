@@ -13,7 +13,7 @@ const secciones: {
   {
     titulo: 'Inicio',
     icono: 'home-outline',
-    descripcion: 'Consulta el resumen de tus mascotas, próximas citas y recordatorios pendientes. Usa la barra inferior para cambiar entre Inicio, Ficha de salud, Citas y Perfil.',
+    descripcion: 'Consulta el resumen de tus mascotas, próximas citas y recordatorios pendientes. Usa la barra inferior para cambiar entre Inicio, Ficha de salud, Agenda y Perfil.',
   },
   {
     titulo: 'Ficha de salud',
@@ -26,14 +26,29 @@ const secciones: {
     descripcion: 'En Ficha de salud, selecciona una mascota y pulsa Añadir tratamiento. Transcribe las indicaciones del veterinario, la fecha de inicio, duración y horarios diarios. Consulta las tomas por día y marca cada una como administrada u omitida cuando llegue su horario. Puedes deshacer un registro incorrecto. Los datos se conservan durante la sesión.',
   },
   {
+    titulo: 'Seguimiento de peso',
+    icono: 'scale-outline',
+    descripcion: 'En Ficha de salud, selecciona una mascota y registra su peso en kg y la fecha de medición. Consulta la gráfica y el historial. Puedes corregir una medición guardando de nuevo su fecha; se mantiene un registro por día. La medición más reciente determina el peso actual. Los cambios se conservan durante la sesión.',
+  },
+  {
+    titulo: 'Carnet de vacunas y desparasitación',
+    icono: 'shield-checkmark-outline',
+    descripcion: 'En Ficha de salud, añade una aplicación o una próxima fecha indicada por el veterinario y adjunta una foto del comprobante. El historial conserva las aplicaciones realizadas; las próximas fechas aparecen como próximas o vencidas. Pulsa Registrar aplicación en un pendiente para registrar el siguiente cuidado. Los datos y fotos se conservan durante la sesión.',
+  },
+  {
     titulo: 'Añadir y consultar mascotas',
     icono: 'paw-outline',
     descripcion: 'Pulsa “Añadir Mascota” en Inicio o el botón +. Completa el nombre, especie, raza y edad, y pulsa “Guardar Mascota”. Toca la tarjeta de una mascota para ver su información y estado de salud.',
   },
   {
-    titulo: 'Consultar citas',
+    titulo: 'Agenda de cuidados',
     icono: 'calendar-outline',
-    descripcion: 'En Citas puedes ver la fecha, hora, estado y los datos del veterinario disponibles. Actualmente, el acceso “Agendar Cita” de Inicio abre esta lista; la creación de citas aún no está disponible.',
+    descripcion: 'Agenda reúne visitas, tomas pendientes y recordatorios. Filtra por mascota y por Hoy, Esta semana (lunes a domingo), Vencidos o Todos. Marca visitas realizadas y tomas administradas u omitidas desde sus tarjetas. Usa Añadir visita veterinaria para agendar.',
+  },
+  {
+    titulo: 'Historial de salud',
+    icono: 'time-outline',
+    descripcion: 'En Ficha de salud, consulta la línea de tiempo de la mascota. Incluye visitas marcadas como realizadas, vacunas, desparasitaciones y tratamientos que ya comenzaron. Registra consultas anteriores u observaciones y adjunta PDF o fotografías a cada evento. Los archivos se conservan durante la sesión.',
   },
   {
     titulo: 'Notificaciones y recordatorios',

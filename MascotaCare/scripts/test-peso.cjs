@@ -1,0 +1,36 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const ts = require('typescript');
+function cargar(archivo) {
+  const mod = { exports: {} };
+  const codigo = ts.transpileModule(fs.readFileSync(path.join(__dirname, '..', 'src/utils', archivo + '.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+  new Function('require', 'module', 'exports', codigo)(nombre => cargar(nombre.replace('./', '')), mod, mod.exports);
+  return mod.exports;
+}
+const { crearRegistroPeso: crear, aplicarRegistroPeso: aplicar, puntosPeso } = cargar('peso');
+const ahora = new Date(2028, 2, 5);
+for (const peso of [0, -1, NaN, Infinity]) assert.throws(() => crear(peso, '01/03/2028', ahora));
+for (const fecha of ['', '31/02/2028', '06/03/2028']) assert.throws(() => crear(4, fecha, ahora));
+assert.equal(crear(4.5, '29/02/2028', ahora).fecha, '2028-02-29');
+const original = { id: 1, nombre: 'Luna', peso: 5, estado: 'malestar' };
+let mascota = aplicar(original, crear(6, '05/03/2028', ahora));
+mascota = aplicar(mascota, crear(4, '01/03/2028', ahora));
+assert.equal(mascota.peso, 6);
+assert.equal(mascota.registros_peso.length, 2);
+assert.equal(mascota.registros_peso[0].fecha, '2028-03-01');
+mascota = aplicar(mascota, crear(4.5, '01/03/2028', ahora));
+assert.equal(mascota.registros_peso.length, 2);
+assert.equal(mascota.peso, 6);
+mascota = aplicar(mascota, crear(6.5, '05/03/2028', ahora));
+assert.equal(mascota.peso, 6.5);
+assert.equal(mascota.estado, 'malestar');
+assert.equal(original.peso, 5);
+assert.equal(original.registros_peso, undefined);
+assert.deepEqual(puntosPeso([], 100, 100), []);
+assert.deepEqual(puntosPeso([{fecha:'2028-01-01',peso:4}], 100, 100), [{x:50,y:50}]);
+assert.deepEqual(puntosPeso([{fecha:'2028-01-01',peso:4},{fecha:'2028-01-02',peso:4}], 100, 100), [{x:0,y:50},{x:100,y:50}]);
+const puntos = puntosPeso([{fecha:'2028-01-01',peso:4},{fecha:'2028-01-02',peso:5},{fecha:'2028-01-11',peso:6}], 100, 100);
+assert.equal(puntos[1].x, 10);
+assert.equal(puntos[1].y, 50);
+console.log('OK: fechas, peso, correcciones, orden cronologico y grafica.');
