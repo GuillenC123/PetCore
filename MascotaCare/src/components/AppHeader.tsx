@@ -27,6 +27,7 @@ export default function AppHeader({ onPressBell }: AppHeaderProps) {
 
       {/* ---- Botón campana (abre los recordatorios) ---- */}
       <Pressable
+        accessibilityRole="button" hitSlop={6}
         onPress={onPressBell}
         style={({ pressed }) => [styles.bellButton, pressed && styles.pressed]}
         accessibilityLabel="Recordatorios">

@@ -32,7 +32,7 @@ export default function WeightTracker({ mascota }: { mascota: Mascota }) {
     <Text style={styles.label}>Peso en kg</Text>
     <FormInput accessibilityLabel="Nuevo peso en kilogramos" keyboardType="decimal-pad" placeholder="Ej. 4,5" value={peso} onChangeText={setPeso} />
     <Text style={styles.label}>Fecha de medición</Text>
-    <FormInput accessibilityLabel="Fecha de medición del peso" placeholder="DD/MM/AAAA" maxLength={10} value={fecha} onChangeText={setFecha} />
+    <FormInput dateMode="date" accessibilityLabel="Fecha de medición del peso" placeholder="DD/MM/AAAA" maxLength={10} value={fecha} onChangeText={setFecha} />
     <Text style={styles.text}>Un registro por día. Guardar una fecha existente reemplaza su peso. Los cambios se conservan durante esta sesión.</Text>
     {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
     {!!mensaje && <Text accessibilityRole="alert" style={styles.text}>{mensaje}</Text>}

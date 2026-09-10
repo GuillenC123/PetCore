@@ -87,7 +87,7 @@ function Formulario({ mascotaId, cerrar }: { mascotaId: number; cerrar: (guardad
     <Text style={styles.label}>Título</Text>
     <FormInput accessibilityLabel="Título del registro de salud" value={titulo} onChangeText={setTitulo} maxLength={120} placeholder="Motivo de consulta u observación" />
     <Text style={styles.label}>Fecha</Text>
-    <FormInput accessibilityLabel="Fecha del evento de salud" value={fecha} onChangeText={setFecha} maxLength={10} placeholder="DD/MM/AAAA" />
+    <FormInput dateMode="date" accessibilityLabel="Fecha del evento de salud" value={fecha} onChangeText={setFecha} maxLength={10} placeholder="DD/MM/AAAA" />
     <Text style={styles.label}>Descripción</Text>
     <FormInput accessibilityLabel="Descripción del evento de salud" value={descripcion} onChangeText={setDescripcion} maxLength={2000} multiline placeholder="Anota lo observado o las indicaciones de la consulta" />
     {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}

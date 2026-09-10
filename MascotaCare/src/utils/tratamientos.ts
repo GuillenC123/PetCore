@@ -14,7 +14,7 @@ export function crearTratamiento(datos: NuevoTratamiento, id: number): Tratamien
   }
   const horarios = datos.horarios.map((h) => h.trim());
   if (!horarios.length || horarios.length > 24 || horarios.some((h) => !interpretarFechaVisita(datos.inicio, h))) {
-    throw new Error('Introduce de 1 a 24 horarios en formato HH:MM, separados por comas.');
+    throw new Error('Selecciona una hora para cada horario añadido (hasta 24 horarios).');
   }
   if (new Set(horarios).size !== horarios.length) throw new Error('No repitas el mismo horario.');
   horarios.sort();

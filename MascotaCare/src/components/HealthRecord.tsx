@@ -4,8 +4,7 @@ import type { Mascota } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { AppColors } from '@/constants/theme';
 import { edadMascota } from '@/utils/salud';
-import { configurarEstadoMascota } from '@/utils/estados';
-import Badge from './Badge';
+import PetHealthStatus from './PetHealthStatus';
 import PetImage from './PetImage';
 import FormInput from './FormInput';
 import Treatments from './Treatments';
@@ -18,7 +17,6 @@ const SEXOS = { desconocido: 'Sin registrar', macho: 'Macho', hembra: 'Hembra' }
 export default function HealthRecord({ mascota }: { mascota: Mascota }) {
   const [editando, setEditando] = useState(false);
   const [guardado, setGuardado] = useState(false);
-  const salud = configurarEstadoMascota(mascota.estado);
   return (
     <View style={styles.card}>
       <View style={styles.identity}>
@@ -26,7 +24,7 @@ export default function HealthRecord({ mascota }: { mascota: Mascota }) {
         <View style={styles.identityText}>
           <Text style={styles.title}>{mascota.nombre}</Text>
           <Text style={styles.text}>{mascota.especie} · {mascota.raza}</Text>
-          <Badge label={salud.label} tone={salud.tone} />
+          <PetHealthStatus mascota={mascota} />
         </View>
       </View>
       {editando ? <Editor mascota={mascota} cancelar={() => setEditando(false)} guardar={() => { setEditando(false); setGuardado(true); }} /> : <>
@@ -69,7 +67,7 @@ function Editor({ mascota, cancelar, guardar }: { mascota: Mascota; cancelar: ()
       <Opcion label="Conozco el nacimiento" activo={usaNacimiento} onPress={() => setUsaNacimiento(true)} />
       <Opcion label="Edad aproximada" activo={!usaNacimiento} onPress={() => setUsaNacimiento(false)} />
     </View>
-    {usaNacimiento ? <FormInput accessibilityLabel="Fecha de nacimiento" placeholder="DD/MM/AAAA" maxLength={10} value={nacimiento} onChangeText={setNacimiento} />
+    {usaNacimiento ? <FormInput dateMode="date" accessibilityLabel="Fecha de nacimiento" placeholder="DD/MM/AAAA" maxLength={10} value={nacimiento} onChangeText={setNacimiento} />
       : <FormInput accessibilityLabel="Edad aproximada" placeholder="Ej. 2 años y 3 meses" maxLength={60} value={edad} onChangeText={setEdad} />}
     <Text style={styles.label}>Sexo</Text>
     <View style={styles.options}>{(Object.entries(SEXOS) as [keyof typeof SEXOS, string][]).map(([value, label]) =>

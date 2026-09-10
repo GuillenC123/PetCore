@@ -36,6 +36,7 @@ export default function QuickActionCard({
 }: QuickActionCardProps) {
   return (
     <Pressable
+      accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
       {/* Círculo de color claro con el ícono centrado. */}

@@ -19,6 +19,7 @@ interface FABProps {
 export default function FAB({ onPress }: FABProps) {
   return (
     <Pressable
+      accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [styles.fab, pressed && styles.pressed]}
       accessibilityLabel="Agregar">

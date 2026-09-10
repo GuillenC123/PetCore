@@ -57,6 +57,7 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 
         return (
           <Pressable
+            accessibilityRole="tab"
             key={route.key}
             onPress={onPress}
             style={styles.tabButton}

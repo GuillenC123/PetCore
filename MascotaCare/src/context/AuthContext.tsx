@@ -200,6 +200,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } : m));
   }, [mascotas]);
   const recordatoriosLocales = React.useRef(new Set<number>());
+  const guardandoRecordatorios = React.useRef(new Set<number>());
+  const versionSesion = React.useRef(0);
 
   const guardarRecordatorio = React.useCallback((datos: Omit<Recordatorio, 'id' | 'completado'>, id?: number) => {
     if (!datos.titulo.trim() || datos.titulo.trim().length > 120) throw new Error('Escribe un título de hasta 120 caracteres.');
@@ -233,7 +235,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Selecciona una fecha y hora futuras.');
     }
     const id = proximaVisitaId.current--;
-    setMascotas((prev) => prev.map((m) => m.id === mascota.id ? { ...m, estado: 'malestar' } : m));
+    setMascotas((prev) => prev.map((m) => m.id === mascota.id ? { ...m, estado: 'malestar', estado_salud: 'malestar',
+      cuidados_registrados: m.estado === 'en_tratamiento' || m.estado === 'vacuna_pendiente'
+        ? [...new Set([...(m.cuidados_registrados ?? []), m.estado])] : m.cuidados_registrados,
+    } : m));
     setCitas((prev) => [...prev, {
       id, mascota_id: mascota.id, mascota_nombre: mascota.nombre,
       titulo: motivo, fecha_hora: fecha.toISOString(),
@@ -394,16 +399,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // -------------------------------------------------------------------------
   const tacharRecordatorio = React.useCallback(
     async (id: number, completado: boolean) => {
-      // Actualizamos el estado local inmediatamente (optimismo en la UI).
-      const ahora = Date.now();
-      setRecordatorios((prev) => prev.map((r) => r.id === id ? completarRecordatorio(r, completado, ahora) : r));
-
-      if (token && conectado && id > 0 && !recordatoriosLocales.current.has(id)) {
-        try {
+      if (guardandoRecordatorios.current.has(id)) throw new Error('Este recordatorio se está guardando.');
+      guardandoRecordatorios.current.add(id);
+      const sesion = versionSesion.current;
+      try {
+        if (token && conectado && id > 0 && !recordatoriosLocales.current.has(id)) {
           await apiTacharRecordatorio(token, id, completado);
-        } catch {
-          // Si falla la API, el cambio local queda; al recargar se re-sincroniza.
         }
+        if (sesion !== versionSesion.current) return;
+        const ahora = Date.now();
+        setRecordatorios((prev) => prev.map((r) => r.id === id ? completarRecordatorio(r, completado, ahora) : r));
+      } catch {
+        throw new Error('No se pudo guardar el recordatorio. Conservamos su estado anterior. Vuelve a intentarlo.');
+      } finally {
+        guardandoRecordatorios.current.delete(id);
       }
     },
     [token, conectado]
@@ -411,6 +420,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Cierra la sesión y limpia todos los datos de la app.
   const logout = React.useCallback(() => {
+    versionSesion.current++;
     setTratamientos([]);
     setUsuario(null);
     setToken(null);

@@ -57,6 +57,9 @@ export interface Mascota {
   alergias?: string;
   condiciones?: string;
   estado: EstadoMascota;
+  /** Salud independiente de los cuidados; estado se conserva por compatibilidad con la API. */
+  estado_salud?: 'saludable' | 'malestar' | 'sin_registrar';
+  cuidados_registrados?: ('en_tratamiento' | 'vacuna_pendiente')[];
   /** URI o null si no hay foto subida. */
   imagen: string | null;
 }

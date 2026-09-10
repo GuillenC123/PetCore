@@ -6,6 +6,7 @@ import type { EstadoToma, Tratamiento } from '@/types';
 import { AppColors } from '@/constants/theme';
 import { formatearFechaCita } from '@/utils/estados';
 import FormInput from './FormInput';
+import TimeSchedule from './TimeSchedule';
 
 export default function Treatments({ mascotaId, nombre }: { mascotaId: number; nombre: string }) {
   const { tratamientos } = useAuth();
@@ -46,11 +47,11 @@ function Formulario({ mascotaId, cerrar }: { mascotaId: number; cerrar: (guardad
     <Text style={styles.label}>Indicaciones del veterinario</Text>
     <FormInput accessibilityLabel="Indicaciones del veterinario" placeholder="Transcribe la dosis, vía de administración y demás indicaciones" value={indicaciones} onChangeText={setIndicaciones} multiline maxLength={2000} />
     <Text style={styles.label}>Fecha de inicio</Text>
-    <FormInput accessibilityLabel="Fecha de inicio" placeholder="DD/MM/AAAA" value={inicio} onChangeText={setInicio} maxLength={10} />
+    <FormInput dateMode="date" accessibilityLabel="Fecha de inicio" placeholder="DD/MM/AAAA" value={inicio} onChangeText={setInicio} maxLength={10} />
     <Text style={styles.label}>Duración en días</Text>
     <FormInput accessibilityLabel="Duración en días" placeholder="Número de días indicado" value={duracion} onChangeText={setDuracion} keyboardType="number-pad" maxLength={3} />
     <Text style={styles.label}>Horarios diarios (24 horas)</Text>
-    <FormInput accessibilityLabel="Horarios diarios separados por comas" placeholder="Ej. 08:00, 20:00" value={horarios} onChangeText={setHorarios} maxLength={166} />
+    <TimeSchedule value={horarios} onChange={setHorarios} />
     <Text style={styles.text}>Se generará una toma por horario cada día, desde la fecha de inicio. Usa los horarios indicados por el veterinario y la hora local de tu dispositivo.</Text>
     <Text style={styles.text}>Los datos se conservan durante esta sesión.</Text>
     {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}

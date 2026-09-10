@@ -29,7 +29,7 @@ export default function NuevaCitaScreen() {
     if (!mascotas.some((m) => m.id === mascotaId)) erroresNuevos.mascota = 'Selecciona una mascota.';
     if (!motivo.trim()) erroresNuevos.motivo = 'Describe el motivo o malestar de tu mascota.';
     const fechaVisita = interpretarFechaVisita(fecha, hora);
-    if (!fechaVisita) erroresNuevos.fecha = 'Introduce una fecha válida (DD/MM/AAAA) y una hora válida (HH:MM).';
+    if (!fechaVisita) erroresNuevos.fecha = 'Selecciona la fecha y la hora de la visita.';
     else if (fechaVisita.getTime() <= Date.now()) erroresNuevos.fecha = 'La visita debe tener una fecha y hora futuras.';
     setErrores(erroresNuevos);
     if (Object.keys(erroresNuevos).length || !fechaVisita || mascotaId === null) return;
@@ -87,12 +87,12 @@ export default function NuevaCitaScreen() {
               </View>
               <View style={styles.group}>
                 <Text style={styles.label}>Fecha de la visita</Text>
-                <FormInput icon="calendar-outline" accessibilityLabel="Fecha de la visita, día mes y año" placeholder="DD/MM/AAAA"
+                <FormInput dateMode="date" icon="calendar-outline" accessibilityLabel="Fecha de la visita, día mes y año" placeholder="DD/MM/AAAA"
                   value={fecha} maxLength={10} onChangeText={(value) => { setFecha(value); limpiarError('fecha'); }} />
               </View>
               <View style={styles.group}>
                 <Text style={styles.label}>Hora de la visita</Text>
-                <FormInput icon="time-outline" accessibilityLabel="Hora de la visita, formato de 24 horas" placeholder="HH:MM, por ejemplo 15:30"
+                <FormInput dateMode="time" icon="time-outline" accessibilityLabel="Hora de la visita, formato de 24 horas" placeholder="HH:MM, por ejemplo 15:30"
                   value={hora} maxLength={5} onChangeText={(value) => { setHora(value); limpiarError('fecha'); }} />
                 <Text style={styles.description}>Formato de 24 horas. Se usa la hora local de tu dispositivo.</Text>
                 {!!errores.fecha && <Text style={styles.error} accessibilityRole="alert">{errores.fecha}</Text>}

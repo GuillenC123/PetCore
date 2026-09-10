@@ -94,6 +94,7 @@ export default function LoginScreen() {
             <FormInput
               icon="mail-outline"
               placeholder="Correo electrónico"
+              label="Correo electrónico"
               value={correo}
               onChangeText={setCorreo}
               keyboardType="email-address"
@@ -103,6 +104,7 @@ export default function LoginScreen() {
             <FormInput
               icon="lock-closed-outline"
               placeholder="Contraseña"
+              label="Contraseña"
               value={password}
               onChangeText={setPassword}
               secure
@@ -112,10 +114,11 @@ export default function LoginScreen() {
           </View>
 
           {/* Error global (de la API). */}
-          {errorApi ? <Text style={styles.errorApi}>{errorApi}</Text> : null}
+          {errorApi ? <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.errorApi}>{errorApi}</Text> : null}
 
           {/* Botón de acceso. */}
           <Pressable
+            accessibilityRole="button"
             onPress={manejarLogin}
             disabled={cargando}
             style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>

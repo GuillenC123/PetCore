@@ -105,10 +105,10 @@ function Formulario({ mascotaId, edicion, cerrar }: { mascotaId: number; edicion
     </View>}
     {aplicado && <>
       <Text style={styles.label}>Fecha de aplicación</Text>
-      <FormInput accessibilityLabel="Fecha de aplicación" value={fecha} onChangeText={setFecha} maxLength={10} placeholder="DD/MM/AAAA" />
+      <FormInput dateMode="date" accessibilityLabel="Fecha de aplicación" value={fecha} onChangeText={setFecha} maxLength={10} placeholder="DD/MM/AAAA" />
     </>}
     <Text style={styles.label}>Próxima fecha indicada por el veterinario {aplicado ? '(opcional)' : ''}</Text>
-    <FormInput accessibilityLabel="Próxima fecha indicada por el veterinario" value={proxima} onChangeText={setProxima} maxLength={10} placeholder="DD/MM/AAAA" />
+    <FormInput dateMode="date" accessibilityLabel="Próxima fecha indicada por el veterinario" value={proxima} onChangeText={setProxima} maxLength={10} placeholder="DD/MM/AAAA" />
     <Text style={styles.text}>La próxima fecha se marca vencida a partir del día siguiente. Puedes registrar fechas anteriores para completar el historial.</Text>
     <Boton label={seleccionando ? 'Abriendo fotos…' : foto ? 'Cambiar foto del comprobante' : 'Adjuntar foto del comprobante'} onPress={elegirFoto} disabled={seleccionando} />
     {!!foto && <>

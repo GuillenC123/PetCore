@@ -17,6 +17,7 @@ import { formatearFechaCita } from '@/utils/estados';
 import { estadoRecordatorio, fechaRecordatorio, REPETICIONES } from '@/utils/recordatorios';
 
 interface ReminderCardProps {
+  disabled?: boolean;
   recordatorio: Recordatorio;
   /** Acción al tocar el checkbox (marcar como completado). */
   onToggle: (recordatorio: Recordatorio) => void;
@@ -25,7 +26,7 @@ interface ReminderCardProps {
   onPostpone: (recordatorio: Recordatorio, minutos: number) => void;
 }
 
-export default function ReminderCard({ recordatorio, onToggle, ahora, onEdit, onPostpone }: ReminderCardProps) {
+export default function ReminderCard({ recordatorio, onToggle, ahora, onEdit, onPostpone, disabled = false }: ReminderCardProps) {
   // El subtítulo en rojo con alerta corresponde a recordatorios que vencen hoy/mañana.
   const estado = estadoRecordatorio(recordatorio, ahora);
   const esUrgente = estado === 'Vencido' || estado === 'Hoy';
@@ -51,10 +52,10 @@ export default function ReminderCard({ recordatorio, onToggle, ahora, onEdit, on
           </Text>
         </View>
         <View style={styles.actions}>
-          <Pressable accessibilityRole="button" onPress={() => onEdit(recordatorio)} style={styles.action}><Text style={styles.link}>Editar</Text></Pressable>
+          <Pressable disabled={disabled} accessibilityRole="button" onPress={() => onEdit(recordatorio)} style={styles.action}><Text style={styles.link}>Editar</Text></Pressable>
           {!recordatorio.completado && <>
-            <Pressable accessibilityRole="button" onPress={() => onPostpone(recordatorio, 60)} style={styles.action}><Text style={styles.link}>Posponer 1 h</Text></Pressable>
-            <Pressable accessibilityRole="button" onPress={() => onPostpone(recordatorio, 1440)} style={styles.action}><Text style={styles.link}>Posponer 1 día</Text></Pressable>
+            <Pressable disabled={disabled} accessibilityRole="button" onPress={() => onPostpone(recordatorio, 60)} style={styles.action}><Text style={styles.link}>Posponer 1 h</Text></Pressable>
+            <Pressable disabled={disabled} accessibilityRole="button" onPress={() => onPostpone(recordatorio, 1440)} style={styles.action}><Text style={styles.link}>Posponer 1 día</Text></Pressable>
           </>}
         </View>
         {recordatorio.repeticion && recordatorio.repeticion !== 'ninguna' && <Text style={styles.subtitulo}>Completar programa la siguiente fecha.</Text>}
@@ -63,8 +64,9 @@ export default function ReminderCard({ recordatorio, onToggle, ahora, onEdit, on
       {/* Checkbox cuadrado: al marcarlo se completa el recordatorio. */}
       <Pressable
         onPress={() => onToggle(recordatorio)}
+        disabled={disabled}
         accessibilityRole="checkbox"
-        accessibilityState={{ checked: recordatorio.completado }}
+        accessibilityState={{ checked: recordatorio.completado, disabled, busy: disabled }}
         style={[styles.checkbox, recordatorio.completado && styles.checkboxMarcado]}
         accessibilityLabel={`Marcar ${recordatorio.titulo}`}>
         {recordatorio.completado && (

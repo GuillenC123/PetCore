@@ -17,6 +17,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AppHeader from '@/components/AppHeader';
 import AppointmentCard from '@/components/AppointmentCard';
 import FAB from '@/components/FAB';
+import CareAgenda from '@/components/CareAgenda';
+import { crearAgenda } from '@/utils/agenda';
 import PetCard from '@/components/PetCard';
 import QuickActionCard from '@/components/QuickActionCard';
 import { AppColors } from '@/constants/theme';
@@ -27,7 +29,7 @@ import { estadoRecordatorio } from '@/utils/recordatorios';
 
 export default function HomeScreen() {
   // Lee del contexto el usuario y los datos de la app.
-  const { usuario, mascotas, citas, recordatorios } = useAuth();
+  const { usuario, mascotas, citas, recordatorios, tratamientos } = useAuth();
   const ahora = useAhora();
 
   // Primer nombre del usuario para el saludo.
@@ -38,6 +40,8 @@ export default function HomeScreen() {
   const vencidos = recordatorios.filter((r) => estadoRecordatorio(r, ahora) === 'Vencido').length;
   const hoy = recordatorios.filter((r) => estadoRecordatorio(r, ahora) === 'Hoy').length;
   const sinFecha = recordatorios.filter((r) => estadoRecordatorio(r, ahora) === 'Sin fecha').length;
+  const cuidados = crearAgenda(citas, tratamientos, recordatorios);
+  const tomasPendientes = cuidados.filter((e) => e.tipo === 'medicamento').length;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -52,9 +56,9 @@ export default function HomeScreen() {
         <View style={styles.greeting}>
           <Text style={styles.hola}>¡Hola, {primerNombre}!</Text>
           <Text style={styles.parrafo}>
-            {proximasCitas.length === 0 && pendientes === 0
-              ? 'No tienes visitas próximas ni recordatorios pendientes.'
-              : `Tienes ${proximasCitas.length} visitas próximas y ${pendientes} recordatorios pendientes.`}
+            {cuidados.length === 0 && pendientes === 0
+              ? 'No tienes cuidados pendientes registrados.'
+              : `Tienes ${proximasCitas.length} visitas próximas, ${pendientes} recordatorios y ${tomasPendientes} tomas pendientes.`}
           </Text>
           {pendientes > 0 && <Text style={styles.parrafo}>{vencidos} vencidos · {hoy} por hacer hoy · {sinFecha} sin fecha.</Text>}
           <Text style={styles.link} onPress={() => router.push('/recordatorios')}>Gestionar recordatorios</Text>
@@ -76,6 +80,8 @@ export default function HomeScreen() {
           />
         </View>
 
+        <Text style={styles.sectionTitle}>Cuidados de hoy y vencidos</Text>
+        <CareAgenda compact />
         {/* ------ Sección Mis Mascotas ------ */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Mis Mascotas</Text>

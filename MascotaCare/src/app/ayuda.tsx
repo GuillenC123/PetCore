@@ -13,12 +13,17 @@ const secciones: {
   {
     titulo: 'Inicio',
     icono: 'home-outline',
-    descripcion: 'Consulta el resumen de tus mascotas, próximas citas y recordatorios pendientes. Usa la barra inferior para cambiar entre Inicio, Ficha de salud, Agenda y Perfil.',
+    descripcion: 'Consulta el resumen de visitas, recordatorios y tomas pendientes. En Cuidados de hoy y vencidos puedes marcar visitas realizadas, registrar tomas administradas u omitidas y completar recordatorios. Se muestran hasta cinco cuidados; pulsa Ver agenda completa para consultar los demás. Usa la barra inferior para cambiar entre Inicio, Ficha de salud, Agenda y Perfil.',
   },
   {
     titulo: 'Ficha de salud',
     icono: 'medical-outline',
-    descripcion: 'Selecciona una mascota y pulsa Editar ficha de salud para registrar nacimiento o edad aproximada, sexo, peso, alergias y condiciones. Guarda los cambios antes de cambiar de mascota. Los datos se conservan durante la sesión.',
+    descripcion: 'Selecciona una mascota y pulsa Editar ficha de salud para registrar nacimiento o edad aproximada, sexo, alergias y condiciones. Si registras el nacimiento, la edad se calcula automáticamente. Actualiza el peso en Seguimiento de peso, indicando la fecha de medición. Guarda los cambios antes de cambiar de mascota.',
+  },
+  {
+    titulo: 'Estados de salud y cuidados',
+    icono: 'heart-outline',
+    descripcion: 'La sección Salud muestra Saludable, Malestar o Salud sin registrar. Los cuidados aparecen en etiquetas independientes: En tratamiento, Vacuna pendiente y Desparasitación pendiente. Pueden mostrarse al mismo tiempo. Una vacuna pendiente se señala como vencida cuando pasa su fecha. Al agendar una visita por malestar, la mascota cambia a Malestar sin perder sus cuidados registrados.',
   },
   {
     titulo: 'Tratamientos y medicamentos',
@@ -53,7 +58,12 @@ const secciones: {
   {
     titulo: 'Notificaciones y recordatorios',
     icono: 'notifications-outline',
-    descripcion: 'Toca la campana o entra en Perfil → Notificaciones para abrir los mismos recordatorios. Pulsa la casilla para marcar uno como completado o volver a dejarlo pendiente. Los pendientes aparecen primero. Usa la X para cerrar.',
+    descripcion: 'Toca la campana o entra en Perfil → Notificaciones. Puedes crear y editar recordatorios, elegir mascota, fecha y hora, y repetirlos cada día, semana o mes. Al completar uno repetido se programa la siguiente fecha futura. Puedes posponer un aviso una hora o un día, o cambiar su fecha desde Editar. Posponer el aviso de una visita no cambia la fecha de la cita. Los avisos se consultan dentro de la app; aún no se envían notificaciones al teléfono.',
+  },
+  {
+    titulo: 'Guardado y reintento',
+    icono: 'refresh-outline',
+    descripcion: 'Al completar un recordatorio conectado al servidor, espera a que termine Guardando. Si falla, se conserva su estado anterior y aparece Reintentar. Pulsa ese botón para repetir el guardado. Durante el envío se bloquean las acciones de guardado para evitar pulsaciones duplicadas. Encontrarás estos mensajes en Recordatorios, Agenda y los cuidados de Inicio.',
   },
   {
     titulo: 'Editar tu perfil',
@@ -63,12 +73,17 @@ const secciones: {
   {
     titulo: 'Mensajes de los formularios',
     icono: 'checkmark-circle-outline',
-    descripcion: 'Si falta un dato obligatorio o su formato es incorrecto, al guardar aparecerá un mensaje debajo del campo. Corrígelo e inténtalo de nuevo. En el registro, ambas contraseñas deben coincidir. El icono del ojo permite mostrar u ocultar la contraseña.',
+    descripcion: 'Si falta un dato obligatorio o su formato es incorrecto, al guardar aparecerá un mensaje junto al campo o dentro del formulario. Corrígelo e inténtalo de nuevo. Los campos de acceso y registro tienen etiquetas permanentes y los errores se anuncian a los lectores de pantalla. En el registro, ambas contraseñas deben coincidir. El botón del ojo permite mostrar u ocultar la contraseña.',
+  },
+  {
+    titulo: 'Seleccionar fechas y horas',
+    icono: 'calendar-outline',
+    descripcion: 'Pulsa el campo de fecha u hora para usar el selector de tu dispositivo o navegador. No necesitas escribir ceros iniciales ni separadores. En tratamientos, usa Añadir otro horario para registrar varias tomas al día y Quitar horario para eliminar una. Borrar selección permite dejar vacías las fechas opcionales.',
   },
   {
     titulo: 'Tu sesión',
     icono: 'log-out-outline',
-    descripcion: 'Para salir, entra en Perfil → Cerrar sesión. En esta versión, las mascotas añadidas y los cambios de perfil se conservan durante la sesión; al reiniciar la app o volver a iniciar sesión tendrás que introducirlos de nuevo.',
+    descripcion: 'Para salir, entra en Perfil → Cerrar sesión. Los nuevos datos de mascotas, fichas de salud, visitas, tratamientos, mediciones, carnet, observaciones y adjuntos, así como los cambios locales de perfil y recordatorios, se conservan durante la sesión. Todavía no cuentan con guardado permanente: al reiniciar la app o volver a iniciar sesión pueden perderse. Los recordatorios existentes conectados al servidor sí intentan guardar allí su estado de completado.',
   },
 ];
 

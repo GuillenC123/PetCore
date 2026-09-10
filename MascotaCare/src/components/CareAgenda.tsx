@@ -5,47 +5,47 @@ import { useAuth } from '@/context/AuthContext';
 import { useAhora } from '@/hooks/use-ahora';
 import { crearAgenda, filtrarAgenda, type FiltroAgenda } from '@/utils/agenda';
 import { fechaRecordatorio } from '@/utils/recordatorios';
+import { useAccionGuardado } from '@/hooks/use-accion-guardado';
+import SaveFeedback from './SaveFeedback';
 
-export default function CareAgenda({ initialFilter = 'Hoy' }: { initialFilter?: FiltroAgenda }) {
+export default function CareAgenda({ initialFilter = 'Hoy', compact = false }: { initialFilter?: FiltroAgenda; compact?: boolean }) {
   const { mascotas, citas, tratamientos, recordatorios, marcarToma, tacharRecordatorio, completarCita } = useAuth();
   const ahora = useAhora();
   const [filtro, setFiltro] = useState<FiltroAgenda>(initialFilter);
   const [mascotaId, setMascotaId] = useState<number | null>(null);
-  const [mensaje, setMensaje] = useState('');
+  const guardado = useAccionGuardado();
   const [limite, setLimite] = useState(30);
-  const eventos = filtrarAgenda(crearAgenda(citas, tratamientos, recordatorios), filtro, mascotaId, ahora);
+  const todos = crearAgenda(citas, tratamientos, recordatorios);
+  const eventos = compact ? todos.filter((e) => { const fin = new Date(ahora); fin.setHours(23, 59, 59, 999); return Date.parse(e.fecha) <= fin.getTime(); }) : filtrarAgenda(todos, filtro, mascotaId, ahora);
   const sinFecha = recordatorios.filter((r) => !r.completado && !fechaRecordatorio(r.vence_en) && (mascotaId === null || mascotaId === r.mascota_id)).length;
-  const ejecutar = async (accion: () => void | Promise<void>) => {
-    try { await accion(); setMensaje('Cuidado actualizado para esta sesión.'); }
-    catch (err) { setMensaje(err instanceof Error ? err.message : 'No se pudo actualizar.'); }
-  };
+  const ejecutar = guardado.ejecutar;
   return <View style={styles.section}>
-    <View style={styles.options}>{(['Hoy', 'Esta semana', 'Vencidos', 'Todos'] as FiltroAgenda[]).map((f) =>
+    {!compact && <><View style={styles.options}>{(['Hoy', 'Esta semana', 'Vencidos', 'Todos'] as FiltroAgenda[]).map((f) =>
       <Opcion key={f} label={f} activo={filtro === f} onPress={() => { setFiltro(f); setLimite(30); }} />)}</View>
     <Text style={styles.text}>Esta semana comprende de lunes a domingo. Vencidos muestra los cuidados pendientes cuyo horario ya pasó.</Text>
     <View style={styles.options}>{[{ id: null, nombre: 'Todas las mascotas' }, ...mascotas].map((m) =>
-      <Opcion key={m.id ?? 'todas'} label={m.nombre} activo={m.id === mascotaId} onPress={() => { setMascotaId(m.id); setLimite(30); }} />)}</View>
-    {!!mensaje && <Text accessibilityRole="alert" style={styles.text}>{mensaje}</Text>}
+      <Opcion key={m.id ?? 'todas'} label={m.nombre} activo={m.id === mascotaId} onPress={() => { setMascotaId(m.id); setLimite(30); }} />)}</View></>}
+    <SaveFeedback {...guardado} />
     {sinFecha > 0 && <Boton label={`${sinFecha} recordatorios sin fecha: revisar`} onPress={() => router.push('/recordatorios')} />}
     <Text style={styles.label}>{eventos.length} cuidados pendientes</Text>
     {!eventos.length && <Text style={styles.text}>No hay cuidados pendientes para este filtro.</Text>}
-    {eventos.slice(0, limite).map((e) => <View key={e.clave} style={styles.card}>
+    {eventos.slice(0, compact ? 5 : limite).map((e) => <View key={e.clave} style={styles.card}>
       <Text style={styles.label}>{e.tipo === 'cita' ? 'Visita veterinaria' : e.tipo === 'medicamento' ? 'Medicamento' : 'Recordatorio'} · {mascotas.find((m) => m.id === e.mascota_id)?.nombre ?? 'Sin mascota'}</Text>
       <Text style={styles.label}>{e.titulo}</Text>
       <Text style={styles.text}>{new Date(e.fecha).toLocaleString('es-PE')}</Text>
       {!!e.detalle && <Text style={styles.text}>{e.detalle}</Text>}
       {Date.parse(e.fecha) < ahora && <Text style={styles.overdue}>Vencido · pendiente de registrar</Text>}
-      {e.tipo === 'cita' && <Boton label="Marcar visita realizada" disabled={Date.parse(e.fecha) > ahora} onPress={() => ejecutar(() => completarCita(e.id))} />}
+      {e.tipo === 'cita' && <Boton label="Marcar visita realizada" disabled={guardado.guardando || Date.parse(e.fecha) > ahora} onPress={() => ejecutar(() => completarCita(e.id))} />}
       {e.tipo === 'medicamento' && <View style={styles.options}>
-        <Boton label="Administrada" disabled={Date.parse(e.fecha) > ahora} onPress={() => ejecutar(() => marcarToma(e.id, e.fecha, 'administrada'))} />
-        <Boton label="Omitida" disabled={Date.parse(e.fecha) > ahora} onPress={() => ejecutar(() => marcarToma(e.id, e.fecha, 'omitida'))} />
+        <Boton label="Administrada" disabled={guardado.guardando || Date.parse(e.fecha) > ahora} onPress={() => ejecutar(() => marcarToma(e.id, e.fecha, 'administrada'))} />
+        <Boton label="Omitida" disabled={guardado.guardando || Date.parse(e.fecha) > ahora} onPress={() => ejecutar(() => marcarToma(e.id, e.fecha, 'omitida'))} />
       </View>}
       {e.tipo === 'recordatorio' && <>
-        <Boton label="Completar recordatorio" onPress={() => ejecutar(() => tacharRecordatorio(e.id, true))} />
+        <Boton label="Completar recordatorio" disabled={guardado.guardando} onPress={() => ejecutar(() => tacharRecordatorio(e.id, true))} />
         <Boton label="Editar o posponer" onPress={() => router.push('/recordatorios')} />
       </>}
     </View>)}
-    {eventos.length > limite && <Boton label="Ver más cuidados" onPress={() => setLimite(limite + 30)} />}
+    {compact ? <Boton label="Ver agenda completa" onPress={() => router.push('/citas')} /> : eventos.length > limite && <Boton label="Ver más cuidados" onPress={() => setLimite(limite + 30)} />}
   </View>;
 }
 function Boton({ label, onPress, disabled = false }: { label: string; onPress: () => void; disabled?: boolean }) {

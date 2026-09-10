@@ -14,6 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import ReminderCard from '@/components/ReminderCard';
 import ReminderForm from '@/components/ReminderForm';
+import SaveFeedback from '@/components/SaveFeedback';
+import { useAccionGuardado } from '@/hooks/use-accion-guardado';
 import { useAhora } from '@/hooks/use-ahora';
 import { fechaRecordatorio, ordenarRecordatorios } from '@/utils/recordatorios';
 import { AppColors } from '@/constants/theme';
@@ -25,6 +27,7 @@ export default function RecordatoriosScreen() {
   const ahora = useAhora();
   const [editor, setEditor] = useState<Recordatorio | 'nuevo' | null>(null);
   const [mensaje, setMensaje] = useState('');
+  const guardado = useAccionGuardado();
 
   // Ordena: pendientes primero, completados al final.
   const ordenados = ordenarRecordatorios(recordatorios);
@@ -39,8 +42,8 @@ export default function RecordatoriosScreen() {
 
   // Al tocar el checkbox, cambiamos el estado completado del recordatorio.
   const manejarToggle = (recordatorio: Recordatorio) => {
-    tacharRecordatorio(recordatorio.id, !recordatorio.completado);
-    setMensaje(recordatorio.repeticion && recordatorio.repeticion !== 'ninguna' ? 'Realización registrada. Se programó la siguiente fecha.' : 'Recordatorio actualizado.');
+    setMensaje('');
+    void guardado.ejecutar(() => tacharRecordatorio(recordatorio.id, !recordatorio.completado));
   };
 
   const pendientes = recordatorios.filter((r) => !r.completado).length;
@@ -51,6 +54,7 @@ export default function RecordatoriosScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Recordatorios</Text>
         <Pressable
+          accessibilityRole="button" accessibilityLabel="Cerrar recordatorios"
           onPress={() => router.back()}
           style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}>
           <Ionicons name="close" size={24} color={AppColors.textSecondary} />
@@ -71,6 +75,7 @@ export default function RecordatoriosScreen() {
         showsVerticalScrollIndicator={false}>
         <Text style={styles.empty}>Los cambios se conservan durante esta sesión.</Text>
         {!!mensaje && <Text accessibilityRole="alert" style={styles.empty}>{mensaje}</Text>}
+        <SaveFeedback {...guardado} />
         {editor ? <ReminderForm key={editor === 'nuevo' ? 'nuevo' : editor.id} recordatorio={editor === 'nuevo' ? undefined : editor}
           cerrar={(texto) => { setEditor(null); setMensaje(texto ?? ''); }} /> : <>
         <Pressable accessibilityRole="button" style={styles.newButton} onPress={() => { setMensaje(''); setEditor('nuevo'); }}>
@@ -80,7 +85,7 @@ export default function RecordatoriosScreen() {
           <Text style={styles.empty}>No tienes recordatorios.</Text>
         ) : (
           ordenados.map((r) => (
-            <ReminderCard key={r.id} recordatorio={r} onToggle={manejarToggle} ahora={ahora} onEdit={setEditor} onPostpone={posponer} />
+            <ReminderCard key={r.id} recordatorio={r} disabled={guardado.guardando} onToggle={manejarToggle} ahora={ahora} onEdit={setEditor} onPostpone={posponer} />
           ))
         )}
         </>}

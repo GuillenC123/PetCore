@@ -15,12 +15,11 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import Badge from '@/components/Badge';
+import PetHealthStatus from '@/components/PetHealthStatus';
 import FormInput from '@/components/FormInput';
 import PetImage from '@/components/PetImage';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-import { configurarEstadoMascota } from '@/utils/estados';
 import { validarPeso } from '@/utils/validaciones';
 import { edadMascota } from '@/utils/salud';
 
@@ -45,13 +44,13 @@ export default function MascotaDetalleScreen() {
   }
 
   // Config de estado -> etiqueta y tono para el badge.
-  const salud = configurarEstadoMascota(mascota.estado);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* Cabecera del detalle con botón atrás. */}
       <View style={styles.header}>
         <Pressable
+          accessibilityRole="button" accessibilityLabel="Volver"
           onPress={() => router.back()}
           style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}>
           <Ionicons name="arrow-back" size={24} color={AppColors.text} />
@@ -72,7 +71,7 @@ export default function MascotaDetalleScreen() {
         {/* ---- Nombre y estado de salud ---- */}
         <View style={styles.titleBlock}>
           <Text style={styles.nombre}>{mascota.nombre}</Text>
-          <Badge label={salud.label} tone={salud.tone} />
+          <PetHealthStatus mascota={mascota} />
         </View>
 
         {/* ---- Ficha de características ---- */}
@@ -178,8 +177,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   backButton: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',

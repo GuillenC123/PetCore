@@ -13,9 +13,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppColors } from '@/constants/theme';
 import type { Mascota } from '@/types';
-import { configurarEstadoMascota } from '@/utils/estados';
 import { edadMascota } from '@/utils/salud';
-import Badge from './Badge';
+import PetHealthStatus from './PetHealthStatus';
 import PetImage from './PetImage';
 
 interface PetCardProps {
@@ -30,10 +29,9 @@ interface PetCardProps {
 export default function PetCard({ mascota, showStatus = true, onPress }: PetCardProps) {
   // Guarda las config: ejecutamos la utilidad que convierte el estado en
   // etiqueta legible y tono de color para el badge.
-  const salud = configurarEstadoMascota(mascota.estado);
 
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
       {/* Imagen circular de la mascota (placeholder si no hay foto). */}
       <PetImage url={mascota.imagen} nombre={mascota.nombre} size={60} />
 
@@ -44,7 +42,7 @@ export default function PetCard({ mascota, showStatus = true, onPress }: PetCard
           {mascota.raza} · {edadMascota(mascota)}
         </Text>
         {/* El badge del estado solo aparece cuando showStatus es true. */}
-        {showStatus && <Badge label={salud.label} tone={salud.tone} />}
+        {showStatus && <PetHealthStatus mascota={mascota} />}
       </View>
 
       {/* Flecha indicando que se puede navegar a otra pantalla. */}

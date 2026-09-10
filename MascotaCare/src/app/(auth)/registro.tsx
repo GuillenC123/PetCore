@@ -95,6 +95,7 @@ export default function RegistroScreen() {
             <FormInput
               icon="person-outline"
               placeholder="Nombre completo"
+              label="Nombre completo"
               value={nombre}
               onChangeText={setNombre}
               autoCapitalize="words"
@@ -103,6 +104,7 @@ export default function RegistroScreen() {
             <FormInput
               icon="mail-outline"
               placeholder="Correo electrónico"
+              label="Correo electrónico"
               value={correo}
               onChangeText={setCorreo}
               keyboardType="email-address"
@@ -112,6 +114,7 @@ export default function RegistroScreen() {
             <FormInput
               icon="lock-closed-outline"
               placeholder="Contraseña"
+              label="Contraseña"
               value={password}
               onChangeText={setPassword}
               secure
@@ -121,6 +124,7 @@ export default function RegistroScreen() {
             <FormInput
               icon="shield-checkmark-outline"
               placeholder="Confirmar contraseña"
+              label="Confirmar contraseña"
               value={confirmar}
               onChangeText={setConfirmar}
               secure
@@ -130,10 +134,11 @@ export default function RegistroScreen() {
           </View>
 
           {/* Error global (de la API). */}
-          {errorApi ? <Text style={styles.errorApi}>{errorApi}</Text> : null}
+          {errorApi ? <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.errorApi}>{errorApi}</Text> : null}
 
           {/* Botón de registro. */}
           <Pressable
+            accessibilityRole="button"
             onPress={manejarRegistro}
             disabled={cargando}
             style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>

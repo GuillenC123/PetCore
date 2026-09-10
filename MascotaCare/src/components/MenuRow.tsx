@@ -44,7 +44,7 @@ export default function MenuRow({ label, tipo, onPress }: MenuRowProps) {
   const config = TIPO_CONFIG[tipo];
 
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
       {/* Círculo azul claro con el ícono de la opción. */}
       <View style={[styles.circle, { backgroundColor: config.bg }]}>
         <Ionicons name={config.icon} size={20} color={config.color} />

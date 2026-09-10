@@ -99,6 +99,7 @@ export default function NuevaMascotaScreen() {
         {/* Cabecera con botón atrás y título. */}
         <View style={styles.header}>
           <Pressable
+            accessibilityRole="button" accessibilityLabel="Volver"
             onPress={() => router.back()}
             style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}>
             <Ionicons name="arrow-back" size={24} color={AppColors.text} />
@@ -121,6 +122,7 @@ export default function NuevaMascotaScreen() {
             <FormInput
               icon="paw-outline"
               placeholder="Nombre de la mascota"
+              label="Nombre de la mascota"
               value={nombre}
               onChangeText={setNombre}
               autoCapitalize="words"
@@ -135,6 +137,7 @@ export default function NuevaMascotaScreen() {
                   const activo = especie === esp;
                   return (
                     <Pressable
+                      accessibilityRole="radio" accessibilityState={{ checked: activo }}
                       key={esp}
                       onPress={() => setEspecie(esp)}
                       style={[styles.chip, activo && styles.chipActivo]}>
@@ -150,6 +153,7 @@ export default function NuevaMascotaScreen() {
             <FormInput
               icon="information-circle-outline"
               placeholder="Raza (ej. Golden Retriever)"
+              label="Raza"
               value={raza}
               onChangeText={setRaza}
               autoCapitalize="words"
@@ -159,6 +163,7 @@ export default function NuevaMascotaScreen() {
             <FormInput
               icon="fitness-outline"
               placeholder="Edad (ej. 3 años)"
+              label="Edad aproximada"
               value={edad}
               onChangeText={setEdad}
               error={errores.edad}
@@ -178,6 +183,7 @@ export default function NuevaMascotaScreen() {
           {/* ---- Botón guardar ---- */}
           <Pressable
             onPress={guardar}
+            accessibilityRole="button"
             style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>
             <Text style={styles.buttonText}>Guardar Mascota</Text>
           </Pressable>
@@ -203,8 +209,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   backButton: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',

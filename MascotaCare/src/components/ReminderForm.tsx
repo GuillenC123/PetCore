@@ -21,7 +21,7 @@ export default function ReminderForm({ recordatorio, cerrar }: { recordatorio?: 
 
   const guardar = () => {
     const fechaElegida = interpretarFechaVisita(fecha, hora);
-    if (!fechaElegida) { setError('Introduce una fecha válida (DD/MM/AAAA) y una hora válida (HH:MM).'); return; }
+    if (!fechaElegida) { setError('Selecciona la fecha y la hora del recordatorio.'); return; }
     try {
       guardarRecordatorio({ titulo, descripcion: descripcion.trim() || null, mascota_id: mascotaId, tipo,
         repeticion, vence_en: fechaElegida.toISOString(), cita_id: recordatorio?.cita_id }, recordatorio?.id);
@@ -49,9 +49,9 @@ export default function ReminderForm({ recordatorio, cerrar }: { recordatorio?: 
         ))}
       </View>
       <Text style={styles.label}>Fecha del aviso</Text>
-      <FormInput accessibilityLabel="Fecha del aviso" value={fecha} onChangeText={setFecha} maxLength={10} placeholder="DD/MM/AAAA" />
+      <FormInput dateMode="date" accessibilityLabel="Fecha del aviso" value={fecha} onChangeText={setFecha} maxLength={10} placeholder="DD/MM/AAAA" />
       <Text style={styles.label}>Hora local (24 horas)</Text>
-      <FormInput accessibilityLabel="Hora del aviso" value={hora} onChangeText={setHora} maxLength={5} placeholder="HH:MM" />
+      <FormInput dateMode="time" accessibilityLabel="Hora del aviso" value={hora} onChangeText={setHora} maxLength={5} placeholder="HH:MM" />
       <Text style={styles.label}>Repetir</Text>
       <View style={styles.options}>
         {(Object.entries(REPETICIONES) as [NonNullable<Recordatorio['repeticion']>, string][]).map(([value, label]) => (
