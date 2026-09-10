@@ -17,15 +17,15 @@ export default function FichaSaludScreen() {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <AppHeader onPressBell={() => router.push('/recordatorios')} />
           <Text style={styles.title}>Ficha de salud</Text>
-          <Text style={styles.description}>Consulta y actualiza la información de salud de cada mascota.</Text>
+          <Text style={styles.description}>Elige una mascota y abre la sección que quieras consultar.</Text>
           {mascota ? <>
             <Text style={styles.label}>Selecciona una mascota</Text>
-            <View style={styles.options}>
+            <ScrollView horizontal contentContainerStyle={styles.options}>
               {mascotas.map((m) => <Pressable key={m.id} accessibilityRole="radio" accessibilityState={{ checked: m.id === mascota.id }}
                 onPress={() => setSeleccionada(m.id)} style={[styles.option, m.id === mascota.id && styles.active]}>
                 <Text style={styles.label}>{m.nombre}</Text>
               </Pressable>)}
-            </View>
+            </ScrollView>
             <HealthRecord key={mascota.id} mascota={mascota} />
           </> : <View style={styles.empty}>
             <Text style={styles.label}>Registra tu primera mascota</Text>
@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: '800', color: AppColors.text },
   description: { fontSize: 14, lineHeight: 21, color: AppColors.textSecondary },
   label: { fontSize: 15, fontWeight: '600', color: AppColors.text },
-  options: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  options: { flexDirection: 'row', gap: 10 },
   option: { borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#D1D5DB', backgroundColor: AppColors.surface },
   active: { backgroundColor: AppColors.infoSoft, borderColor: '#0369A1' },
   empty: { gap: 12 },

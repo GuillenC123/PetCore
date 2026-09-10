@@ -15,6 +15,7 @@ export default function CareAgenda({ initialFilter = 'Hoy', compact = false }: {
   const [mascotaId, setMascotaId] = useState<number | null>(null);
   const guardado = useAccionGuardado();
   const [limite, setLimite] = useState(30);
+  const [abierto, setAbierto] = useState<string | null>(null);
   const todos = crearAgenda(citas, tratamientos, recordatorios);
   const eventos = compact ? todos.filter((e) => { const fin = new Date(ahora); fin.setHours(23, 59, 59, 999); return Date.parse(e.fecha) <= fin.getTime(); }) : filtrarAgenda(todos, filtro, mascotaId, ahora);
   const sinFecha = recordatorios.filter((r) => !r.completado && !fechaRecordatorio(r.vence_en) && (mascotaId === null || mascotaId === r.mascota_id)).length;
@@ -27,14 +28,16 @@ export default function CareAgenda({ initialFilter = 'Hoy', compact = false }: {
       <Opcion key={m.id ?? 'todas'} label={m.nombre} activo={m.id === mascotaId} onPress={() => { setMascotaId(m.id); setLimite(30); }} />)}</View></>}
     <SaveFeedback {...guardado} />
     {sinFecha > 0 && <Boton label={`${sinFecha} recordatorios sin fecha: revisar`} onPress={() => router.push('/recordatorios')} />}
-    <Text style={styles.label}>{eventos.length} cuidados pendientes</Text>
+    {!compact && <Text style={styles.label}>{eventos.length} cuidados pendientes</Text>}
     {!eventos.length && <Text style={styles.text}>No hay cuidados pendientes para este filtro.</Text>}
-    {eventos.slice(0, compact ? 5 : limite).map((e) => <View key={e.clave} style={styles.card}>
+    {eventos.slice(0, compact ? 3 : limite).map((e) => <View key={e.clave} style={styles.card}>
       <Text style={styles.label}>{e.tipo === 'cita' ? 'Visita veterinaria' : e.tipo === 'medicamento' ? 'Medicamento' : 'Recordatorio'} · {mascotas.find((m) => m.id === e.mascota_id)?.nombre ?? 'Sin mascota'}</Text>
-      <Text style={styles.label}>{e.titulo}</Text>
+      <Text style={styles.label} numberOfLines={compact && abierto !== e.clave ? 2 : undefined}>{e.titulo}</Text>
       <Text style={styles.text}>{new Date(e.fecha).toLocaleString('es-PE')}</Text>
-      {!!e.detalle && <Text style={styles.text}>{e.detalle}</Text>}
+      {(!compact || abierto === e.clave) && !!e.detalle && <Text style={styles.text}>{e.detalle}</Text>}
       {Date.parse(e.fecha) < ahora && <Text style={styles.overdue}>Vencido · pendiente de registrar</Text>}
+      {compact && <Pressable accessibilityRole="button" accessibilityState={{ expanded: abierto === e.clave }} onPress={() => setAbierto(abierto === e.clave ? null : e.clave)} style={{ paddingVertical: 10 }}><Text style={{ color: '#0369A1', fontWeight: '600' }}>{abierto === e.clave ? 'Cerrar acciones' : 'Ver detalle y registrar'}</Text></Pressable>}
+      {(!compact || abierto === e.clave) && <>
       {e.tipo === 'cita' && <Boton label="Marcar visita realizada" disabled={guardado.guardando || Date.parse(e.fecha) > ahora} onPress={() => ejecutar(() => completarCita(e.id))} />}
       {e.tipo === 'medicamento' && <View style={styles.options}>
         <Boton label="Administrada" disabled={guardado.guardando || Date.parse(e.fecha) > ahora} onPress={() => ejecutar(() => marcarToma(e.id, e.fecha, 'administrada'))} />
@@ -43,6 +46,7 @@ export default function CareAgenda({ initialFilter = 'Hoy', compact = false }: {
       {e.tipo === 'recordatorio' && <>
         <Boton label="Completar recordatorio" disabled={guardado.guardando} onPress={() => ejecutar(() => tacharRecordatorio(e.id, true))} />
         <Boton label="Editar o posponer" onPress={() => router.push('/recordatorios')} />
+      </>}
       </>}
     </View>)}
     {compact ? <Boton label="Ver agenda completa" onPress={() => router.push('/citas')} /> : eventos.length > limite && <Boton label="Ver más cuidados" onPress={() => setLimite(limite + 30)} />}

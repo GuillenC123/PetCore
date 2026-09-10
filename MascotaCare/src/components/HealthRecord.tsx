@@ -11,12 +11,15 @@ import Treatments from './Treatments';
 import WeightTracker from './WeightTracker';
 import VaccineRecord from './VaccineRecord';
 import HealthTimeline from './HealthTimeline';
+import HealthSection from './HealthSection';
 
 const SEXOS = { desconocido: 'Sin registrar', macho: 'Macho', hembra: 'Hembra' } as const;
 
 export default function HealthRecord({ mascota }: { mascota: Mascota }) {
   const [editando, setEditando] = useState(false);
   const [guardado, setGuardado] = useState(false);
+  const [seccion, setSeccion] = useState<string | null>(null);
+  const alternar = (nombre: string) => setSeccion((actual) => actual === nombre ? null : nombre);
   return (
     <View style={styles.card}>
       <View style={styles.identity}>
@@ -27,7 +30,10 @@ export default function HealthRecord({ mascota }: { mascota: Mascota }) {
           <PetHealthStatus mascota={mascota} />
         </View>
       </View>
-      {editando ? <Editor mascota={mascota} cancelar={() => setEditando(false)} guardar={() => { setEditando(false); setGuardado(true); }} /> : <>
+      <>
+        <Text style={styles.text}>{edadMascota(mascota)} · {mascota.peso != null ? `${mascota.peso} kg` : 'Peso sin registrar'}</Text>
+        <HealthSection title="Datos de salud" description="Nacimiento, sexo, alergias y condiciones" icon="medical-outline" open={seccion === 'datos'} onToggle={() => alternar('datos')}>
+        {editando ? <Editor mascota={mascota} cancelar={() => setEditando(false)} guardar={() => { setEditando(false); setGuardado(true); }} /> : <>
         <Dato label={mascota.nacimiento ? 'Nacimiento' : 'Edad aproximada'} valor={mascota.nacimiento ?? mascota.edad} />
         {!!mascota.nacimiento && <Dato label="Edad" valor={edadMascota(mascota)} />}
         <Dato label="Sexo" valor={SEXOS[mascota.sexo ?? 'desconocido']} />
@@ -36,11 +42,21 @@ export default function HealthRecord({ mascota }: { mascota: Mascota }) {
         <Dato label="Condiciones registradas" valor={mascota.condiciones} />
         {guardado && <Text accessibilityRole="alert" style={styles.text}>Ficha guardada para esta sesión.</Text>}
         <Boton label="Editar ficha de salud" onPress={() => { setEditando(true); setGuardado(false); }} />
+        </>}
+        </HealthSection>
+        <HealthSection title="Peso" description="Registrar una medición y ver su evolución" icon="scale-outline" open={seccion === 'peso'} onToggle={() => alternar('peso')}>
         <WeightTracker mascota={mascota} />
+        </HealthSection>
+        <HealthSection title="Vacunas y desparasitación" description="Carnet, próximas aplicaciones y comprobantes" icon="shield-checkmark-outline" open={seccion === 'vacunas'} onToggle={() => alternar('vacunas')}>
         <VaccineRecord mascota={mascota} />
+        </HealthSection>
+        <HealthSection title="Tratamientos" description="Medicamentos, horarios y registro de tomas" icon="medkit-outline" open={seccion === 'tratamientos'} onToggle={() => alternar('tratamientos')}>
         <Treatments mascotaId={mascota.id} nombre={mascota.nombre} />
+        </HealthSection>
+        <HealthSection title="Historial de salud" description="Consultas, observaciones y documentos" icon="time-outline" open={seccion === 'historial'} onToggle={() => alternar('historial')}>
         <HealthTimeline mascota={mascota} />
-      </>}
+        </HealthSection>
+      </>
     </View>
   );
 }

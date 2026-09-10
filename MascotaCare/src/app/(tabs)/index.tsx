@@ -5,9 +5,8 @@
 //   * Cabecera (AppHeader) con huella + campana.
 //   * Saludo "¡Hola, Ana!" con párrafo gris de resumen.
 //   * Dos acciones rápidas: "Añadir Mascota" y "Agendar Cita".
-//   * Sección "Mis Mascotas" (sin etiquetas de estado).
-//   * Sección "Próximas Citas" (primera cita).
-//   * FAB en la esquina inferior derecha.
+//   * Cuidados prioritarios con acciones desplegables.
+//   * Mascotas en una lista horizontal con sus estados de salud.
 // ============================================================================
 
 import { router } from 'expo-router';
@@ -15,17 +14,13 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AppHeader from '@/components/AppHeader';
-import AppointmentCard from '@/components/AppointmentCard';
-import FAB from '@/components/FAB';
 import CareAgenda from '@/components/CareAgenda';
 import { crearAgenda } from '@/utils/agenda';
 import PetCard from '@/components/PetCard';
 import QuickActionCard from '@/components/QuickActionCard';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-import { obtenerProximasCitas } from '@/utils/citas';
 import { useAhora } from '@/hooks/use-ahora';
-import { estadoRecordatorio } from '@/utils/recordatorios';
 
 export default function HomeScreen() {
   // Lee del contexto el usuario y los datos de la app.
@@ -34,14 +29,10 @@ export default function HomeScreen() {
 
   // Primer nombre del usuario para el saludo.
   const primerNombre = usuario?.nombre.split(' ')[0] ?? 'Amigo';
-  // Número de eventos próximos (citas + recordatorios pendientes).
-  const pendientes = recordatorios.filter((r) => !r.completado).length;
-  const proximasCitas = obtenerProximasCitas(citas, ahora);
-  const vencidos = recordatorios.filter((r) => estadoRecordatorio(r, ahora) === 'Vencido').length;
-  const hoy = recordatorios.filter((r) => estadoRecordatorio(r, ahora) === 'Hoy').length;
-  const sinFecha = recordatorios.filter((r) => estadoRecordatorio(r, ahora) === 'Sin fecha').length;
+  // Cuidados pendientes hasta el final de hoy, incluidos los vencidos.
   const cuidados = crearAgenda(citas, tratamientos, recordatorios);
-  const tomasPendientes = cuidados.filter((e) => e.tipo === 'medicamento').length;
+  const finHoy = new Date(ahora); finHoy.setHours(23, 59, 59, 999);
+  const pendientesHoy = cuidados.filter((e) => Date.parse(e.fecha) <= finHoy.getTime()).length;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -56,12 +47,8 @@ export default function HomeScreen() {
         <View style={styles.greeting}>
           <Text style={styles.hola}>¡Hola, {primerNombre}!</Text>
           <Text style={styles.parrafo}>
-            {cuidados.length === 0 && pendientes === 0
-              ? 'No tienes cuidados pendientes registrados.'
-              : `Tienes ${proximasCitas.length} visitas próximas, ${pendientes} recordatorios y ${tomasPendientes} tomas pendientes.`}
+            {pendientesHoy === 0 ? 'No tienes cuidados de hoy ni vencidos con fecha registrada.' : `Tienes ${pendientesHoy} cuidados de hoy o vencidos por revisar.`}
           </Text>
-          {pendientes > 0 && <Text style={styles.parrafo}>{vencidos} vencidos · {hoy} por hacer hoy · {sinFecha} sin fecha.</Text>}
-          <Text style={styles.link} onPress={() => router.push('/recordatorios')}>Gestionar recordatorios</Text>
         </View>
 
         {/* ------ Acciones rápidas ------ */}
@@ -89,31 +76,22 @@ export default function HomeScreen() {
             Ficha de salud
           </Text>
         </View>
-        <View style={styles.list}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.list}>
           {/* El estado se mantiene visible también en Inicio. */}
           {mascotas.map((m) => (
+            <View key={m.id} style={styles.pet}>
             <PetCard
-              key={m.id}
               mascota={m}
               showStatus
               onPress={() => router.push(`/mascota-detalle?id=${m.id}`)}
-            />
+            /></View>
           ))}
-        </View>
+        </ScrollView>
+        {mascotas.length === 0 && <Text style={styles.empty}>Añade tu primera mascota para empezar a organizar sus cuidados.</Text>}
+        {mascotas.length > 1 && <Text style={styles.empty}>Desliza para ver tus mascotas.</Text>}
 
-        {/* ------ Sección Próximas Citas ------ */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Próximas Citas</Text>
-        </View>
-        {proximasCitas.length > 0 ? (
-          <AppointmentCard cita={proximasCitas[0]} />
-        ) : (
-          <Text style={styles.empty}>No tienes citas próximas.</Text>
-        )}
       </ScrollView>
 
-      {/* Botón flotante de acción */}
-      <FAB onPress={() => router.push('/nueva-mascota')} />
     </SafeAreaView>
   );
 }
@@ -128,7 +106,10 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-    paddingBottom: 100, // deja espacio para el FAB.
+    paddingBottom: 32,
+    width: '100%',
+    maxWidth: 800,
+    alignSelf: 'center',
     gap: 16,
   },
   greeting: {
@@ -168,6 +149,7 @@ const styles = StyleSheet.create({
   list: {
     gap: 12,
   },
+  pet: { width: 270 },
   empty: {
     fontSize: 14,
     color: AppColors.textSecondary,

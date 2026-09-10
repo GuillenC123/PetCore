@@ -13,12 +13,12 @@ const secciones: {
   {
     titulo: 'Inicio',
     icono: 'home-outline',
-    descripcion: 'Consulta el resumen de visitas, recordatorios y tomas pendientes. En Cuidados de hoy y vencidos puedes marcar visitas realizadas, registrar tomas administradas u omitidas y completar recordatorios. Se muestran hasta cinco cuidados; pulsa Ver agenda completa para consultar los demás. Usa la barra inferior para cambiar entre Inicio, Ficha de salud, Agenda y Perfil.',
+    descripcion: 'Consulta el resumen de visitas, recordatorios y tomas pendientes. En Cuidados de hoy y vencidos puedes marcar visitas realizadas, registrar tomas administradas u omitidas y completar recordatorios. Se muestran hasta tres cuidados; pulsa Ver detalle y registrar para abrir sus acciones. pulsa Ver agenda completa para consultar los demás. Usa la barra inferior para cambiar entre Inicio, Ficha de salud, Agenda y Perfil.',
   },
   {
     titulo: 'Ficha de salud',
     icono: 'medical-outline',
-    descripcion: 'Selecciona una mascota y pulsa Editar ficha de salud para registrar nacimiento o edad aproximada, sexo, alergias y condiciones. Si registras el nacimiento, la edad se calcula automáticamente. Actualiza el peso en Seguimiento de peso, indicando la fecha de medición. Guarda los cambios antes de cambiar de mascota.',
+    descripcion: 'Selecciona una mascota y abre Datos de salud. Pulsa Editar ficha de salud para registrar nacimiento o edad aproximada, sexo, alergias y condiciones. Si registras el nacimiento, la edad se calcula automáticamente. Actualiza el peso en Seguimiento de peso, indicando la fecha de medición. Peso, Vacunas y desparasitación, Tratamientos e Historial de salud se abren por separado. Guarda los cambios antes de cambiar de mascota.',
   },
   {
     titulo: 'Estados de salud y cuidados',
@@ -28,22 +28,22 @@ const secciones: {
   {
     titulo: 'Tratamientos y medicamentos',
     icono: 'medkit-outline',
-    descripcion: 'En Ficha de salud, selecciona una mascota y pulsa Añadir tratamiento. Transcribe las indicaciones del veterinario, la fecha de inicio, duración y horarios diarios. Consulta las tomas por día y marca cada una como administrada u omitida cuando llegue su horario. Puedes deshacer un registro incorrecto. Los datos se conservan durante la sesión.',
+    descripcion: 'En Ficha de salud, selecciona una mascota, abre Tratamientos y pulsa Añadir tratamiento. Transcribe las indicaciones del veterinario, la fecha de inicio, duración y horarios diarios. Consulta las tomas por día y marca cada una como administrada u omitida cuando llegue su horario. Puedes deshacer un registro incorrecto. Los datos se conservan durante la sesión.',
   },
   {
     titulo: 'Seguimiento de peso',
     icono: 'scale-outline',
-    descripcion: 'En Ficha de salud, selecciona una mascota y registra su peso en kg y la fecha de medición. Consulta la gráfica y el historial. Puedes corregir una medición guardando de nuevo su fecha; se mantiene un registro por día. La medición más reciente determina el peso actual. Los cambios se conservan durante la sesión.',
+    descripcion: 'En Ficha de salud, selecciona una mascota, abre Peso y registra su peso en kg y la fecha de medición. Consulta la gráfica y el historial. Puedes corregir una medición guardando de nuevo su fecha; se mantiene un registro por día. La medición más reciente determina el peso actual. Los cambios se conservan durante la sesión.',
   },
   {
     titulo: 'Carnet de vacunas y desparasitación',
     icono: 'shield-checkmark-outline',
-    descripcion: 'En Ficha de salud, añade una aplicación o una próxima fecha indicada por el veterinario y adjunta una foto del comprobante. El historial conserva las aplicaciones realizadas; las próximas fechas aparecen como próximas o vencidas. Pulsa Registrar aplicación en un pendiente para registrar el siguiente cuidado. Los datos y fotos se conservan durante la sesión.',
+    descripcion: 'En Ficha de salud, abre Vacunas y desparasitación y añade una aplicación o una próxima fecha indicada por el veterinario y adjunta una foto del comprobante. El historial conserva las aplicaciones realizadas; las próximas fechas aparecen como próximas o vencidas. Pulsa Registrar aplicación en un pendiente para registrar el siguiente cuidado. Los datos y fotos se conservan durante la sesión.',
   },
   {
     titulo: 'Añadir y consultar mascotas',
     icono: 'paw-outline',
-    descripcion: 'Pulsa “Añadir Mascota” en Inicio o el botón +. Completa el nombre, especie, raza y edad, y pulsa “Guardar Mascota”. Toca la tarjeta de una mascota para ver su información y estado de salud.',
+    descripcion: 'Pulsa “Añadir Mascota” en Inicio. Completa el nombre, especie, raza y edad, y pulsa “Guardar Mascota”. Toca la tarjeta de una mascota para ver su información y estado de salud.',
   },
   {
     titulo: 'Agenda de cuidados',
@@ -53,7 +53,7 @@ const secciones: {
   {
     titulo: 'Historial de salud',
     icono: 'time-outline',
-    descripcion: 'En Ficha de salud, consulta la línea de tiempo de la mascota. Incluye visitas marcadas como realizadas, vacunas, desparasitaciones y tratamientos que ya comenzaron. Registra consultas anteriores u observaciones y adjunta PDF o fotografías a cada evento. Los archivos se conservan durante la sesión.',
+    descripcion: 'En Ficha de salud, abre Historial de salud para consultar la línea de tiempo de la mascota. Incluye visitas marcadas como realizadas, vacunas, desparasitaciones y tratamientos que ya comenzaron. Registra consultas anteriores u observaciones y adjunta PDF o fotografías a cada evento. Los archivos se conservan durante la sesión.',
   },
   {
     titulo: 'Notificaciones y recordatorios',
