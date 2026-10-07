@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useAhora } from '@/hooks/use-ahora';
-import type { EstadoToma, Tratamiento } from '@/types';
+import type { Identificador, EstadoToma, Tratamiento  } from '@/types';
 import { AppColors } from '@/constants/theme';
 import { formatearFechaCita } from '@/utils/estados';
 import FormInput from './FormInput';
 import TimeSchedule from './TimeSchedule';
 
-export default function Treatments({ mascotaId, nombre }: { mascotaId: number; nombre: string }) {
+export default function Treatments({ mascotaId, nombre }: { mascotaId: Identificador; nombre: string }) {
   const { tratamientos } = useAuth();
   const [creando, setCreando] = useState(false);
   const [mensaje, setMensaje] = useState('');
@@ -25,7 +25,7 @@ export default function Treatments({ mascotaId, nombre }: { mascotaId: number; n
   </View>;
 }
 
-function Formulario({ mascotaId, cerrar }: { mascotaId: number; cerrar: (guardado: boolean) => void }) {
+function Formulario({ mascotaId, cerrar }: { mascotaId: Identificador; cerrar: (guardado: boolean) => void }) {
   const { agregarTratamiento } = useAuth();
   const [medicamento, setMedicamento] = useState('');
   const [indicaciones, setIndicaciones] = useState('');

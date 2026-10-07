@@ -1,3 +1,4 @@
+import { layoutStyles } from '@/components/AdaptiveLayout';
 // ============================================================================
 // (auth)/login.tsx - Pantalla de Iniciar Sesión
 // ----------------------------------------------------------------------------
@@ -74,7 +75,7 @@ export default function LoginScreen() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, layoutStyles.auth]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           {/* Marca de la app. */}

@@ -34,7 +34,8 @@ const react = {
   useRef: valor => { const n = refIndice++; return refs[n] ?? (refs[n] = { current: valor }); },
   useCallback: fn => fn, createElement: (_tipo, props) => props,
 };
-const { AuthProvider } = cargar('src/context/AuthContext.tsx', nombre => nombre === 'react' ? react : nombre === '@/utils/carnet' ? util : nombre === '@/utils/citas' ? cargar('src/utils/citas.ts') : {});
+react.useEffect = () => {};
+const { AuthProvider } = cargar('src/context/AuthContext.tsx', nombre => nombre === '@/hooks/use-carga-datos' ? require('./helpers/carga-datos.cjs') : nombre === 'react' ? react : nombre === '@/utils/carnet' ? util : nombre === '@/utils/citas' ? cargar('src/utils/citas.ts') : {});
 function contexto() { indice = 0; refIndice = 0; return AuthProvider({ children: null }).value; }
 const pasado = { ...datos, fecha_aplicacion: '01/01/2020', proxima_fecha: '01/02/2020' };
 assert.throws(() => contexto().guardarCarnet(99, pasado));

@@ -1,3 +1,4 @@
+import { AdaptiveColumns, layoutStyles } from '@/components/AdaptiveLayout';
 // ============================================================================
 // (tabs)/perfil.tsx - Pantalla de Perfil
 // ----------------------------------------------------------------------------
@@ -54,10 +55,10 @@ export default function PerfilScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, layoutStyles.page]}
         showsVerticalScrollIndicator={false}>
         {/* Cabecera general. */}
         <AppHeader onPressBell={() => router.push('/recordatorios')} />
@@ -68,6 +69,8 @@ export default function PerfilScreen() {
           <Text style={styles.subtitle}>Gestiona tu cuenta y preferencias.</Text>
         </View>
 
+        <AdaptiveColumns>
+        <View style={layoutStyles.column}>
         {/* Avatar circular de usuario + nombre y correo. */}
         <View style={styles.avatarBlock}>
           <View style={styles.avatar}>
@@ -84,6 +87,7 @@ export default function PerfilScreen() {
           <StatCard valor={pendientes} label="Pendiente" />
         </View>
 
+        </View>
         {/* Menú de opciones. */}
         <View style={styles.menu}>
           {opciones.map((op) => (
@@ -95,6 +99,7 @@ export default function PerfilScreen() {
             />
           ))}
         </View>
+        </AdaptiveColumns>
       </ScrollView>
     </SafeAreaView>
   );

@@ -1,3 +1,4 @@
+import { AdaptiveColumns, layoutStyles } from '@/components/AdaptiveLayout';
 // ============================================================================
 // recordatorios.tsx - Pantalla Modal de Recordatorios
 // ----------------------------------------------------------------------------
@@ -49,7 +50,7 @@ export default function RecordatoriosScreen() {
   const pendientes = recordatorios.filter((r) => !r.completado).length;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
       {/* Cabecera del modal con botón de cierre. */}
       <View style={styles.header}>
         <Text style={styles.title}>Recordatorios</Text>
@@ -70,7 +71,7 @@ export default function RecordatoriosScreen() {
       {/* Lista de recordatorios. */}
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, editor ? layoutStyles.form : layoutStyles.page]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
         <Text style={styles.empty}>Los cambios se conservan durante esta sesión.</Text>
@@ -84,9 +85,9 @@ export default function RecordatoriosScreen() {
         {ordenados.length === 0 ? (
           <Text style={styles.empty}>No tienes recordatorios.</Text>
         ) : (
-          ordenados.map((r) => (
+          <AdaptiveColumns>{ordenados.map((r) => (
             <ReminderCard key={r.id} recordatorio={r} disabled={guardado.guardando} onToggle={manejarToggle} ahora={ahora} onEdit={setEditor} onPostpone={posponer} />
-          ))
+          ))}</AdaptiveColumns>
         )}
         </>}
       </ScrollView>

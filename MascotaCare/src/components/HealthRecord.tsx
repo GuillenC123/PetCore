@@ -12,6 +12,7 @@ import WeightTracker from './WeightTracker';
 import VaccineRecord from './VaccineRecord';
 import HealthTimeline from './HealthTimeline';
 import HealthSection from './HealthSection';
+import { AdaptiveColumns, layoutStyles } from './AdaptiveLayout';
 
 const SEXOS = { desconocido: 'Sin registrar', macho: 'Macho', hembra: 'Hembra' } as const;
 
@@ -32,7 +33,9 @@ export default function HealthRecord({ mascota }: { mascota: Mascota }) {
       </View>
       <>
         <Text style={styles.text}>{edadMascota(mascota)} · {mascota.peso != null ? `${mascota.peso} kg` : 'Peso sin registrar'}</Text>
-        <HealthSection title="Datos de salud" description="Nacimiento, sexo, alergias y condiciones" icon="medical-outline" open={seccion === 'datos'} onToggle={() => alternar('datos')}>
+        <AdaptiveColumns>
+        <View style={layoutStyles.column}>
+        <HealthSection key="datos" title="Datos de salud" description="Nacimiento, sexo, alergias y condiciones" icon="medical-outline" open={seccion === 'datos'} onToggle={() => alternar('datos')}>
         {editando ? <Editor mascota={mascota} cancelar={() => setEditando(false)} guardar={() => { setEditando(false); setGuardado(true); }} /> : <>
         <Dato label={mascota.nacimiento ? 'Nacimiento' : 'Edad aproximada'} valor={mascota.nacimiento ?? mascota.edad} />
         {!!mascota.nacimiento && <Dato label="Edad" valor={edadMascota(mascota)} />}
@@ -44,6 +47,8 @@ export default function HealthRecord({ mascota }: { mascota: Mascota }) {
         <Boton label="Editar ficha de salud" onPress={() => { setEditando(true); setGuardado(false); }} />
         </>}
         </HealthSection>
+        </View>
+        <View style={layoutStyles.column}>
         <HealthSection title="Peso" description="Registrar una medición y ver su evolución" icon="scale-outline" open={seccion === 'peso'} onToggle={() => alternar('peso')}>
         <WeightTracker mascota={mascota} />
         </HealthSection>
@@ -56,6 +61,8 @@ export default function HealthRecord({ mascota }: { mascota: Mascota }) {
         <HealthSection title="Historial de salud" description="Consultas, observaciones y documentos" icon="time-outline" open={seccion === 'historial'} onToggle={() => alternar('historial')}>
         <HealthTimeline mascota={mascota} />
         </HealthSection>
+        </View>
+        </AdaptiveColumns>
       </>
     </View>
   );

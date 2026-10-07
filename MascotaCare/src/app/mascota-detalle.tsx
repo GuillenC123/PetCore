@@ -1,3 +1,5 @@
+import type { Identificador } from '@/types';
+import { layoutStyles } from '@/components/AdaptiveLayout';
 // ============================================================================
 // mascota-detalle.tsx - Pantalla de Detalle de una Mascota
 // ----------------------------------------------------------------------------
@@ -46,7 +48,7 @@ export default function MascotaDetalleScreen() {
   // Config de estado -> etiqueta y tono para el badge.
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
       {/* Cabecera del detalle con botón atrás. */}
       <View style={styles.header}>
         <Pressable
@@ -61,7 +63,7 @@ export default function MascotaDetalleScreen() {
 
       <ScrollView
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, layoutStyles.form]}
         showsVerticalScrollIndicator={false}>
         {/* ---- Foto grande de la mascota ---- */}
         <View style={styles.photoBlock}>
@@ -103,7 +105,7 @@ export default function MascotaDetalleScreen() {
   );
 }
 
-function EditorPeso({ id, pesoActual }: { id: number; pesoActual?: number | null }) {
+function EditorPeso({ id, pesoActual }: { id: Identificador; pesoActual?: number | null }) {
   const { actualizarPesoMascota } = useAuth();
   const [editando, setEditando] = useState(false);
   const [peso, setPeso] = useState('');

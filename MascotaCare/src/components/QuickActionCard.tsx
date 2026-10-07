@@ -58,6 +58,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 20,
+    paddingHorizontal: 12,
+    minHeight: 100,
+    minWidth: 0,
     gap: 12,
     // Sombra suave.
     elevation: 3,

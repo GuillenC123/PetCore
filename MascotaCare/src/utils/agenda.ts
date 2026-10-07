@@ -1,10 +1,9 @@
-import type { Cita, Recordatorio, Tratamiento } from '../types';
+import type { Cita, Identificador, Recordatorio, Tratamiento } from '../types';
 import { fechaRecordatorio } from './recordatorios';
 
-export interface EventoAgenda {
-  clave: string; tipo: 'cita' | 'medicamento' | 'recordatorio'; id: number;
-  mascota_id: number | null; titulo: string; detalle: string; fecha: string;
-}
+export type EventoAgenda = {
+  clave: string; mascota_id: Identificador | null; titulo: string; detalle: string; fecha: string;
+} & ({ tipo: 'medicamento'; id: number } | { tipo: 'cita' | 'recordatorio'; id: Identificador });
 export function crearAgenda(citas: Cita[], tratamientos: Tratamiento[], recordatorios: Recordatorio[]): EventoAgenda[] {
   const eventos: EventoAgenda[] = [];
   citas.filter((c) => c.estado !== 'cancelado' && c.estado !== 'completado').forEach((c) => eventos.push({
@@ -27,7 +26,7 @@ export function crearAgenda(citas: Cita[], tratamientos: Tratamiento[], recordat
 }
 
 export type FiltroAgenda = 'Hoy' | 'Esta semana' | 'Vencidos' | 'Todos';
-export function filtrarAgenda(eventos: EventoAgenda[], filtro: FiltroAgenda, mascotaId: number | null, ahora = Date.now()) {
+export function filtrarAgenda(eventos: EventoAgenda[], filtro: FiltroAgenda, mascotaId: Identificador | null, ahora = Date.now()) {
   const hoy = new Date(ahora);
   hoy.setHours(0, 0, 0, 0);
   const manana = new Date(hoy); manana.setDate(manana.getDate() + 1);

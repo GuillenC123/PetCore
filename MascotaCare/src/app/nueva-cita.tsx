@@ -1,3 +1,4 @@
+import { AdaptiveColumns, layoutStyles } from '@/components/AdaptiveLayout';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
@@ -8,14 +9,14 @@ import FormInput from '@/components/FormInput';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { interpretarFechaVisita } from '@/utils/citas';
+import { buscarPorId } from '@/utils/identificadores';
+import type { Identificador } from '@/types';
 
 export default function NuevaCitaScreen() {
   const { mascotas, agregarCita } = useAuth();
   const params = useLocalSearchParams<{ mascotaId?: string }>();
-  const [mascotaId, setMascotaId] = useState<number | null>(() => {
-    const id = Number(params.mascotaId);
-    return mascotas.some((m) => m.id === id) ? id : null;
-  });
+  const [seleccionada, setMascotaId] = useState<Identificador | null>(null);
+  const mascotaId = seleccionada ?? buscarPorId(mascotas, params.mascotaId)?.id ?? null;
   const [motivo, setMotivo] = useState('');
   const [fecha, setFecha] = useState('');
   const [hora, setHora] = useState('');
@@ -44,7 +45,7 @@ export default function NuevaCitaScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
       <KeyboardAvoidingView style={styles.safe} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Volver" style={styles.back}>
@@ -52,7 +53,7 @@ export default function NuevaCitaScreen() {
           </Pressable>
           <Text style={styles.title}>Recordar visita</Text>
         </View>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[styles.content, layoutStyles.form]} keyboardShouldPersistTaps="handled">
           <Text style={styles.description}>Anota cuándo llevarás a tu mascota a la veterinaria y el motivo de la visita.</Text>
           <Text style={styles.description}>Al guardar, la mascota seleccionada aparecerá con estado Malestar en rojo.</Text>
           {mascotas.length === 0 ? (
@@ -65,6 +66,7 @@ export default function NuevaCitaScreen() {
             </View>
           ) : (
             <>
+              <AdaptiveColumns>
               <View style={styles.group}>
                 <Text style={styles.label}>¿Qué mascota irá?</Text>
                 {mascotas.map((mascota) => (
@@ -97,6 +99,7 @@ export default function NuevaCitaScreen() {
                 <Text style={styles.description}>Formato de 24 horas. Se usa la hora local de tu dispositivo.</Text>
                 {!!errores.fecha && <Text style={styles.error} accessibilityRole="alert">{errores.fecha}</Text>}
               </View>
+              </AdaptiveColumns>
               <Text style={styles.description}>El recordatorio estará disponible en Citas y en la campana durante esta sesión.</Text>
               {!!errores.general && <Text style={styles.error} accessibilityRole="alert">{errores.general}</Text>}
               <Pressable style={styles.button} onPress={guardar} accessibilityRole="button">

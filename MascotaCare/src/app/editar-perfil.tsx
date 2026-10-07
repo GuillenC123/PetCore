@@ -1,3 +1,4 @@
+import { layoutStyles } from '@/components/AdaptiveLayout';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -38,7 +39,7 @@ export default function EditarPerfilScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.header}>
           <Pressable onPress={volver} accessibilityRole="button" accessibilityLabel="Volver al perfil"
@@ -48,7 +49,7 @@ export default function EditarPerfilScreen() {
           <Text style={styles.title}>Editar Perfil</Text>
           <View style={styles.back} />
         </View>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[styles.content, layoutStyles.form]} keyboardShouldPersistTaps="handled">
           <Text style={styles.subtitle}>Actualiza tu nombre y correo electrónico.</Text>
           <View style={styles.field}>
             <Text style={styles.label}>Nombre</Text>

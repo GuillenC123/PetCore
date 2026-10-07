@@ -14,25 +14,22 @@
 // contexto de autenticación.
 // ============================================================================
 
-import * as SplashScreen from 'expo-splash-screen';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/context/AuthContext';
-
-// Evita que el splash desaparezca antes de que la app esté lista.
-SplashScreen.preventAutoHideAsync();
+import DataLoadState from '@/components/DataLoadState';
 
 /**
  * Navegador que decide cuál grupo mostrar según el estado de autenticación.
  * Necesita estar dentro del AuthProvider para leer useAuth().
  */
 function RootNavigator() {
-  const { usuario } = useAuth();
+  const { usuario, estadoDatos, modoDemo, cargarDatos, logout } = useAuth();
   const autenticado = usuario !== null;
 
-  return (
+  const navigation = (
     <Stack
       screenOptions={{
         headerShown: false, // Cada pantalla dibuja su propia cabecera.
@@ -59,6 +56,12 @@ function RootNavigator() {
         options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
       />
     </Stack>
+  );
+
+  return (
+    <DataLoadState activo={autenticado} estado={estadoDatos} modoDemo={modoDemo} reintentar={cargarDatos} salir={logout}>
+      {navigation}
+    </DataLoadState>
   );
 }
 

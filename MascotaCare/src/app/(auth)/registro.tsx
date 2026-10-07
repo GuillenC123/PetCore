@@ -1,3 +1,4 @@
+import { layoutStyles } from '@/components/AdaptiveLayout';
 // ============================================================================
 // (auth)/registro.tsx - Pantalla de Registro de Cuenta
 // ----------------------------------------------------------------------------
@@ -81,7 +82,7 @@ export default function RegistroScreen() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, layoutStyles.auth]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           {/* Título del formulario. */}

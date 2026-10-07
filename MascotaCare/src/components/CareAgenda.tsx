@@ -1,3 +1,4 @@
+import type { Identificador } from '@/types';
 import { useState } from 'react';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -7,12 +8,13 @@ import { crearAgenda, filtrarAgenda, type FiltroAgenda } from '@/utils/agenda';
 import { fechaRecordatorio } from '@/utils/recordatorios';
 import { useAccionGuardado } from '@/hooks/use-accion-guardado';
 import SaveFeedback from './SaveFeedback';
+import { AdaptiveColumns } from './AdaptiveLayout';
 
 export default function CareAgenda({ initialFilter = 'Hoy', compact = false }: { initialFilter?: FiltroAgenda; compact?: boolean }) {
   const { mascotas, citas, tratamientos, recordatorios, marcarToma, tacharRecordatorio, completarCita } = useAuth();
   const ahora = useAhora();
   const [filtro, setFiltro] = useState<FiltroAgenda>(initialFilter);
-  const [mascotaId, setMascotaId] = useState<number | null>(null);
+  const [mascotaId, setMascotaId] = useState<Identificador | null>(null);
   const guardado = useAccionGuardado();
   const [limite, setLimite] = useState(30);
   const [abierto, setAbierto] = useState<string | null>(null);
@@ -30,6 +32,7 @@ export default function CareAgenda({ initialFilter = 'Hoy', compact = false }: {
     {sinFecha > 0 && <Boton label={`${sinFecha} recordatorios sin fecha: revisar`} onPress={() => router.push('/recordatorios')} />}
     {!compact && <Text style={styles.label}>{eventos.length} cuidados pendientes</Text>}
     {!eventos.length && <Text style={styles.text}>No hay cuidados pendientes para este filtro.</Text>}
+    <AdaptiveColumns singleColumn={compact}>
     {eventos.slice(0, compact ? 3 : limite).map((e) => <View key={e.clave} style={styles.card}>
       <Text style={styles.label}>{e.tipo === 'cita' ? 'Visita veterinaria' : e.tipo === 'medicamento' ? 'Medicamento' : 'Recordatorio'} · {mascotas.find((m) => m.id === e.mascota_id)?.nombre ?? 'Sin mascota'}</Text>
       <Text style={styles.label} numberOfLines={compact && abierto !== e.clave ? 2 : undefined}>{e.titulo}</Text>
@@ -49,6 +52,7 @@ export default function CareAgenda({ initialFilter = 'Hoy', compact = false }: {
       </>}
       </>}
     </View>)}
+    </AdaptiveColumns>
     {compact ? <Boton label="Ver agenda completa" onPress={() => router.push('/citas')} /> : eventos.length > limite && <Boton label="Ver más cuidados" onPress={() => setLimite(limite + 30)} />}
   </View>;
 }

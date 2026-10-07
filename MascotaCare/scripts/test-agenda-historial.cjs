@@ -48,7 +48,8 @@ assert.throws(()=>historial.validarObservacion({tipo:'observacion',titulo:'Nota'
 const estados = [null,null,false,[mascota,{id:2}],citas,recordatorios,tratamientos];
 let indice=0;
 const react={createContext:()=>({Provider:'Provider'}),useState:()=>{const n=indice++;return [estados[n],valor=>{estados[n]=typeof valor==='function'?valor(estados[n]):valor;}];},useRef:valor=>({current:valor}),useCallback:fn=>fn,createElement:(_t,p)=>p};
-const {AuthProvider}=cargar('src/context/AuthContext.tsx',nombre=>nombre==='react'?react:nombre==='@/utils/historial'?historial:{});
+react.useEffect = () => {};
+const {AuthProvider}=cargar('src/context/AuthContext.tsx',nombre => nombre === '@/hooks/use-carga-datos' ? require('./helpers/carga-datos.cjs') : nombre === 'react'?react:nombre==='@/utils/historial'?historial:{});
 const ctx=AuthProvider({children:null}).value;
 // Usa una visita pasada respecto al reloj real para probar su transición.
 estados[4][0].fecha_hora='2020-01-01T10:00:00Z';

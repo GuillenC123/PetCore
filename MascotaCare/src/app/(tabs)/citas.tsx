@@ -1,3 +1,4 @@
+import { layoutStyles } from '@/components/AdaptiveLayout';
 // ============================================================================
 // (tabs)/citas.tsx - Pantalla de Citas
 // ----------------------------------------------------------------------------
@@ -18,10 +19,10 @@ export default function CitasScreen() {
   const { creada } = useLocalSearchParams<{ creada?: string }>();
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, layoutStyles.page]}
         showsVerticalScrollIndicator={false}>
         {/* Cabecera general. */}
         <AppHeader onPressBell={() => router.push('/recordatorios')} />

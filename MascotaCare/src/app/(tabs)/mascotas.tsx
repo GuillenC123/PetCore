@@ -1,3 +1,5 @@
+import type { Identificador } from '@/types';
+import { layoutStyles } from '@/components/AdaptiveLayout';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -9,12 +11,12 @@ import { useAuth } from '@/context/AuthContext';
 
 export default function FichaSaludScreen() {
   const { mascotas } = useAuth();
-  const [seleccionada, setSeleccionada] = useState<number | null>(null);
+  const [seleccionada, setSeleccionada] = useState<Identificador | null>(null);
   const mascota = mascotas.find((m) => m.id === seleccionada) ?? mascotas[0];
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView style={styles.safe} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[styles.content, layoutStyles.page]} keyboardShouldPersistTaps="handled">
           <AppHeader onPressBell={() => router.push('/recordatorios')} />
           <Text style={styles.title}>Ficha de salud</Text>
           <Text style={styles.description}>Elige una mascota y abre la sección que quieras consultar.</Text>

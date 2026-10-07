@@ -1,57 +1,66 @@
-# PETCore
+# PetCore
 
-Aplicación para organizar la información y el cuidado de mascotas. El frontend está desarrollado con React Native, Expo y TypeScript. El proyecto también incluye una API con Express y una base de datos PostgreSQL.
+Aplicación para que los dueños organicen la salud y los cuidados de sus mascotas: fichas de salud, visitas, tratamientos, peso, vacunas, historial y recordatorios.
 
-## ¿Qué contiene?
+La interfaz usa la marca **PetCore**; el proyecto y la configuración de Expo conservan el nombre `MascotaCare`. El frontend contempla Android, iOS y web.
 
-- **Inicio:** resumen de mascotas, citas y recordatorios pendientes.
-- **Mascotas:** listado, detalle y formulario para añadir mascotas.
-- **Citas:** consulta de citas y sus estados. Agendar desde el frontend todavía está pendiente.
-- **Recordatorios:** lista con casillas para marcar tareas como completadas, accesible desde la campana y desde Notificaciones.
-- **Perfil:** datos del usuario, estadísticas, edición de nombre y correo, y cierre de sesión.
-- **Ayuda:** guía sobre cómo utilizar la aplicación.
-- **Acceso:** inicio de sesión y registro con validaciones y mensajes de error.
+## Funcionalidades actuales
 
-## Estructura del proyecto
+| Área | Funciones |
+| --- | --- |
+| Inicio | Cuidados de hoy y vencidos, mascotas y accesos rápidos. |
+| Ficha de salud | Nacimiento o edad, sexo, alergias y condiciones. |
+| Peso | Una medición por día, correcciones, historial y gráfica. |
+| Carnet | Vacunas, desparasitación, próximas aplicaciones y comprobantes. |
+| Tratamientos | Indicaciones, duración, horarios y registro de tomas. |
+| Agenda | Visitas, medicamentos y recordatorios; filtros por mascota y fecha. |
+| Historial | Eventos de salud, consultas, observaciones y adjuntos PDF o fotografías. |
+| Recordatorios | Crear, editar, completar, posponer y repetir tareas. |
+| Perfil y acceso | Login, registro, edición de perfil, ayuda y cierre de sesión. |
+
+Agendar visitas desde el frontend ya funciona durante la sesión: crea una cita y un recordatorio y cambia la mascota a `malestar`. Los avisos se consultan dentro de la app; todavía no hay notificaciones al teléfono.
+
+## Arquitectura y tecnologías
+
+El frontend usa **React Native 0.86.3, React 19.2.3, Expo SDK 57, Expo Router y TypeScript 6**. React Context comparte sesión y datos; `useCargaDatos` coordina las consultas, las utilidades procesan las respuestas y `fetch` consulta la API.
+
+La API propia usa **Node.js, Express 4, PostgreSQL y pg**, con validaciones, consultas SQL parametrizadas, bcrypt y JWT.
 
 ```text
-MascotaCare/
-├── assets/                 # Imágenes e iconos
-├── src/
-│   ├── app/                # Pantallas y navegación con Expo Router
-│   │   ├── (auth)/         # Login y registro
-│   │   ├── (tabs)/         # Inicio, mascotas, citas y perfil
-│   │   ├── ayuda.tsx
-│   │   ├── editar-perfil.tsx
-│   │   ├── mascota-detalle.tsx
-│   │   ├── nueva-mascota.tsx
-│   │   ├── recordatorios.tsx
-│   │   └── _layout.tsx     # Navegación principal
-│   ├── components/         # Tarjetas, botones, campos y cabeceras reutilizables
-│   ├── constants/          # Colores y estilos del tema
-│   ├── context/            # Sesión del usuario y datos compartidos
-│   ├── data/               # Datos de demostración
-│   ├── hooks/              # Hooks de tema y apariencia
-│   ├── services/           # Comunicación con la API
-│   ├── utils/              # Validaciones y formato de estados y fechas
-│   └── types.ts            # Tipos de usuario, mascota, cita y recordatorio
-├── server/
-│   ├── src/
-│   │   ├── routes/         # Rutas de autenticación, mascotas, citas y recordatorios
-│   │   ├── middleware/     # Autenticación y validación de solicitudes
-│   │   ├── validation/     # Reglas y esquemas de validación
-│   │   ├── db.js           # Conexión a PostgreSQL
-│   │   └── index.js        # Inicio de la API
-│   ├── db/schema.sql       # Tablas y datos iniciales
-│   └── test/               # Pruebas de validación de la API
-├── app.json                # Configuración de Expo
-├── package.json            # Dependencias y comandos del frontend
-└── tsconfig.json           # Configuración de TypeScript
+PetCore/
+├── MascotaCare/
+│   ├── src/app/          Pantallas y navegación
+│   ├── src/components/   Interfaz y módulos de salud
+│   ├── src/context/      Sesión y datos compartidos
+│   ├── src/services/     Cliente HTTP
+│   ├── src/utils/        Reglas y transformación de datos
+│   ├── src/hooks/        Tiempo, guardado y apariencia
+│   ├── server/src/       API Express
+│   ├── server/db/        Esquema y datos iniciales
+│   └── scripts/          Pruebas del frontend
+└── docs/                 Plan de desarrollo
 ```
 
-## Ejecutar el frontend
+Flujo actual: **pantallas → contexto y utilidades → cliente HTTP → API Express → PostgreSQL**. El contexto también permite usar datos de demostración.
 
-Desde la raíz del repositorio, con Node.js y npm instalados:
+## Estado del avance 2
+
+| Requisito | Estado |
+| --- | --- |
+| `useState` y `useEffect` con funciones reales | Cumplido: formularios, estado compartido y vencimientos. |
+| Obtener, procesar y mostrar datos de API | Implementado en código mediante la API propia. |
+| Carga, error y vacío | Implementado: consulta atómica, indicador de carga, error con reintento y vacío tras una respuesta correcta. |
+| AsyncStorage: guardar, recuperar y reutilizar | Pendiente; no está instalado ni integrado. |
+| Flujo integrado | Parcial; falta incorporar almacenamiento con API, hooks y estados. |
+| README y evidencias | Documentación actualizada; capturas o video del flujo completo pendientes. |
+
+Crear mascotas o visitas, editar el perfil y registrar datos de salud modifica el estado en memoria. Crear, editar y posponer recordatorios también es local. Completar un recordatorio existente de API sí intenta guardar su estado en el servidor. La sesión y los cambios locales se pierden al reiniciar o salir.
+
+## Ejecución
+
+Necesitas Node.js y npm; PostgreSQL para la API real. La [referencia de Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/) indica Node.js 22.13.x como mínimo para ese SDK.
+
+Desde la raíz:
 
 ```bash
 cd MascotaCare
@@ -59,22 +68,14 @@ npm install
 npm start
 ```
 
-Pulsa `w` para abrir la versión web. También puedes ejecutar `npm run web`.
+Pulsa `w` para web. La [guía completa](MascotaCare/README.md#ejecutar-el-proyecto) documenta PostgreSQL, configuración e inicio del servidor, conexión desde dispositivos y comprobaciones.
 
-Para presentar el frontend sin iniciar el backend, usa la cuenta de demostración:
+Sin servidor, puedes entrar con `ana.garcia@email.com` y contraseña `123456`. Este modo usa mocks y no demuestra consumo real de API ni persistencia local.
 
-- **Correo:** `ana.garcia@email.com`
-- **Contraseña:** `123456`
+## Documentación y desarrollo
 
-Si la API no está disponible, estas credenciales permiten entrar con datos simulados. Las validaciones, la edición de perfil, el registro local de mascotas y las casillas de recordatorios funcionan sin backend. Los cambios locales se mantienen durante la sesión; no se conservan al reiniciar la app. Crear una cuenta nueva sí requiere la API.
+- [Guía de la aplicación y uso en tablet](MascotaCare/README.md).
+- [Plan del avance 2 por ramas](docs/PLAN-DESARROLLO.md).
+- [Evidencias pendientes](MascotaCare/README.md#evidencias-del-funcionamiento).
 
-## Comprobar el código
-
-Desde `MascotaCare/`:
-
-```bash
-npm run lint
-npx tsc --noEmit
-```
-
-Para las pruebas del servidor, instala primero sus dependencias con `npm install --prefix server` y ejecuta `npm test --prefix server`. Estas pruebas usan PostgreSQL simulado.
+`dev` ya reúne `funciones` y `visual`. La primera etapa está implementada en `api-estados`. Las tres ramas siguientes siguen propuestas.

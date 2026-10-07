@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import FormInput from './FormInput';
 import { useAuth } from '@/context/AuthContext';
 import { AppColors } from '@/constants/theme';
-import type { Recordatorio, TipoRecordatorio } from '@/types';
+import type { Identificador, Recordatorio, TipoRecordatorio  } from '@/types';
 import { interpretarFechaVisita } from '@/utils/citas';
 import { fechaRecordatorio, REPETICIONES } from '@/utils/recordatorios';
 
@@ -12,7 +12,7 @@ export default function ReminderForm({ recordatorio, cerrar }: { recordatorio?: 
   const inicial = fechaRecordatorio(recordatorio?.vence_en ?? null);
   const [titulo, setTitulo] = useState(recordatorio?.titulo ?? '');
   const [descripcion, setDescripcion] = useState(recordatorio?.descripcion ?? '');
-  const [mascotaId, setMascotaId] = useState<number | null>(recordatorio?.mascota_id ?? null);
+  const [mascotaId, setMascotaId] = useState<Identificador | null>(recordatorio?.mascota_id ?? null);
   const [tipo, setTipo] = useState<TipoRecordatorio>(recordatorio?.tipo ?? 'general');
   const [repeticion, setRepeticion] = useState(recordatorio?.repeticion ?? 'ninguna');
   const [fecha, setFecha] = useState(inicial ? `${String(inicial.getDate()).padStart(2, '0')}/${String(inicial.getMonth() + 1).padStart(2, '0')}/${inicial.getFullYear()}` : '');

@@ -1,137 +1,171 @@
-// ============================================================================
-// api.ts - Cliente del servidor API local de MascotaCare
-// ----------------------------------------------------------------------------
-// Encapsula todas las llamadas HTTP (fetch) hacia el servidor Express:
-//   * Endpoints públicos:  login y registro (no requieren token).
-//   * Endpoints protegidos: mascotas, citas y recordatorios (requieren token).
-//
-// Reglas de funcionamiento:
-//   1. La URL base viene de la constante API_URL. En un emulador Android se usa
-//      "10.0.2.2" para alcanzar el localhost de la máquina anfitriona; en buen
-//      una prueba real se deja "localhost".
-//   2. El token JWT se envía en la cabecera "Authorization: Bearer <token>".
-//   3. Si el servidor no responde (offline), la app usa los datos simulados de
-//      "mockData" para que la interfaz siempre pueda demostrarse. Para ello se
-//      exportan funciones "use fallback" manejadas desde el contexto.
-// ============================================================================
-
+// Cliente HTTP: configuración, errores y adaptación de respuestas de PostgreSQL.
 import { Platform } from 'react-native';
 
-import type {
-  ApiError,
-  AuthResponse,
-  Cita,
-  Mascota,
-  Recordatorio,
-  Usuario,
-} from '@/types';
+import { normalizarIdentificador } from '@/utils/identificadores';
+import type { ApiError, AuthResponse, Cita, DatosApp, Identificador, Mascota, Recordatorio, Usuario } from '@/types';
 
-// En un emulador Android el "localhost" de la máquina se accede por 10.0.2.2.
-// Para un dispositivo físico, reemplazar por la IP LAN del equipo que corre la API.
-const HOST = Platform.select({
-  android: '10.0.2.2',
-  default: 'localhost',
-});
+const HOST = Platform.select({ android: '10.0.2.2', default: 'localhost' });
+export const API_URL = (process.env.EXPO_PUBLIC_API_URL?.trim() || `http://${HOST}:4000/api`).replace(/\/+$/, '');
 
-/** URL base del servidor API. */
-export const API_URL = `http://${HOST}:4000/api`;
+export type TipoErrorApi = 'red' | 'http' | 'respuesta' | 'cancelada' | 'tiempo';
 
-/**
- * Lanza fetch y normaliza la respuesta: si el servidor devuelve un error HTTP
- * se lanza una excepción con el mensaje de la API (para mostrarlo en formas).
- */
+export class ErrorApi extends Error {
+  constructor(message: string, public readonly tipo: TipoErrorApi, public readonly status?: number) {
+    super(message);
+    this.name = 'ErrorApi';
+  }
+}
+
+export function esErrorDeRed(error: unknown): boolean {
+  return error instanceof ErrorApi && error.tipo === 'red';
+}
+
+/** La cancelación de sesión y el tiempo de espera no habilitan el modo demo. */
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers ?? {}),
-    },
-  });
+  const controller = new AbortController();
+  let tiempoAgotado = false;
+  const cancelar = () => controller.abort();
+  options.signal?.addEventListener('abort', cancelar, { once: true });
+  if (options.signal?.aborted) controller.abort();
+  const timeout = setTimeout(() => { tiempoAgotado = true; controller.abort(); }, 15000);
 
-  // Si la respuesta no es 2xx, intentamos leer el mensaje de error de la API.
-  if (!res.ok) {
-    let message = `Error ${res.status}`;
+  try {
+    let res: Response;
     try {
-      const cuerpo = (await res.json()) as ApiError;
-      if (cuerpo?.error) message = cuerpo.error;
+      res = await fetch(`${API_URL}${path}`, {
+        ...options,
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json', ...options.headers },
+      });
     } catch {
-      // Si no hay cuerpo JSON, dejamos el mensaje genérico.
+      if (options.signal?.aborted) throw new ErrorApi('La solicitud se canceló.', 'cancelada');
+      if (tiempoAgotado) throw new ErrorApi('El servidor tardó demasiado en responder. Vuelve a intentarlo.', 'tiempo');
+      throw new ErrorApi('No se pudo conectar con el servidor. Comprueba la conexión y vuelve a intentarlo.', 'red');
     }
-    throw new Error(message);
-  }
 
-  // 204 No Content (p. ej. en DELETE) no tiene cuerpo que analizar.
-  if (res.status === 204) {
-    return undefined as unknown as T;
-  }
+    if (!res.ok) {
+      let mensaje = `El servidor respondió con un error (${res.status}).`;
+      try {
+        const cuerpo = await res.json() as ApiError;
+        if (typeof cuerpo?.error === 'string') mensaje = cuerpo.error;
+      } catch {
+        // Una respuesta HTTP sigue siendo HTTP aunque su cuerpo no sea JSON.
+      }
+      throw new ErrorApi(mensaje, 'http', res.status);
+    }
+    if (res.status === 204) return undefined as T;
 
-  return (await res.json()) as T;
+    try {
+      return await res.json() as T;
+    } catch {
+      if (options.signal?.aborted) throw new ErrorApi('La solicitud se canceló.', 'cancelada');
+      if (tiempoAgotado) throw new ErrorApi('El servidor tardó demasiado en responder. Vuelve a intentarlo.', 'tiempo');
+      throw new ErrorApi('El servidor devolvió una respuesta que no se pudo leer.', 'respuesta');
+    }
+  } finally {
+    clearTimeout(timeout);
+    options.signal?.removeEventListener('abort', cancelar);
+  }
 }
 
-// ============================================================================
-// Servicio de autenticación (público)
-// ============================================================================
+/** Una respuesta inválida no se confunde con un fallo de conexión. */
+function adaptar<T>(transformar: () => T): T {
+  try {
+    return transformar();
+  } catch {
+    throw new ErrorApi('El servidor devolvió datos con un formato inválido.', 'respuesta');
+  }
+}
 
-/** Inicia sesión con correo y contraseña. */
-export function apiLogin(correo: string, password: string): Promise<AuthResponse> {
-  return request<AuthResponse>('/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ correo, password }),
+function mascotaApi(dato: Mascota): Mascota {
+  if (typeof dato.nombre !== 'string' || typeof dato.raza !== 'string' ||
+      typeof dato.especie !== 'string' || typeof dato.edad !== 'string' ||
+      !['saludable', 'malestar', 'vacuna_pendiente', 'en_tratamiento'].includes(dato.estado)) {
+    throw new Error('Mascota inválida.');
+  }
+  return { ...dato, id: normalizarIdentificador(dato.id) };
+}
+
+function citaApi(dato: Cita): Cita {
+  if (typeof dato.titulo !== 'string' || !Number.isFinite(Date.parse(dato.fecha_hora)) ||
+      !['confirmado', 'pendiente', 'programado', 'cancelado', 'completado'].includes(dato.estado)) {
+    throw new Error('Cita inválida.');
+  }
+  return { ...dato, id: normalizarIdentificador(dato.id), mascota_id: normalizarIdentificador(dato.mascota_id) };
+}
+
+function recordatorioApi(dato: Recordatorio): Recordatorio {
+  if (typeof dato.titulo !== 'string' || typeof dato.completado !== 'boolean' ||
+      !['vacuna', 'alimento', 'cita', 'dosis', 'general'].includes(dato.tipo)) {
+    throw new Error('Recordatorio inválido.');
+  }
+  return {
+    ...dato,
+    id: normalizarIdentificador(dato.id),
+    mascota_id: dato.mascota_id === null ? null : normalizarIdentificador(dato.mascota_id),
+  };
+}
+
+function listaApi<T>(datos: T[], transformar: (dato: T) => T): T[] {
+  return adaptar(() => {
+    if (!Array.isArray(datos)) throw new Error('Se esperaba una lista.');
+    return datos.map(transformar);
   });
 }
 
-/** Crea una cuenta nueva y devuelve el token de sesión. */
-export function apiRegistro(
-  nombre: string,
-  correo: string,
-  password: string
-): Promise<AuthResponse> {
-  return request<AuthResponse>('/auth/registro', {
-    method: 'POST',
-    body: JSON.stringify({ nombre, correo, password }),
+function sesionApi(datos: AuthResponse): AuthResponse {
+  return adaptar(() => {
+    if (typeof datos.token !== 'string' || !datos.token) throw new Error('Falta el token.');
+    if (typeof datos.usuario.nombre !== 'string' || typeof datos.usuario.correo !== 'string') {
+      throw new Error('Usuario inválido.');
+    }
+    return { ...datos, usuario: { ...datos.usuario, id: normalizarIdentificador(datos.usuario.id) } };
   });
 }
 
-// ============================================================================
-// Servicio de datos protegidos (requieren token)
-// ============================================================================
+export async function apiLogin(correo: string, password: string, signal?: AbortSignal): Promise<AuthResponse> {
+  const datos = await request<AuthResponse>('/auth/login', {
+    method: 'POST', signal, body: JSON.stringify({ correo, password }),
+  });
+  return sesionApi(datos);
+}
 
-/** Cabeceras con el token JWT del usuario logueado. */
+export async function apiRegistro(nombre: string, correo: string, password: string, signal?: AbortSignal): Promise<AuthResponse> {
+  const datos = await request<AuthResponse>('/auth/registro', {
+    method: 'POST', signal, body: JSON.stringify({ nombre, correo, password }),
+  });
+  return sesionApi(datos);
+}
+
 function autorizar(token: string): RequestInit['headers'] {
   return { Authorization: `Bearer ${token}` };
 }
 
-/** Lista las mascotas del usuario autenticado. */
-export function apiGetMascotas(token: string): Promise<Mascota[]> {
-  return request<Mascota[]>('/mascotas', { headers: autorizar(token) });
+export async function apiGetMascotas(token: string, signal?: AbortSignal): Promise<Mascota[]> {
+  return listaApi(await request<Mascota[]>('/mascotas', { headers: autorizar(token), signal }), mascotaApi);
 }
 
-/** Lista las citas del usuario autenticado. */
-export function apiGetCitas(token: string): Promise<Cita[]> {
-  return request<Cita[]>('/citas', { headers: autorizar(token) });
+export async function apiGetCitas(token: string, signal?: AbortSignal): Promise<Cita[]> {
+  return listaApi(await request<Cita[]>('/citas', { headers: autorizar(token), signal }), citaApi);
 }
 
-/** Lista los recordatorios pendientes del usuario autenticado. */
-export function apiGetRecordatorios(token: string): Promise<Recordatorio[]> {
-  return request<Recordatorio[]>('/recordatorios?', { headers: autorizar(token) });
+export async function apiGetRecordatorios(token: string, signal?: AbortSignal): Promise<Recordatorio[]> {
+  return listaApi(await request<Recordatorio[]>('/recordatorios', { headers: autorizar(token), signal }), recordatorioApi);
 }
 
-/** Marca un recordatorio como completado (mueve su checkbox). */
-export function apiTacharRecordatorio(
-  token: string,
-  id: number,
-  completado: boolean
-): Promise<Recordatorio> {
-  return request<Recordatorio>(`/recordatorios/${id}`, {
-    method: 'PUT',
-    headers: autorizar(token),
-    body: JSON.stringify({ completado }),
+/** Se entregan las tres listas juntas; un fallo no publica una carga parcial. */
+export async function apiGetDatos(token: string, signal?: AbortSignal): Promise<DatosApp> {
+  const [mascotas, citas, recordatorios] = await Promise.all([
+    apiGetMascotas(token, signal), apiGetCitas(token, signal), apiGetRecordatorios(token, signal),
+  ]);
+  return { mascotas, citas, recordatorios };
+}
+
+export async function apiTacharRecordatorio(token: string, id: Identificador, completado: boolean): Promise<Recordatorio> {
+  const datos = await request<Recordatorio>(`/recordatorios/${id}`, {
+    method: 'PUT', headers: autorizar(token), body: JSON.stringify({ completado }),
   });
+  return adaptar(() => recordatorioApi(datos));
 }
-
-// ============================================================================
-// Tipos de utilidad exportados para reuso
-// ============================================================================
 
 export type { Usuario, Mascota, Cita, Recordatorio };

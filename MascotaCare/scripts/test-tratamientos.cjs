@@ -44,7 +44,8 @@ const react = {
   useRef: valor => ({ current: valor }), useCallback: fn => fn,
   createElement: (_tipo, props) => props,
 };
-const { AuthProvider } = cargar('src/context/AuthContext.tsx', nombre => nombre === 'react' ? react : nombre === '@/utils/tratamientos' ? util : {});
+react.useEffect = () => {};
+const { AuthProvider } = cargar('src/context/AuthContext.tsx', nombre => nombre === '@/hooks/use-carga-datos' ? require('./helpers/carga-datos.cjs') : nombre === 'react' ? react : nombre === '@/utils/tratamientos' ? util : {});
 let contexto = AuthProvider({ children: null }).value;
 assert.throws(() => contexto.agregarTratamiento({ ...datos, mascota_id: 99 }));
 contexto.agregarTratamiento({ ...datos, inicio: '01/01/2020' });

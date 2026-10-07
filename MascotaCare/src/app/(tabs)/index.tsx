@@ -1,3 +1,4 @@
+import { AdaptiveColumns, layoutStyles } from '@/components/AdaptiveLayout';
 // ============================================================================
 // (tabs)/index.tsx - Pantalla de Inicio
 // ----------------------------------------------------------------------------
@@ -35,10 +36,10 @@ export default function HomeScreen() {
   const pendientesHoy = cuidados.filter((e) => Date.parse(e.fecha) <= finHoy.getTime()).length;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, layoutStyles.page]}
         showsVerticalScrollIndicator={false}>
         {/* ------ Cabecera general ------ */}
         <AppHeader onPressBell={() => router.push('/recordatorios')} />
@@ -67,8 +68,12 @@ export default function HomeScreen() {
           />
         </View>
 
+        <AdaptiveColumns>
+        <View style={layoutStyles.column}>
         <Text style={styles.sectionTitle}>Cuidados de hoy y vencidos</Text>
         <CareAgenda compact />
+        </View>
+        <View style={layoutStyles.column}>
         {/* ------ Sección Mis Mascotas ------ */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Mis Mascotas</Text>
@@ -76,7 +81,7 @@ export default function HomeScreen() {
             Ficha de salud
           </Text>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.list}>
+        <View style={styles.list}>
           {/* El estado se mantiene visible también en Inicio. */}
           {mascotas.map((m) => (
             <View key={m.id} style={styles.pet}>
@@ -86,9 +91,10 @@ export default function HomeScreen() {
               onPress={() => router.push(`/mascota-detalle?id=${m.id}`)}
             /></View>
           ))}
-        </ScrollView>
+        </View>
         {mascotas.length === 0 && <Text style={styles.empty}>Añade tu primera mascota para empezar a organizar sus cuidados.</Text>}
-        {mascotas.length > 1 && <Text style={styles.empty}>Desliza para ver tus mascotas.</Text>}
+        </View>
+        </AdaptiveColumns>
 
       </ScrollView>
 
@@ -149,7 +155,7 @@ const styles = StyleSheet.create({
   list: {
     gap: 12,
   },
-  pet: { width: 270 },
+  pet: { width: '100%' },
   empty: {
     fontSize: 14,
     color: AppColors.textSecondary,

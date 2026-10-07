@@ -1,3 +1,4 @@
+import { AdaptiveColumns, layoutStyles } from '@/components/AdaptiveLayout';
 // ============================================================================
 // nueva-mascota.tsx - Formulario "Añadir nueva mascota"
 // ----------------------------------------------------------------------------
@@ -92,7 +93,7 @@ export default function NuevaMascotaScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -109,7 +110,7 @@ export default function NuevaMascotaScreen() {
         </View>
 
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, layoutStyles.form]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           {/* Subtítulo descriptivo. */}
@@ -118,7 +119,7 @@ export default function NuevaMascotaScreen() {
           </Text>
 
           {/* ---- Camapos del formulario ---- */}
-          <View style={styles.form}>
+          <AdaptiveColumns>
             <FormInput
               icon="paw-outline"
               placeholder="Nombre de la mascota"
@@ -168,6 +169,7 @@ export default function NuevaMascotaScreen() {
               onChangeText={setEdad}
               error={errores.edad}
             />
+            <View style={styles.especieBlock}>
             <Text style={styles.label}>Peso en kg (opcional)</Text>
             <FormInput
               icon="scale-outline"
@@ -178,7 +180,8 @@ export default function NuevaMascotaScreen() {
               onChangeText={(valor) => { setPeso(valor); setErrores((prev) => ({ ...prev, peso: '' })); }}
               error={errores.peso}
             />
-          </View>
+            </View>
+          </AdaptiveColumns>
 
           {/* ---- Botón guardar ---- */}
           <Pressable

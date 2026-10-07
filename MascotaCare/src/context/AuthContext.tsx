@@ -12,10 +12,12 @@
 //
 // Además expone los datos de la app (mascotas, citas, recordatorios) y un
 // método para cargarlos, delegando en la API cuando hay token y en los datos
-// simulados cuando el servidor no está accesible.
+// simulados únicamente en una sesión demo; los fallos de consulta permiten reintentar.
 // ============================================================================
 
 import * as React from 'react';
+import { useCargaDatos } from '@/hooks/use-carga-datos';
+import { esIdentificadorRemoto } from '@/utils/identificadores';
 import { validarObservacion } from '@/utils/historial';
 import { validarCarnet } from '@/utils/carnet';
 import { interpretarFechaVisita } from '@/utils/citas';
@@ -26,15 +28,16 @@ import { completarRecordatorio, fechaRecordatorio } from '@/utils/recordatorios'
 
 import { MOCK_EMAIL, MOCK_PASSWORD, mockData } from '@/data/mockData';
 import {
-  apiGetCitas,
-  apiGetMascotas,
-  apiGetRecordatorios,
+  esErrorDeRed,
   apiLogin,
   apiRegistro,
   apiTacharRecordatorio,
 } from '@/services/api';
 import type {
   AuthResponse,
+  DatosApp,
+  EstadoCargaDatos,
+  Identificador,
   ObservacionSalud,
   AdjuntoSalud,
   RegistroCarnet,
@@ -51,20 +54,6 @@ import type {
 // ---------------------------------------------------------------------------
 
 /**
- * Detecta si un error proviene de la red (servidor apagado o sin conexión) y no
- * de una respuesta HTTP real. Los "fetch" fallan así cuando no hay servidor.
- */
-function esErrorDeRed(err: unknown): boolean {
-  const msg = String(err instanceof Error ? err.message : err).toLowerCase();
-  return (
-    msg.includes('failed to fetch') ||
-    msg.includes('network request failed') ||
-    msg.includes('typeerror') ||
-    msg.includes('fetch')
-  );
-}
-
-/**
  * Mensaje profesional y seguro cuando el servidor no está disponible. NO revela
  * credenciales ni detalles internos por seguridad.
  */
@@ -77,16 +66,18 @@ function mensajeServidorNoDisponible(): string {
 // ---------------------------------------------------------------------------
 
 interface AuthContextValue {
-  completarCita: (id: number) => void;
-  agregarObservacion: (mascotaId: number, datos: Omit<ObservacionSalud, 'id'>) => void;
-  adjuntarHistorial: (mascotaId: number, clave: string, adjuntos: AdjuntoSalud[]) => void;
-  guardarCarnet: (mascotaId: number, datos: Omit<RegistroCarnet, 'id'>, id?: number) => void;
+  completarCita: (id: Identificador) => void;
+  agregarObservacion: (mascotaId: Identificador, datos: Omit<ObservacionSalud, 'id'>) => void;
+  adjuntarHistorial: (mascotaId: Identificador, clave: string, adjuntos: AdjuntoSalud[]) => void;
+  guardarCarnet: (mascotaId: Identificador, datos: Omit<RegistroCarnet, 'id'>, id?: number) => void;
   tratamientos: Tratamiento[];
   agregarTratamiento: (datos: NuevoTratamiento) => void;
   marcarToma: (tratamientoId: number, fecha: string, estado: EstadoToma) => void;
   usuario: Usuario | null;
   token: string | null;
   conectado: boolean;
+  modoDemo: boolean;
+  estadoDatos: EstadoCargaDatos;
   mascotas: Mascota[];
   citas: Cita[];
   recordatorios: Recordatorio[];
@@ -95,15 +86,15 @@ interface AuthContextValue {
   registro: (nombre: string, correo: string, password: string) => Promise<void>;
   logout: () => void;
   cargarDatos: () => Promise<void>;
-  tacharRecordatorio: (id: number, completado: boolean) => Promise<void>;
-  guardarRecordatorio: (datos: Omit<Recordatorio, 'id' | 'completado'>, id?: number) => void;
-  posponerRecordatorio: (id: number, fecha: string) => void;
+  tacharRecordatorio: (id: Identificador, completado: boolean) => Promise<void>;
+  guardarRecordatorio: (datos: Omit<Recordatorio, 'id' | 'completado'>, id?: Identificador) => void;
+  posponerRecordatorio: (id: Identificador, fecha: string) => void;
   /** Añade una mascota al estado local (aporta el id automáticamente). */
   agregarMascota: (datos: Omit<Mascota, 'id'>) => Mascota;
-  agregarCita: (datos: { mascota_id: number; motivo: string; fecha_hora: string }) => void;
-  actualizarPesoMascota: (id: number, peso: number | null) => void;
-  registrarPeso: (id: number, peso: number, fecha: string) => void;
-  actualizarFichaSalud: (id: number, datos: DatosFichaSalud) => void;
+  agregarCita: (datos: { mascota_id: Identificador; motivo: string; fecha_hora: string }) => void;
+  actualizarPesoMascota: (id: Identificador, peso: number | null) => void;
+  registrarPeso: (id: Identificador, peso: number, fecha: string) => void;
+  actualizarFichaSalud: (id: Identificador, datos: DatosFichaSalud) => void;
   /** Actualiza el perfil en memoria durante la sesión, sin llamar a la API. */
   actualizarPerfil: (datos: Pick<Usuario, 'nombre' | 'correo'>) => void;
 }
@@ -125,6 +116,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [citas, setCitas] = React.useState<Cita[]>([]);
   const [recordatorios, setRecordatorios] = React.useState<Recordatorio[]>([]);
   const [tratamientos, setTratamientos] = React.useState<Tratamiento[]>([]);
+
+  const aplicarDatos = React.useCallback((datos: DatosApp) => {
+    setMascotas(datos.mascotas);
+    setCitas(datos.citas);
+    setRecordatorios(datos.recordatorios);
+  }, []);
+  const { estadoDatos, cargarDatos, iniciarCarga, reiniciarCarga } = useCargaDatos(aplicarDatos);
   const siguienteTratamiento = React.useRef(1);
   const agregarTratamiento = React.useCallback((datos: NuevoTratamiento) => {
     if (!mascotas.some((m) => m.id === datos.mascota_id)) throw new Error('Selecciona una mascota registrada.');
@@ -140,30 +138,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setTratamientos((prev) => prev.map((t) => t.id === id ? registrarToma(t, fecha, estado, ahora) : t));
   }, [tratamientos]);
 
-  // Contador para generar ids de mascotas creadas localmente (evita colisiones
-  // con los ids reales de la BD, que son bajos; usamos un arranque alto).
-  const proximoId = React.useRef(1000);
+  // IDs negativos para que las mascotas locales no colisionen con PostgreSQL.
+  const proximoId = React.useRef(-1);
   const proximaVisitaId = React.useRef(-1);
   const siguienteObservacion = React.useRef(1);
-  const agregarObservacion = React.useCallback((mascotaId: number, datos: Omit<ObservacionSalud, 'id'>) => {
+  const agregarObservacion = React.useCallback((mascotaId: Identificador, datos: Omit<ObservacionSalud, 'id'>) => {
     validarObservacion(datos);
     if (!mascotas.some((m) => m.id === mascotaId)) throw new Error('Mascota no encontrada.');
     const observacion = { ...datos, titulo: datos.titulo.trim(), descripcion: datos.descripcion.trim(), id: siguienteObservacion.current++ };
     setMascotas((prev) => prev.map((m) => m.id === mascotaId ? { ...m, observaciones: [...(m.observaciones ?? []), observacion] } : m));
   }, [mascotas]);
-  const adjuntarHistorial = React.useCallback((mascotaId: number, clave: string, adjuntos: AdjuntoSalud[]) => {
+  const adjuntarHistorial = React.useCallback((mascotaId: Identificador, clave: string, adjuntos: AdjuntoSalud[]) => {
     setMascotas((prev) => prev.map((m) => m.id === mascotaId ? { ...m, adjuntos_historial: {
       ...m.adjuntos_historial, [clave]: [...(m.adjuntos_historial?.[clave] ?? []), ...adjuntos],
     } } : m));
   }, []);
-  const completarCita = React.useCallback((id: number) => {
+  const completarCita = React.useCallback((id: Identificador) => {
     const cita = citas.find((c) => c.id === id);
     if (!cita || cita.estado === 'cancelado' || Date.parse(cita.fecha_hora) > Date.now()) throw new Error('La visita aún no puede marcarse como realizada.');
     setCitas((prev) => prev.map((c) => c.id === id ? { ...c, estado: 'completado' } : c));
     setRecordatorios((prev) => prev.map((r) => r.cita_id === id ? { ...r, completado: true } : r));
   }, [citas]);
   const siguienteCarnet = React.useRef(1);
-  const guardarCarnet = React.useCallback((mascotaId: number, datos: Omit<RegistroCarnet, 'id'>, id?: number) => {
+  const guardarCarnet = React.useCallback((mascotaId: Identificador, datos: Omit<RegistroCarnet, 'id'>, id?: number) => {
     const error = validarCarnet(datos);
     if (error) throw new Error(error);
     const mascota = mascotas.find((m) => m.id === mascotaId);
@@ -186,12 +183,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setMascotas((prev) => prev.map((m) => m.id === mascotaId ? { ...m, carnet: id === undefined
       ? [...(m.carnet ?? []), registro] : (m.carnet ?? []).map((r) => r.id === id ? registro : r) } : m));
   }, [mascotas]);
-  const registrarPeso = React.useCallback((id: number, peso: number, fecha: string) => {
+  const registrarPeso = React.useCallback((id: Identificador, peso: number, fecha: string) => {
     if (!mascotas.some((m) => m.id === id)) throw new Error('Mascota no encontrada.');
     const registro = crearRegistroPeso(peso, fecha);
     setMascotas((prev) => prev.map((m) => m.id === id ? aplicarRegistroPeso(m, registro) : m));
   }, [mascotas]);
-  const actualizarFichaSalud = React.useCallback((id: number, datos: DatosFichaSalud) => {
+  const actualizarFichaSalud = React.useCallback((id: Identificador, datos: DatosFichaSalud) => {
     const error = validarFichaSalud(datos);
     if (error) throw new Error(error);
     if (!mascotas.some((m) => m.id === id)) throw new Error('Mascota no encontrada.');
@@ -199,11 +196,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       edad: datos.edad.trim(), alergias: datos.alergias.trim(), condiciones: datos.condiciones.trim(),
     } : m));
   }, [mascotas]);
-  const recordatoriosLocales = React.useRef(new Set<number>());
-  const guardandoRecordatorios = React.useRef(new Set<number>());
+  const recordatoriosLocales = React.useRef(new Set<Identificador>());
+  const guardandoRecordatorios = React.useRef(new Set<Identificador>());
   const versionSesion = React.useRef(0);
+  const autenticacionActual = React.useRef<AbortController | null>(null);
 
-  const guardarRecordatorio = React.useCallback((datos: Omit<Recordatorio, 'id' | 'completado'>, id?: number) => {
+  React.useEffect(() => () => {
+    versionSesion.current++;
+    autenticacionActual.current?.abort();
+  }, []);
+
+  const guardarRecordatorio = React.useCallback((datos: Omit<Recordatorio, 'id' | 'completado'>, id?: Identificador) => {
     if (!datos.titulo.trim() || datos.titulo.trim().length > 120) throw new Error('Escribe un título de hasta 120 caracteres.');
     const fecha = fechaRecordatorio(datos.vence_en);
     if (!fecha || fecha.getTime() <= Date.now()) throw new Error('Elige una fecha y hora futuras.');
@@ -217,7 +220,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       : prev.map((r) => r.id === id ? { ...r, ...cambios } : r));
   }, [mascotas]);
 
-  const posponerRecordatorio = React.useCallback((id: number, fecha: string) => {
+  const posponerRecordatorio = React.useCallback((id: Identificador, fecha: string) => {
     const nuevaFecha = fechaRecordatorio(fecha);
     if (!nuevaFecha || nuevaFecha.getTime() <= Date.now()) throw new Error('Elige una fecha y hora futuras.');
     recordatoriosLocales.current.add(id);
@@ -225,7 +228,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Las visitas creadas en este avance se conservan durante la sesión.
-  const agregarCita = React.useCallback((datos: { mascota_id: number; motivo: string; fecha_hora: string }) => {
+  const agregarCita = React.useCallback((datos: { mascota_id: Identificador; motivo: string; fecha_hora: string }) => {
     const mascota = mascotas.find((m) => m.id === datos.mascota_id);
     if (!mascota) throw new Error('Selecciona una mascota registrada.');
     const fecha = new Date(datos.fecha_hora);
@@ -252,7 +255,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }]);
   }, [mascotas]);
 
-  const actualizarPesoMascota = React.useCallback((id: number, peso: number | null) => {
+  const actualizarPesoMascota = React.useCallback((id: Identificador, peso: number | null) => {
     if (peso !== null && (!Number.isFinite(peso) || peso <= 0)) {
       throw new Error('El peso debe ser mayor que cero.');
     }
@@ -275,135 +278,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * sincronizará con la API.
    */
   const agregarMascota = React.useCallback((datos: Omit<Mascota, 'id'>): Mascota => {
-    const base: Mascota = { ...datos, id: proximoId.current++ };
+    const base: Mascota = { ...datos, id: proximoId.current-- };
     const nueva = datos.peso != null ? aplicarRegistroPeso(base, crearRegistroPeso(datos.peso, fechaPesoHoy())) : base;
     setMascotas((prev) => [nueva, ...prev]);
     return nueva;
   }, []);
 
-  /**
-   * Carga las mascotas, citas y recordatorios. Si hay token usamos la API;
-   * si la API falla (servidor apagado) cargamos los datos simulados para que
-   * la demo siga funcionando de forma autónoma.
-   */
-  const cargarDatos = React.useCallback(async () => {
-    // Sin usuario, no hay nada que cargar.
-    if (!token) return;
+  /** La autenticación habilita la sesión; la consulta tiene sus propios estados. */
+  const aplicarSesion = React.useCallback((respuesta: AuthResponse, datosDemo?: DatosApp) => {
+    setUsuario(respuesta.usuario);
+    setToken(respuesta.token);
+    setConectado(!datosDemo);
+    setMascotas([]);
+    setCitas([]);
+    setRecordatorios([]);
+    setTratamientos([]);
+    recordatoriosLocales.current.clear();
+    guardandoRecordatorios.current.clear();
+    void iniciarCarga(respuesta.token, datosDemo);
+  }, [iniciarCarga]);
+
+  const autenticar = React.useCallback(async (
+    solicitar: (signal: AbortSignal) => Promise<AuthResponse>,
+    permitirDemo = false,
+  ) => {
+    const version = ++versionSesion.current;
+    autenticacionActual.current?.abort();
+    const controller = new AbortController();
+    autenticacionActual.current = controller;
 
     try {
-      // Se piden los tres recursos en paralelo para minimizar latencia.
-      const [m, c, r] = await Promise.all([
-        apiGetMascotas(token),
-        apiGetCitas(token),
-        apiGetRecordatorios(token),
-      ]);
-
-      setMascotas(m);
-      setCitas(c);
-      setRecordatorios(r);
-      setConectado(true); // La API respondió correctamente.
-    } catch {
-      // Servidor no disponible: usamos los datos simulados.
-      setMascotas(mockData.mascotas);
-      setCitas(mockData.citas);
-      setRecordatorios(mockData.recordatorios);
-      setConectado(false);
+      const respuesta = await solicitar(controller.signal);
+      if (version !== versionSesion.current || controller.signal.aborted) return;
+      aplicarSesion(respuesta);
+    } catch (error) {
+      if (version !== versionSesion.current || controller.signal.aborted) return;
+      if (esErrorDeRed(error)) {
+        if (permitirDemo) {
+          aplicarSesion({ usuario: mockData.usuario, token: 'token-demo' }, mockData);
+          return;
+        }
+        throw new Error(mensajeServidorNoDisponible());
+      }
+      throw error;
+    } finally {
+      if (version === versionSesion.current) autenticacionActual.current = null;
     }
-  }, [token]);
+  }, [aplicarSesion]);
 
-  /**
-   * Procesa el resultado de una autenticación: guarda usuario y token, luego
-   * carga los datos asociados.
-   */
-  const aplicarSesion = React.useCallback(
-    async (respuesta: AuthResponse) => {
-      setUsuario(respuesta.usuario);
-      setToken(respuesta.token);
-      // Aún no registramos el token en el estado para la carga; usamos el valor.
-    },
-    []
-  );
+  const login = React.useCallback((correo: string, password: string) =>
+    autenticar((signal) => apiLogin(correo, password, signal),
+      correo.trim().toLowerCase() === MOCK_EMAIL && password === MOCK_PASSWORD),
+  [autenticar]);
 
-  // -------------------------------------------------------------------------
-  // LOGIN: intenta contra el servidor; si no hay conexión, usa el usuario demo.
-  // -------------------------------------------------------------------------
-  const login = React.useCallback(
-    async (correo: string, password: string) => {
-      try {
-        const respuesta = await apiLogin(correo, password);
-        await aplicarSesion(respuesta);
-        setConectado(true);
-        // Carga los datos del usuario real desde el servidor.
-        setMascotas(await apiGetMascotas(respuesta.token));
-        setCitas(await apiGetCitas(respuesta.token));
-        setRecordatorios(await apiGetRecordatorios(respuesta.token));
-      } catch (err) {
-        // Si el fallo es de red (servidor apagado), permitimos la demostración
-        // con el usuario simulado para que la app siga siendo usable sin API.
-        if (esErrorDeRed(err)) {
-          const esDemo =
-            correo.trim().toLowerCase() === MOCK_EMAIL &&
-            password === MOCK_PASSWORD;
-
-          if (esDemo) {
-            setUsuario(mockData.usuario);
-            setToken('token-demo');
-            setConectado(false);
-            setMascotas(mockData.mascotas);
-            setCitas(mockData.citas);
-            setRecordatorios(mockData.recordatorios);
-            return;
-          }
-          // Sin conexión y credenciales no-demo: avisamos sin revelar datos.
-          throw new Error(mensajeServidorNoDisponible());
-        }
-
-        // El servidor respondió (p. ej. 401): propagamos su mensaje genérico
-        // "Correo o contraseña incorrectos." sin detallar cuál falló.
-        throw err;
-      }
-    },
-    [aplicarSesion]
-  );
-
-  // -------------------------------------------------------------------------
-  // REGISTRO: crea una cuenta (requiere el servidor activo).
-  // -------------------------------------------------------------------------
-  const registro = React.useCallback(
-    async (nombre: string, correo: string, password: string) => {
-      try {
-        const respuesta = await apiRegistro(nombre, correo, password);
-        await aplicarSesion(respuesta);
-        setConectado(true);
-        // Un usuario nuevo no tiene datos aún; comenzamos con listas vacías.
-        setMascotas([]);
-        setCitas([]);
-        setRecordatorios([]);
-      } catch (err) {
-        // Si no hay conexión con el servidor, mostramos un mensaje claro en
-        // lugar del genérico "Failed to fetch" del navegador/dispositivo.
-        if (esErrorDeRed(err)) {
-          throw new Error(
-            mensajeServidorNoDisponible() +
-              ' Cada usuario se crea en la base de datos local.'
-          );
-        }
-        throw err;
-      }
-    },
-    [aplicarSesion]
-  );
+  const registro = React.useCallback((nombre: string, correo: string, password: string) =>
+    autenticar((signal) => apiRegistro(nombre, correo, password, signal)),
+  [autenticar]);
 
   // -------------------------------------------------------------------------
   // TACHAR recordatorio (checkbox) - sincroniza con la API o con estado local.
   // -------------------------------------------------------------------------
   const tacharRecordatorio = React.useCallback(
-    async (id: number, completado: boolean) => {
+    async (id: Identificador, completado: boolean) => {
       if (guardandoRecordatorios.current.has(id)) throw new Error('Este recordatorio se está guardando.');
       guardandoRecordatorios.current.add(id);
       const sesion = versionSesion.current;
       try {
-        if (token && conectado && id > 0 && !recordatoriosLocales.current.has(id)) {
+        if (token && conectado && esIdentificadorRemoto(id) && !recordatoriosLocales.current.has(id)) {
           await apiTacharRecordatorio(token, id, completado);
         }
         if (sesion !== versionSesion.current) return;
@@ -412,7 +353,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch {
         throw new Error('No se pudo guardar el recordatorio. Conservamos su estado anterior. Vuelve a intentarlo.');
       } finally {
-        guardandoRecordatorios.current.delete(id);
+        if (sesion === versionSesion.current) guardandoRecordatorios.current.delete(id);
       }
     },
     [token, conectado]
@@ -421,6 +362,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Cierra la sesión y limpia todos los datos de la app.
   const logout = React.useCallback(() => {
     versionSesion.current++;
+    autenticacionActual.current?.abort();
+    autenticacionActual.current = null;
+    reiniciarCarga();
+    guardandoRecordatorios.current.clear();
     setTratamientos([]);
     setUsuario(null);
     setToken(null);
@@ -429,7 +374,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setCitas([]);
     setRecordatorios([]);
     recordatoriosLocales.current.clear();
-  }, []);
+  }, [reiniciarCarga]);
 
   // ==========================================================================
   // Valor expuesto por el contexto.
@@ -445,6 +390,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     usuario,
     token,
     conectado,
+    modoDemo: token === 'token-demo',
+    estadoDatos,
     mascotas,
     citas,
     recordatorios,

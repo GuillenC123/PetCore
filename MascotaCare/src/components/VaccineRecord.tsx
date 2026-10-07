@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import type { Mascota, RegistroCarnet } from '@/types';
+import type { Identificador, Mascota, RegistroCarnet  } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { useAhora } from '@/hooks/use-ahora';
 import { estadoProximo, pendientesCarnet } from '@/utils/carnet';
@@ -64,7 +64,7 @@ export default function VaccineRecord({ mascota }: { mascota: Mascota }) {
   </View>;
 }
 
-function Formulario({ mascotaId, edicion, cerrar }: { mascotaId: number; edicion: Edicion; cerrar: (guardado: boolean) => void }) {
+function Formulario({ mascotaId, edicion, cerrar }: { mascotaId: Identificador; edicion: Edicion; cerrar: (guardado: boolean) => void }) {
   const { guardarCarnet } = useAuth();
   const datos = edicion.datos;
   const [tipo, setTipo] = useState<RegistroCarnet['tipo']>(datos?.tipo ?? edicion.anterior?.tipo ?? 'vacuna');

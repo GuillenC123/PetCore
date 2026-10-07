@@ -1,3 +1,4 @@
+import { layoutStyles } from '@/components/AdaptiveLayout';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -13,7 +14,7 @@ const secciones: {
   {
     titulo: 'Inicio',
     icono: 'home-outline',
-    descripcion: 'Consulta el resumen de visitas, recordatorios y tomas pendientes. En Cuidados de hoy y vencidos puedes marcar visitas realizadas, registrar tomas administradas u omitidas y completar recordatorios. Se muestran hasta tres cuidados; pulsa Ver detalle y registrar para abrir sus acciones. pulsa Ver agenda completa para consultar los demás. Usa la barra inferior para cambiar entre Inicio, Ficha de salud, Agenda y Perfil.',
+    descripcion: 'Consulta el resumen de visitas, recordatorios y tomas pendientes. En Cuidados de hoy y vencidos puedes marcar visitas realizadas, registrar tomas administradas u omitidas y completar recordatorios. Se muestran hasta tres cuidados; pulsa Ver detalle y registrar para abrir sus acciones. pulsa Ver agenda completa para consultar los demás. Usa el men? de navegaci?n para cambiar entre Inicio, Ficha de salud, Agenda y Perfil.',
   },
   {
     titulo: 'Ficha de salud',
@@ -94,7 +95,7 @@ export default function AyudaScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.header}>
         <Pressable
           onPress={volver}
@@ -107,7 +108,7 @@ export default function AyudaScreen() {
         <View style={styles.back} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, layoutStyles.form]}>
         <Text style={styles.intro}>Aprende a usar MascotaCare</Text>
         <Text style={styles.subtitle}>
           Organiza la información y los cuidados de tus mascotas con esta guía rápida.

@@ -5,7 +5,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as Sharing from 'expo-sharing';
 import { useAuth } from '@/context/AuthContext';
 import { useAhora } from '@/hooks/use-ahora';
-import type { AdjuntoSalud, Mascota, ObservacionSalud } from '@/types';
+import type { Identificador, AdjuntoSalud, Mascota, ObservacionSalud  } from '@/types';
 import { crearHistorial } from '@/utils/historial';
 import { interpretarFechaVisita } from '@/utils/citas';
 import { fechaPesoHoy } from '@/utils/peso';
@@ -67,7 +67,7 @@ export default function HealthTimeline({ mascota }: { mascota: Mascota }) {
   </View>;
 }
 
-function Formulario({ mascotaId, cerrar }: { mascotaId: number; cerrar: (guardado: boolean) => void }) {
+function Formulario({ mascotaId, cerrar }: { mascotaId: Identificador; cerrar: (guardado: boolean) => void }) {
   const { agregarObservacion } = useAuth();
   const [tipo, setTipo] = useState<ObservacionSalud['tipo']>('observacion');
   const [titulo, setTitulo] = useState('');

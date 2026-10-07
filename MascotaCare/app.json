@@ -3,7 +3,7 @@
     "name": "MascotaCare",
     "slug": "MascotaCare",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "mascotacare",
     "userInterfaceStyle": "automatic",

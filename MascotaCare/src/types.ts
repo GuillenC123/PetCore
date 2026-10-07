@@ -15,6 +15,21 @@
 /** Estado de salud de una mascota. */
 export type EstadoMascota = 'saludable' | 'malestar' | 'vacuna_pendiente' | 'en_tratamiento';
 
+/** Los IDs remotos que exceden el rango seguro conservan su texto BIGINT. */
+export type Identificador = number | string;
+
+export interface DatosApp {
+  mascotas: Mascota[];
+  citas: Cita[];
+  recordatorios: Recordatorio[];
+}
+
+export interface EstadoCargaDatos {
+  estado: 'inicial' | 'cargando' | 'listo' | 'error';
+  error: string | null;
+  datosDisponibles: boolean;
+}
+
 /** Estado de una cita veterinaria. */
 export type EstadoCita = 'confirmado' | 'pendiente' | 'programado' | 'cancelado' | 'completado';
 
@@ -26,8 +41,8 @@ export type TipoRecordatorio = 'vacuna' | 'alimento' | 'cita' | 'dosis' | 'gener
 // ---------------------------------------------------------------------------
 
 export interface Usuario {
-  /** Identificador numérico en la base de datos. */
-  id: number;
+  /** Identificador de la base de datos, sin pérdida de precisión. */
+  id: Identificador;
   /** Nombre completo del usuario (se muestra en el saludo). */
   nombre: string;
   /** Correo electrónico único (usado para iniciar sesión). */
@@ -39,7 +54,7 @@ export interface Usuario {
 // ---------------------------------------------------------------------------
 
 export interface Mascota {
-  id: number;
+  id: Identificador;
   nombre: string;
   raza: string;
   /** Perro, Gato, etc. */
@@ -69,7 +84,7 @@ export interface Mascota {
 // ---------------------------------------------------------------------------
 
 export interface Cita {
-  id: number;
+  id: Identificador;
   titulo: string;
   /** Fecha y hora como string ISO (ej. "2026-09-01T15:30:00Z"). */
   fecha_hora: string;
@@ -78,7 +93,7 @@ export interface Cita {
   estado: EstadoCita;
   /** Nombre de la mascota asociada (se une desde la API). */
   mascota_nombre?: string;
-  mascota_id: number;
+  mascota_id: Identificador;
 }
 
 // ---------------------------------------------------------------------------
@@ -89,17 +104,17 @@ export interface Recordatorio {
   repeticion?: 'ninguna' | 'diaria' | 'semanal' | 'mensual';
   ultima_realizacion?: string;
   dia_repeticion?: number;
-  cita_id?: number;
-  id: number;
+  cita_id?: Identificador;
+  id: Identificador;
   titulo: string;
   descripcion: string | null;
   tipo: TipoRecordatorio;
-  /** Fecha límite (DD-MM o texto amigable según la pantalla). */
+  /** Fecha local AAAA-MM-DD o fecha y hora ISO. */
   vence_en: string | null;
   /** Si ya fue completado (checkbox). */
   completado: boolean;
   mascota_nombre?: string;
-  mascota_id: number | null;
+  mascota_id: Identificador | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -146,7 +161,7 @@ export interface Toma {
 }
 export interface Tratamiento {
   id: number;
-  mascota_id: number;
+  mascota_id: Identificador;
   medicamento: string;
   indicaciones: string;
   inicio: string;
