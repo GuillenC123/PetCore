@@ -32,7 +32,7 @@ PetCore/
 │   ├── src/app/          Pantallas y navegación
 │   ├── src/components/   Interfaz y módulos de salud
 │   ├── src/context/      Sesión y datos compartidos
-│   ├── src/services/     Cliente HTTP
+│   ├── src/services/     Cliente HTTP y servicio de caché
 │   ├── src/utils/        Reglas y transformación de datos
 │   ├── src/hooks/        Tiempo, guardado y apariencia
 │   ├── server/src/       API Express
@@ -50,11 +50,13 @@ Flujo actual: **pantallas → contexto y utilidades → cliente HTTP → API Exp
 | `useState` y `useEffect` con funciones reales | Cumplido: formularios, estado compartido y vencimientos. |
 | Obtener, procesar y mostrar datos de API | Implementado en código mediante la API propia. |
 | Carga, error y vacío | Implementado: consulta atómica, indicador de carga, error con reintento y vacío tras una respuesta correcta. |
-| AsyncStorage: guardar, recuperar y reutilizar | Pendiente; no está instalado ni integrado. |
+| AsyncStorage: guardar, recuperar y reutilizar | Parcial: dependencia y servicio de caché implementados y probados; reutilización en la interfaz pendiente. |
 | Flujo integrado | Parcial; falta incorporar almacenamiento con API, hooks y estados. |
 | README y evidencias | Documentación actualizada; capturas o video del flujo completo pendientes. |
 
 Crear mascotas o visitas, editar el perfil y registrar datos de salud modifica el estado en memoria. Crear, editar y posponer recordatorios también es local. Completar un recordatorio existente de API sí intenta guardar su estado en el servidor. La sesión y los cambios locales se pierden al reiniciar o salir.
+
+El servicio de caché usa AsyncStorage 2.2.0 y dispone de lectura, escritura y eliminación por usuario y origen API/demo. Todavía no está conectado a las pantallas; su uso dentro de la app corresponde a la siguiente etapa.
 
 ## Ejecución
 
@@ -78,4 +80,4 @@ Sin servidor, puedes entrar con `ana.garcia@email.com` y contraseña `123456`. E
 - [Plan del avance 2 por ramas](docs/PLAN-DESARROLLO.md).
 - [Evidencias pendientes](MascotaCare/README.md#evidencias-del-funcionamiento).
 
-`dev` ya reúne `funciones` y `visual`. La primera etapa está implementada en `api-estados`. Las tres ramas siguientes siguen propuestas.
+`dev` ya reúne `funciones` y `visual`. Las etapas de API y servicio de caché están implementadas en `api-estados` y `storage`. La integración del flujo y las evidencias siguen pendientes.

@@ -24,6 +24,22 @@ export interface DatosApp {
   recordatorios: Recordatorio[];
 }
 
+export type OrigenCache = 'api' | 'demo';
+
+export interface DestinoCache {
+  usuarioId: Identificador;
+  origen: OrigenCache;
+}
+
+/** Una instantánea de respuestas, separada de la sesión y las ediciones locales. */
+export interface CacheDatosApp {
+  version: 1;
+  usuarioId: string;
+  origen: OrigenCache;
+  actualizadoEn: string;
+  datos: DatosApp;
+}
+
 export interface EstadoCargaDatos {
   estado: 'inicial' | 'cargando' | 'listo' | 'error';
   error: string | null;

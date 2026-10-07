@@ -2,7 +2,7 @@
 
 Objetivo: completar API con estados, AsyncStorage, el flujo integrado y evidencias. Los hooks ya tienen funciones reales y el consumo y procesamiento de API están implementados en código.
 
-La primera etapa se implementó en la rama `api-estados`; las etapas 2 a 4 siguen propuestas. `dev` ya reúne `funciones` y `visual`. Cada rama se crea desde `dev` después de integrar la anterior.
+Las etapas 1 y 2 se implementaron en `api-estados` y `storage` (esta última corresponde a `feat/asyncstorage` del plan); las etapas 3 y 4 siguen propuestas. `dev` ya reúne `funciones` y `visual`. Cada rama se crea desde `dev` después de integrar la anterior.
 
 ## Alcance mínimo
 
@@ -13,7 +13,7 @@ Guardar, recuperar y actualizar una caché de respuestas de API por usuario. Est
 | Orden | Rama | Entrega | Requisitos |
 | --- | --- | --- | --- |
 | 1 | `api-estados` | Carga reutilizable, estados y errores de consulta. | API y estados; conserva hooks existentes. |
-| 2 | `feat/asyncstorage` | Servicio de caché por usuario y pruebas. | Base técnica de almacenamiento. |
+| 2 | `storage` | Servicio de caché por usuario y pruebas. | Base técnica de almacenamiento. |
 | 3 | `feat/flujo-integrado` | Recuperación, consulta, interfaz y guardado conectados. | AsyncStorage e integración dentro de la app. |
 | 4 | `docs/evidencias-avance2` | Demostración, capturas/video y README final. | Evidencias y documentación. |
 
@@ -37,9 +37,11 @@ AsyncStorage se considera cumplido cuando la rama 3 utiliza el servicio de la ra
 
 **Aceptación:** éxito, red fallida, error HTTP y vacío son distinguibles; reintentar vuelve a consultar; no se mezclan usuarios; funciona seleccionar mascotas reales; pasan comprobaciones y pruebas de éxito/error/vacío/respuesta tardía.
 
-## 2. feat/asyncstorage
+## 2. storage
 
-**Dónde:** `package.json`, `package-lock.json`, nuevo `src/services/storage.ts`, `src/types.ts` y pruebas de almacenamiento.
+**Estado:** servicio implementado y probado. AsyncStorage 2.2.0 está instalado; la integración con el flujo de la app permanece en la etapa 3.
+
+**Dónde:** `package.json`, `package-lock.json`, `src/services/storage.ts`, `src/utils/cache.ts`, `src/types.ts` y `scripts/test-storage.cjs`.
 
 **Trabajo:**
 
@@ -52,13 +54,15 @@ AsyncStorage se considera cumplido cuando la rama 3 utiliza el servicio de la ra
    Comando de la [referencia de AsyncStorage para Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/async-storage/).
 
 2. Definir caché con versión, propietario, fecha de actualización, mascotas, citas y recordatorios.
-3. Usar una clave por usuario, por ejemplo `petcore:cache:v1:usuario:<id>`, y un espacio independiente para demo.
+3. Usar una clave por usuario, por ejemplo `petcore:cache:v1:<origen>:usuario:<id>`, y un espacio independiente para demo.
 4. Implementar lectura, escritura y eliminación con JSON y validación del contenido.
 5. Diferenciar ausencia, corrupción, versión incompatible y fallo del almacenamiento.
 6. Ordenar escrituras para evitar que una antigua sobrescriba datos nuevos.
 7. La caché guardará datos de aplicación; contraseñas y tokens quedan fuera de ese contenido.
 
-**Aceptación:** guardar/leer recupera el contenido; usuarios aislados; errores y corrupción manejables; un fallo conserva los datos válidos en memoria; prevalece la escritura reciente y eliminar afecta solo a la clave indicada.
+**Aceptación verificada:** guardar/leer recupera el contenido; usuarios y demo aislados; ausencia, corrupción, versión incompatible y error distinguibles; los errores no bloquean operaciones posteriores; prevalece la escritura reciente; eliminar afecta solo a la clave indicada y respeta las escrituras pendientes. La validación incluye campos, fechas, IDs y referencias entre listas.
+
+**Contrato para la etapa 3:** usar `guardarCache`, `leerCache` y `eliminarCache` con `{ usuarioId, origen }`. Leer entrega un resultado discriminado; escribir/eliminar rechazan con `ErrorStorage` ante errores. La caché contiene campos de las respuestas actuales, sin sesión ni registros locales avanzados de salud. No se utiliza aún desde el contexto o la interfaz.
 
 ## 3. feat/flujo-integrado
 
@@ -104,17 +108,17 @@ Recuperar caché no concede acceso. Una cuenta real todavía necesita autenticar
 
 ## Integración en dev
 
-Guardar primero los cambios locales en su rama correspondiente. La rama `api-estados` ya existe. Después de verificarla e integrarla, crear la siguiente desde `dev` actualizado:
+Guardar primero los cambios locales en su rama correspondiente. Las ramas `api-estados` y `storage` ya existen. Después de verificar e integrar `storage`, crear la siguiente desde `dev` actualizado:
 
 ```bash
 git switch dev
 git pull --ff-only origin dev
-git switch -c feat/asyncstorage
+git switch -c feat/flujo-integrado
 ```
 
 Al terminar, abrir un PR hacia `dev` con resultado y verificación. Integrar y crear la siguiente rama desde el nuevo `dev`. El orden evita cambios independientes simultáneos sobre el contexto.
 
-No hace falta volver a combinar `funciones` y `visual`. La adaptación a tablets aún sin commit debe conservarse y registrarse antes de cambiar de rama. `main` puede recibir la entrega cuando se verifique el avance completo.
+No hace falta volver a combinar `funciones` y `visual`. Conservar la adaptación a tablets al integrar las siguientes ramas. `main` puede recibir la entrega cuando se verifique el avance completo.
 
 ## Ampliaciones posteriores
 

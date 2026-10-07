@@ -31,9 +31,10 @@ Express verifica JWT, valida solicitudes y consulta PostgreSQL mediante `pg` y S
 | Interfaz y dispositivo | StyleSheet, Ionicons, Expo Image, selectores de fecha, imágenes, documentos y compartir. |
 | Servidor | Node.js, Express 4, CORS, dotenv. |
 | Datos y autenticación | PostgreSQL, pg, bcryptjs, jsonwebtoken. |
+| Almacenamiento local | AsyncStorage 2.2.0; servicio de caché preparado para la integración. |
 | Comprobaciones | ESLint, TypeScript, node:test y assertions. |
 
-AsyncStorage todavía no está instalado ni integrado.
+AsyncStorage 2.2.0 está instalado. `services/storage.ts` ofrece guardar, recuperar y eliminar caché por usuario. Su conexión con el hook y las pantallas se implementará en `feat/flujo-integrado`.
 
 ## Estructura del proyecto
 
@@ -56,7 +57,7 @@ MascotaCare/
 │   ├── context/            # Sesión del usuario y datos compartidos
 │   ├── data/               # Datos de demostración
 │   ├── hooks/              # Tiempo, guardado, tema y adaptación de interfaz
-│   ├── services/           # Comunicación con la API
+│   ├── services/           # Cliente HTTP y caché local
 │   ├── utils/              # Validaciones y formato de estados y fechas
 │   └── types.ts            # Tipos de usuario, mascota, cita y recordatorio
 ├── server/
@@ -210,7 +211,7 @@ npm test --prefix server
 
 Las pruebas del servidor recorren rutas HTTP y sustituyen PostgreSQL; no verifican una base de datos real. El lint de Expo tiene como alcance predeterminado el frontend.
 
-Para los ocho scripts de lógica del frontend en PowerShell:
+Para los nueve scripts de lógica del frontend en PowerShell:
 
 ```powershell
 $falloPruebas = $false
@@ -221,13 +222,48 @@ Get-ChildItem -LiteralPath scripts -Filter 'test-*.cjs' | ForEach-Object {
 if ($falloPruebas) { throw 'Fallaron pruebas del frontend.' }
 ```
 
-Cubren agenda, historial, carnet, estados, guardado y reintento, peso, recordatorios, selectores y tratamientos. `test-api-estados.cjs` añade URL configurable, BIGINT, carga atómica, errores, reintento, sesiones y demo, con respuestas simuladas y una comprobación HTTP local. En una instalación nueva, Expo debe generar `expo-env.d.ts`; si TypeScript no reconoce la importación CSS, inicia Expo antes de repetir la comprobación.
+Cubren agenda, historial, carnet, estados, guardado y reintento, peso, recordatorios, selectores y tratamientos. `test-api-estados.cjs` añade URL configurable, BIGINT, carga atómica, errores, reintento, sesiones y demo, con respuestas simuladas y una comprobación HTTP local. `test-storage.cjs` cubre recuperación, aislamiento, formato, errores, concurrencia y borrado; también utiliza la implementación web real de AsyncStorage con un localStorage de prueba. En una instalación nueva, Expo debe generar `expo-env.d.ts`; si TypeScript no reconoce la importación CSS, inicia Expo antes de repetir la comprobación.
 
 ## Carga y errores de datos
 
 Después de autenticar, las consultas de mascotas, citas y recordatorios se ejecutan en paralelo y se publican juntas. Durante la primera carga, las pantallas de datos permanecen ocultas para no presentar listas vacías prematuramente. Un error muestra Reintentar y Cerrar sesión. Una respuesta correcta sin elementos habilita los mensajes de vacío existentes.
 
 El cliente distingue error de conexión, HTTP, respuesta inválida, cancelación y tiempo de espera de 15 segundos por solicitud. Los IDs BIGINT conservan su precisión. Cambiar o cerrar sesión invalida las respuestas pendientes. Los errores al consultar datos de una cuenta real no cargan mocks; el modo demo solo se activa por un fallo de conexión durante el acceso con sus credenciales y se identifica en la interfaz.
+
+## Servicio de caché local
+
+El servicio `src/services/storage.ts` está disponible para la siguiente etapa. La interfaz actual todavía no lo invoca, por lo que su comportamiento de sesión no ha cambiado.
+
+- `guardarCache(destino, datos)` devuelve la instantánea guardada o rechaza con `ErrorStorage`.
+- `leerCache(destino)` devuelve `disponible`, `ausente`, `corrupta`, `incompatible` o `error`. Solo `disponible` incluye datos utilizables.
+- `eliminarCache(destino)` elimina únicamente esa clave; un fallo rechaza con `ErrorStorage`.
+- El destino contiene `usuarioId` y `origen` (`api` o `demo`). Un destino inválido rechaza sin acceder al almacenamiento.
+- La clave es `petcore:cache:v1:<origen>:usuario:<id>`. IDs seguros numéricos y sus equivalentes en texto comparten la misma clave; BIGINT grandes conservan su precisión.
+- La instantánea contiene versión, propietario, origen, fecha de actualización y las tres listas. Se valida antes de guardar y después de leer.
+- Se guardan los campos de las respuestas actuales de mascotas y citas, y los campos de recordatorios, incluidas las opciones de repetición cuando existen. No incluye sesión, tokens, contraseñas ni los registros locales avanzados de salud.
+- Las operaciones de una clave se ejecutan en orden; usuarios u orígenes distintos pueden operar simultáneamente. Una escritura captura sus datos al solicitarla.
+- Una lectura corrupta o incompatible no borra automáticamente el contenido. Un fallo de almacenamiento no actualiza el estado de la app; el consumidor decidirá cómo informarlo.
+
+Ejemplo para usar el servicio en la futura integración:
+
+```typescript
+import { guardarCache, leerCache } from '@/services/storage';
+
+const destino = { usuarioId: usuario.id, origen: 'api' } as const;
+await guardarCache(destino, datosObtenidosDeLaApi);
+const resultado = await leerCache(destino);
+if (resultado.estado === 'disponible') {
+  aplicarDatos(resultado.cache.datos);
+}
+```
+
+Las operaciones de escritura y eliminación deben manejarse con `try/catch`. La próxima rama coordinará esa información con los estados visibles y protegerá los cambios que siguen siendo locales.
+
+Desde `MascotaCare/`, puedes probar este servicio por separado:
+
+```bash
+node scripts/test-storage.cjs
+```
 
 ## Estado del avance 2
 
@@ -236,7 +272,7 @@ El cliente distingue error de conexión, HTTP, respuesta inválida, cancelación
 | Hooks con utilidad real | Cumplido: `useState` en formularios/datos y `useEffect` en vencimientos. |
 | API: obtener, procesar y mostrar | Implementado en código: cliente HTTP, contexto y agenda. |
 | Carga, error y vacío | Implementado: consulta atómica, indicador de carga, error con reintento y vacío después de una respuesta correcta. |
-| AsyncStorage | Pendiente: guardar, recuperar y reutilizar. |
+| AsyncStorage | Parcial: servicio implementado y probado; reutilización desde la interfaz pendiente. |
 | Flujo integrado | Parcial: falta conectar almacenamiento, API, hooks y estados. |
 | README y evidencias | Documentación actualizada; evidencias del flujo completo pendientes. |
 
