@@ -20,7 +20,7 @@ Agendar una visita exige mascota, motivo y fecha futura. Se crean una cita y su 
 
 ## Arquitectura y tecnologías
 
-Las pantallas consumen `useAuth()`. `AuthContext` administra sesión y operaciones de datos. `useCargaDatos` coordina las consultas, sus estados y la cancelación al salir; las utilidades calculan agenda, historial, peso y estados. `services/api.ts` realiza llamadas HTTP con `fetch`.
+Las pantallas consumen `useAuth()`. `AuthContext` administra sesión y operaciones de datos. `useCargaDatos` coordina recuperación de caché, consultas, guardado, estados y cancelación al salir; las utilidades calculan agenda, historial, peso y estados. `services/api.ts` realiza llamadas HTTP con `fetch`.
 
 Express verifica JWT, valida solicitudes y consulta PostgreSQL mediante `pg` y SQL parametrizado. Las rutas de datos filtran por el usuario autenticado.
 
@@ -31,10 +31,10 @@ Express verifica JWT, valida solicitudes y consulta PostgreSQL mediante `pg` y S
 | Interfaz y dispositivo | StyleSheet, Ionicons, Expo Image, selectores de fecha, imágenes, documentos y compartir. |
 | Servidor | Node.js, Express 4, CORS, dotenv. |
 | Datos y autenticación | PostgreSQL, pg, bcryptjs, jsonwebtoken. |
-| Almacenamiento local | AsyncStorage 2.2.0; servicio de caché preparado para la integración. |
+| Almacenamiento local | AsyncStorage 2.2.0; copia por usuario y origen API/demo integrada en la app. |
 | Comprobaciones | ESLint, TypeScript, node:test y assertions. |
 
-AsyncStorage 2.2.0 está instalado. `services/storage.ts` ofrece guardar, recuperar y eliminar caché por usuario. Su conexión con el hook y las pantallas se implementará en `feat/flujo-integrado`.
+`services/storage.ts` ofrece guardar, recuperar y eliminar caché por usuario. El hook lo utiliza tras autenticar y el componente compartido `DataLoadState` muestra procedencia, fecha, actualización y errores en las pantallas protegidas. La integración se implementó en `flujo`.
 
 ## Estructura del proyecto
 
@@ -79,13 +79,13 @@ MascotaCare/
 | Operación desde la interfaz | Almacenamiento |
 | --- | --- |
 | Registro de cuenta | PostgreSQL mediante API. |
-| Consulta de mascotas, citas y recordatorios | API, o mocks en demostración. |
-| Completar un recordatorio existente de API | Intenta actualizar el servidor; conserva su estado anterior si falla y permite reintentar. |
+| Consulta de mascotas, citas y recordatorios | Copia local seguida de API, o mocks y copia independiente en demostración. |
+| Completar un recordatorio existente de API | Actualiza el servidor y después su copia local; si falla la API conserva su estado anterior. Un fallo de copia permite reintentar el guardado. |
 | Crear mascotas o visitas; editar perfil | Memoria de la sesión. |
 | Ficha de salud, peso, carnet, tratamientos, observaciones y adjuntos | Memoria de la sesión. |
 | Crear, editar o posponer recordatorios | Memoria de la sesión. |
 
-La sesión tampoco se recupera automáticamente. Los cambios locales se pierden al reiniciar o salir. Aunque la API tiene creación y edición de mascotas y citas, el frontend aún no las utiliza para esas acciones.
+La sesión tampoco se recupera automáticamente. Los cambios locales se protegen al actualizar las listas durante la sesión y se pierden al reiniciar o salir. La copia de respuestas de API permanece por usuario y se reutiliza después de autenticarse nuevamente. Aunque la API tiene creación y edición de mascotas y citas, el frontend aún no las utiliza para esas acciones.
 
 PostgreSQL contiene `Usuario`, `Mascota`, `CitaMedica` y `Recordatorio`. El seguimiento de salud avanzado no tiene persistencia equivalente. El servidor no admite `malestar` y guarda vencimientos como fechas sin hora ni repetición.
 
@@ -189,7 +189,7 @@ En dispositivos físicos, define la IP y el puerto mediante `EXPO_PUBLIC_API_URL
 
 Si falla la conexión durante el acceso con estas credenciales, la app puede cargar mocks. Un rechazo de credenciales del servidor no habilita ese acceso alternativo. Crear cuentas requiere API activa.
 
-Las fechas de los mocks están fijadas en septiembre de 2026 y pueden aparecer vencidas. El seed SQL utiliza fechas relativas a su inserción. El modo demo no acredita consumo real de API ni persistencia local.
+Las fechas de los mocks están fijadas en septiembre de 2026 y pueden aparecer vencidas. El seed SQL utiliza fechas relativas a su inserción. El modo demo también guarda y recupera una copia independiente, pero no acredita consumo real de API.
 
 ## Uso en tablet
 
@@ -211,7 +211,7 @@ npm test --prefix server
 
 Las pruebas del servidor recorren rutas HTTP y sustituyen PostgreSQL; no verifican una base de datos real. El lint de Expo tiene como alcance predeterminado el frontend.
 
-Para los nueve scripts de lógica del frontend en PowerShell:
+Para los diez scripts de lógica del frontend en PowerShell:
 
 ```powershell
 $falloPruebas = $false
@@ -222,17 +222,22 @@ Get-ChildItem -LiteralPath scripts -Filter 'test-*.cjs' | ForEach-Object {
 if ($falloPruebas) { throw 'Fallaron pruebas del frontend.' }
 ```
 
-Cubren agenda, historial, carnet, estados, guardado y reintento, peso, recordatorios, selectores y tratamientos. `test-api-estados.cjs` añade URL configurable, BIGINT, carga atómica, errores, reintento, sesiones y demo, con respuestas simuladas y una comprobación HTTP local. `test-storage.cjs` cubre recuperación, aislamiento, formato, errores, concurrencia y borrado; también utiliza la implementación web real de AsyncStorage con un localStorage de prueba. En una instalación nueva, Expo debe generar `expo-env.d.ts`; si TypeScript no reconoce la importación CSS, inicia Expo antes de repetir la comprobación.
+Cubren agenda, historial, carnet, estados, guardado y reintento, peso, recordatorios, selectores y tratamientos. `test-api-estados.cjs` añade URL configurable, BIGINT, carga atómica, errores, reintento, sesiones y demo, con respuestas simuladas y una comprobación HTTP local. `test-storage.cjs` cubre recuperación, aislamiento, formato, errores, concurrencia y borrado; también utiliza la implementación web real de AsyncStorage con un localStorage de prueba. `test-flujo.cjs` ejecuta los servicios, hook, contexto y presentación con transportes simulados: verifica recuperación tras reinicio, errores y reintentos separados, respuestas vacías, aislamiento, operaciones tardías, confirmaciones frente a consultas pendientes y conservación de ediciones locales. En una instalación nueva, Expo debe generar `expo-env.d.ts`; si TypeScript no reconoce la importación CSS, inicia Expo antes de repetir la comprobación.
 
 ## Carga y errores de datos
 
-Después de autenticar, las consultas de mascotas, citas y recordatorios se ejecutan en paralelo y se publican juntas. Durante la primera carga, las pantallas de datos permanecen ocultas para no presentar listas vacías prematuramente. Un error muestra Reintentar y Cerrar sesión. Una respuesta correcta sin elementos habilita los mensajes de vacío existentes.
+Después de autenticar, un `useEffect` recupera la copia del usuario antes de consultar o guardar. Si contiene datos, las pantallas los muestran con su fecha mientras se consulta la API. Sin copia utilizable, permanecen ocultas durante la carga inicial. Las consultas de mascotas, citas y recordatorios se ejecutan en paralelo y se publican juntas.
 
+Una respuesta correcta actualiza las listas y guarda una nueva copia. Si es vacía, reemplaza los datos remotos obsoletos y habilita los mensajes de vacío. Una copia vacía no muestra vacío durante la consulta inicial. Las entidades con ediciones locales se conservan en memoria, incluso si ya no aparecen en la respuesta; su copia de API sí refleja la respuesta remota.
+
+Un error de API conserva los datos disponibles y ofrece Reintentar; sin datos, también permite Cerrar sesión. Un error al guardar muestra un aviso independiente y permite Guardar copia sin consultar la API ni repetir un cambio ya confirmado. Actualizar vuelve a consultar; los botones se deshabilitan mientras hay una consulta o guardado pendientes.
+
+Las pantallas comparten este aviso desde `src/app/_layout.tsx`; no necesitan consultar ni guardar por separado.
 El cliente distingue error de conexión, HTTP, respuesta inválida, cancelación y tiempo de espera de 15 segundos por solicitud. Los IDs BIGINT conservan su precisión. Cambiar o cerrar sesión invalida las respuestas pendientes. Los errores al consultar datos de una cuenta real no cargan mocks; el modo demo solo se activa por un fallo de conexión durante el acceso con sus credenciales y se identifica en la interfaz.
 
 ## Servicio de caché local
 
-El servicio `src/services/storage.ts` está disponible para la siguiente etapa. La interfaz actual todavía no lo invoca, por lo que su comportamiento de sesión no ha cambiado.
+El hook `src/hooks/use-carga-datos.ts` utiliza `src/services/storage.ts`. Mantiene una instantánea de respuestas remotas separada de las listas visibles; `src/utils/datos-locales.ts` conserva las entidades editadas durante la sesión. Crear o editar datos locales no los incorpora a la copia de API.
 
 - `guardarCache(destino, datos)` devuelve la instantánea guardada o rechaza con `ErrorStorage`.
 - `leerCache(destino)` devuelve `disponible`, `ausente`, `corrupta`, `incompatible` o `error`. Solo `disponible` incluye datos utilizables.
@@ -242,27 +247,17 @@ El servicio `src/services/storage.ts` está disponible para la siguiente etapa. 
 - La instantánea contiene versión, propietario, origen, fecha de actualización y las tres listas. Se valida antes de guardar y después de leer.
 - Se guardan los campos de las respuestas actuales de mascotas y citas, y los campos de recordatorios, incluidas las opciones de repetición cuando existen. No incluye sesión, tokens, contraseñas ni los registros locales avanzados de salud.
 - Las operaciones de una clave se ejecutan en orden; usuarios u orígenes distintos pueden operar simultáneamente. Una escritura captura sus datos al solicitarla.
-- Una lectura corrupta o incompatible no borra automáticamente el contenido. Un fallo de almacenamiento no actualiza el estado de la app; el consumidor decidirá cómo informarlo.
+- Una lectura corrupta o incompatible no borra automáticamente el contenido. El hook informa fallos de recuperación o guardado en `estadoDatos.errorCache` sin descartar los datos disponibles.
 
-Ejemplo para usar el servicio en la futura integración:
+El contexto inicia la recuperación con el ID autenticado y el origen. Después de una consulta correcta, el hook guarda la instantánea. Un recordatorio confirmado por el servidor actualiza esa instantánea; una consulta iniciada antes de la confirmación no la deshace. Cerrar sesión limpia datos visibles e invalida operaciones pendientes, conservando la copia para el próximo acceso.
 
-```typescript
-import { guardarCache, leerCache } from '@/services/storage';
-
-const destino = { usuarioId: usuario.id, origen: 'api' } as const;
-await guardarCache(destino, datosObtenidosDeLaApi);
-const resultado = await leerCache(destino);
-if (resultado.estado === 'disponible') {
-  aplicarDatos(resultado.cache.datos);
-}
-```
-
-Las operaciones de escritura y eliminación deben manejarse con `try/catch`. La próxima rama coordinará esa información con los estados visibles y protegerá los cambios que siguen siendo locales.
+La recuperación no autentica: una cuenta real requiere API disponible al iniciar sesión. Para probar reutilización tras reiniciar, vuelve a iniciar sesión; para probar la conservación ante una falla, detén la API después del acceso y pulsa Actualizar. Verás el error junto a los datos disponibles; al iniciar la API y pulsar Reintentar se actualizan las listas y la copia.
 
 Desde `MascotaCare/`, puedes probar este servicio por separado:
 
 ```bash
 node scripts/test-storage.cjs
+node scripts/test-flujo.cjs
 ```
 
 ## Estado del avance 2
@@ -272,8 +267,8 @@ node scripts/test-storage.cjs
 | Hooks con utilidad real | Cumplido: `useState` en formularios/datos y `useEffect` en vencimientos. |
 | API: obtener, procesar y mostrar | Implementado en código: cliente HTTP, contexto y agenda. |
 | Carga, error y vacío | Implementado: consulta atómica, indicador de carga, error con reintento y vacío después de una respuesta correcta. |
-| AsyncStorage | Parcial: servicio implementado y probado; reutilización desde la interfaz pendiente. |
-| Flujo integrado | Parcial: falta conectar almacenamiento, API, hooks y estados. |
+| AsyncStorage | Implementado y probado: lectura, guardado y reutilización por usuario dentro de la app. |
+| Flujo integrado | Implementado y probado en `flujo`: recuperación, API, interfaz y persistencia coordinadas. |
 | README y evidencias | Documentación actualizada; evidencias del flujo completo pendientes. |
 
 ## Evidencias del funcionamiento

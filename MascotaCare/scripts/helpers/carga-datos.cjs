@@ -3,6 +3,8 @@
 exports.useCargaDatos = (aplicarDatos) => ({
   estadoDatos: { estado: 'listo', error: null, datosDisponibles: true },
   cargarDatos: async () => {},
-  iniciarCarga: async (_token, demo) => { if (demo) aplicarDatos(demo); },
+  iniciarCarga: (_token, _usuarioId, demo) => { if (demo) aplicarDatos(demo); },
   reiniciarCarga: () => {},
+  confirmarRecordatorio: async () => {},
+  reintentarGuardado: async () => {},
 });

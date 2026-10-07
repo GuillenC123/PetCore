@@ -33,7 +33,7 @@ async function main() {
     useCallback: fn => fn, createElement: (_t, props) => props,
   };
   let intentos = 0, fallar = true, resolver;
-  const api = { apiTacharRecordatorio: async () => { intentos++; if (fallar) throw new Error('Fallo de red'); if (resolver === 'esperar') await new Promise(resolve => {resolver = resolve;}); } };
+  const api = { apiTacharRecordatorio: async (_token, id, completado) => { intentos++; if (fallar) throw new Error('Fallo de red'); if (resolver === 'esperar') await new Promise(resolve => {resolver = resolve;}); return { id, completado }; } };
   react.useEffect = () => {};
   const { AuthProvider } = cargar('src/context/AuthContext.tsx', nombre => nombre === '@/hooks/use-carga-datos' ? require('./helpers/carga-datos.cjs') : nombre === 'react' ? react : nombre === '@/services/api' ? api : nombre.startsWith('@/utils/') ? cargar(`src/utils/${nombre.slice(8)}.ts`) : {});
   const contexto = () => { indice = 0; indiceRef = 0; return AuthProvider({children:null}).value; };

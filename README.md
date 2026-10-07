@@ -22,7 +22,7 @@ Agendar visitas desde el frontend ya funciona durante la sesión: crea una cita 
 
 ## Arquitectura y tecnologías
 
-El frontend usa **React Native 0.86.3, React 19.2.3, Expo SDK 57, Expo Router y TypeScript 6**. React Context comparte sesión y datos; `useCargaDatos` coordina las consultas, las utilidades procesan las respuestas y `fetch` consulta la API.
+El frontend usa **React Native 0.86.3, React 19.2.3, Expo SDK 57, Expo Router y TypeScript 6**. React Context comparte sesión y datos; `useCargaDatos` coordina recuperación, consultas y guardado; las utilidades procesan las respuestas y `fetch` consulta la API. AsyncStorage conserva una copia por usuario.
 
 La API propia usa **Node.js, Express 4, PostgreSQL y pg**, con validaciones, consultas SQL parametrizadas, bcrypt y JWT.
 
@@ -41,7 +41,7 @@ PetCore/
 └── docs/                 Plan de desarrollo
 ```
 
-Flujo actual: **pantallas → contexto y utilidades → cliente HTTP → API Express → PostgreSQL**. El contexto también permite usar datos de demostración.
+Después del acceso, el flujo es **recuperar copia local → mostrarla → consultar API → actualizar interfaz → guardar nueva copia**. Las consultas siguen pasando por contexto, cliente HTTP, Express y PostgreSQL. Demo utiliza una copia independiente.
 
 ## Estado del avance 2
 
@@ -50,13 +50,13 @@ Flujo actual: **pantallas → contexto y utilidades → cliente HTTP → API Exp
 | `useState` y `useEffect` con funciones reales | Cumplido: formularios, estado compartido y vencimientos. |
 | Obtener, procesar y mostrar datos de API | Implementado en código mediante la API propia. |
 | Carga, error y vacío | Implementado: consulta atómica, indicador de carga, error con reintento y vacío tras una respuesta correcta. |
-| AsyncStorage: guardar, recuperar y reutilizar | Parcial: dependencia y servicio de caché implementados y probados; reutilización en la interfaz pendiente. |
-| Flujo integrado | Parcial; falta incorporar almacenamiento con API, hooks y estados. |
+| AsyncStorage: guardar, recuperar y reutilizar | Implementado y probado: recuperación por usuario, guardado y reutilización dentro de la app. |
+| Flujo integrado | Implementado y probado: hooks, API, interfaz y almacenamiento conectados. |
 | README y evidencias | Documentación actualizada; capturas o video del flujo completo pendientes. |
 
 Crear mascotas o visitas, editar el perfil y registrar datos de salud modifica el estado en memoria. Crear, editar y posponer recordatorios también es local. Completar un recordatorio existente de API sí intenta guardar su estado en el servidor. La sesión y los cambios locales se pierden al reiniciar o salir.
 
-El servicio de caché usa AsyncStorage 2.2.0 y dispone de lectura, escritura y eliminación por usuario y origen API/demo. Todavía no está conectado a las pantallas; su uso dentro de la app corresponde a la siguiente etapa.
+AsyncStorage 2.2.0 guarda las respuestas de API y las confirmaciones de recordatorios. La interfaz indica procedencia, fecha, actualización y errores; ofrece Actualizar, Reintentar y Guardar copia. Un fallo de API conserva los datos disponibles. Actualizar protege las ediciones locales durante la sesión, pero esas ediciones siguen sin persistencia.
 
 ## Ejecución
 
@@ -72,7 +72,7 @@ npm start
 
 Pulsa `w` para web. La [guía completa](MascotaCare/README.md#ejecutar-el-proyecto) documenta PostgreSQL, configuración e inicio del servidor, conexión desde dispositivos y comprobaciones.
 
-Sin servidor, puedes entrar con `ana.garcia@email.com` y contraseña `123456`. Este modo usa mocks y no demuestra consumo real de API ni persistencia local.
+Sin servidor, puedes entrar con `ana.garcia@email.com` y contraseña `123456`. Este modo usa mocks y una copia local independiente; no demuestra consumo real de API.
 
 ## Documentación y desarrollo
 
@@ -80,4 +80,4 @@ Sin servidor, puedes entrar con `ana.garcia@email.com` y contraseña `123456`. E
 - [Plan del avance 2 por ramas](docs/PLAN-DESARROLLO.md).
 - [Evidencias pendientes](MascotaCare/README.md#evidencias-del-funcionamiento).
 
-`dev` ya reúne `funciones` y `visual`. Las etapas de API y servicio de caché están implementadas en `api-estados` y `storage`. La integración del flujo y las evidencias siguen pendientes.
+`dev` ya reúne `funciones` y `visual`. Las etapas de API y servicio de caché están implementadas en `api-estados` y `storage`. El paso 3 está implementado en `flujo`, equivalente a `feat/flujo-integrado`. Quedan la verificación con PostgreSQL real y las capturas o video del paso 4.

@@ -2,7 +2,7 @@
 
 Objetivo: completar API con estados, AsyncStorage, el flujo integrado y evidencias. Los hooks ya tienen funciones reales y el consumo y procesamiento de API están implementados en código.
 
-Las etapas 1 y 2 se implementaron en `api-estados` y `storage` (esta última corresponde a `feat/asyncstorage` del plan); las etapas 3 y 4 siguen propuestas. `dev` ya reúne `funciones` y `visual`. Cada rama se crea desde `dev` después de integrar la anterior.
+Las etapas 1, 2 y 3 se implementaron en `api-estados`, `storage` y `flujo`. Las dos últimas corresponden a `feat/asyncstorage` y `feat/flujo-integrado` del plan. La etapa 4 sigue pendiente. `dev` ya reúne `funciones` y `visual`. Cada rama se crea desde `dev` después de integrar la anterior.
 
 ## Alcance mínimo
 
@@ -14,10 +14,10 @@ Guardar, recuperar y actualizar una caché de respuestas de API por usuario. Est
 | --- | --- | --- | --- |
 | 1 | `api-estados` | Carga reutilizable, estados y errores de consulta. | API y estados; conserva hooks existentes. |
 | 2 | `storage` | Servicio de caché por usuario y pruebas. | Base técnica de almacenamiento. |
-| 3 | `feat/flujo-integrado` | Recuperación, consulta, interfaz y guardado conectados. | AsyncStorage e integración dentro de la app. |
+| 3 | `flujo` | Recuperación, consulta, interfaz y guardado conectados. | AsyncStorage e integración dentro de la app. |
 | 4 | `docs/evidencias-avance2` | Demostración, capturas/video y README final. | Evidencias y documentación. |
 
-AsyncStorage se considera cumplido cuando la rama 3 utiliza el servicio de la rama 2 en el funcionamiento real de la app.
+La rama 3 utiliza el servicio de la rama 2 en el funcionamiento real de la app; la integración está comprobada mediante pruebas automatizadas. La demostración con PostgreSQL y capturas se completa en la etapa 4.
 
 ## 1. api-estados
 
@@ -39,7 +39,7 @@ AsyncStorage se considera cumplido cuando la rama 3 utiliza el servicio de la ra
 
 ## 2. storage
 
-**Estado:** servicio implementado y probado. AsyncStorage 2.2.0 está instalado; la integración con el flujo de la app permanece en la etapa 3.
+**Estado:** servicio implementado y probado. AsyncStorage 2.2.0 está instalado; la integración con el flujo de la app se implementó en la etapa 3.
 
 **Dónde:** `package.json`, `package-lock.json`, `src/services/storage.ts`, `src/utils/cache.ts`, `src/types.ts` y `scripts/test-storage.cjs`.
 
@@ -62,13 +62,15 @@ AsyncStorage se considera cumplido cuando la rama 3 utiliza el servicio de la ra
 
 **Aceptación verificada:** guardar/leer recupera el contenido; usuarios y demo aislados; ausencia, corrupción, versión incompatible y error distinguibles; los errores no bloquean operaciones posteriores; prevalece la escritura reciente; eliminar afecta solo a la clave indicada y respeta las escrituras pendientes. La validación incluye campos, fechas, IDs y referencias entre listas.
 
-**Contrato para la etapa 3:** usar `guardarCache`, `leerCache` y `eliminarCache` con `{ usuarioId, origen }`. Leer entrega un resultado discriminado; escribir/eliminar rechazan con `ErrorStorage` ante errores. La caché contiene campos de las respuestas actuales, sin sesión ni registros locales avanzados de salud. No se utiliza aún desde el contexto o la interfaz.
+**Contrato para la etapa 3:** usar `guardarCache`, `leerCache` y `eliminarCache` con `{ usuarioId, origen }`. Leer entrega un resultado discriminado; escribir/eliminar rechazan con `ErrorStorage` ante errores. La caché contiene campos de las respuestas actuales, sin sesión ni registros locales avanzados de salud. El hook y la interfaz ya lo utilizan desde la etapa 3.
 
-## 3. feat/flujo-integrado
+## 3. flujo
 
-**Dónde:** `src/context/AuthContext.tsx`; opcionalmente nuevo hook `src/hooks/use-datos-mascotas.ts`; pantallas de Inicio, Ficha de salud, Agenda y Recordatorios; `src/components/CareAgenda.tsx`; componente compartido de estados y pruebas de integración.
+**Estado:** implementado en `flujo`, equivalente a `feat/flujo-integrado`. Pasan TypeScript, lint, diez scripts del frontend, 44 pruebas del servidor y exportación web. Estas comprobaciones no sustituyen la demostración con PostgreSQL real o dispositivo.
 
-**Flujo previsto:**
+**Dónde:** `src/hooks/use-carga-datos.ts`, `src/context/AuthContext.tsx`, `src/utils/datos-locales.ts`, `src/types.ts`, `src/components/DataLoadState.tsx`, `src/app/_layout.tsx`, `scripts/test-flujo.cjs` y auxiliares de pruebas. El aviso y los datos compartidos cubren Inicio, Ficha de salud, Agenda y Recordatorios sin duplicar consultas por pantalla.
+
+**Flujo implementado:**
 
 1. Iniciar sesión; la sesión sigue siendo temporal en este alcance.
 2. Un `useEffect` recupera la caché del usuario. `useState` controla datos, recuperación, consulta y error.
@@ -89,7 +91,9 @@ Recuperar caché no concede acceso. Una cuenta real todavía necesita autenticar
 - Al salir, limpiar datos visibles e ignorar operaciones pendientes; conservar caché por usuario para el siguiente acceso.
 - Adaptar scripts que simulan hooks si cambia el proveedor.
 
-**Aceptación:** los cuatro elementos participan en el mismo flujo; reiniciar y entrar reutiliza datos; no aparece vacío durante carga; un error conserva caché y muestra procedencia/reintento; no se mezclan sesiones ni demo; no hay sobrescritura inicial; una consulta vacía elimina datos obsoletos; pasan TypeScript, lint, pruebas existentes y del flujo.
+Estas tareas están implementadas. El guardado puede reintentarse sin consultar API. Las pruebas incluyen reinicio simulado con el mismo dispositivo, lectura y escritura tardías, separación de usuarios/demo y confirmación de un recordatorio mientras hay un GET pendiente.
+
+**Aceptación comprobada en código y pruebas:** los cuatro elementos participan en el mismo flujo; reiniciar y entrar reutiliza datos; no aparece vacío durante carga; un error conserva caché y muestra procedencia/reintento; no se mezclan sesiones ni demo; no hay sobrescritura inicial; una consulta vacía elimina datos obsoletos; pasan TypeScript, lint, pruebas existentes y del flujo.
 
 ## 4. docs/evidencias-avance2
 
@@ -108,12 +112,12 @@ Recuperar caché no concede acceso. Una cuenta real todavía necesita autenticar
 
 ## Integración en dev
 
-Guardar primero los cambios locales en su rama correspondiente. Las ramas `api-estados` y `storage` ya existen. Después de verificar e integrar `storage`, crear la siguiente desde `dev` actualizado:
+Guardar primero los cambios locales en su rama correspondiente. Las ramas `api-estados`, `storage` y `flujo` ya existen. Tras verificar e integrar `flujo`, crear la rama de evidencias desde `dev` actualizado:
 
 ```bash
 git switch dev
 git pull --ff-only origin dev
-git switch -c feat/flujo-integrado
+git switch -c docs/evidencias-avance2
 ```
 
 Al terminar, abrir un PR hacia `dev` con resultado y verificación. Integrar y crear la siguiente rama desde el nuevo `dev`. El orden evita cambios independientes simultáneos sobre el contexto.

@@ -16,6 +16,7 @@
 // ============================================================================
 
 import * as React from 'react';
+import { conservarCambiosLocales, type CambiosLocales } from '@/utils/datos-locales';
 import { useCargaDatos } from '@/hooks/use-carga-datos';
 import { esIdentificadorRemoto } from '@/utils/identificadores';
 import { validarObservacion } from '@/utils/historial';
@@ -78,6 +79,8 @@ interface AuthContextValue {
   conectado: boolean;
   modoDemo: boolean;
   estadoDatos: EstadoCargaDatos;
+  hayCambiosLocales: boolean;
+  reintentarGuardado: () => Promise<void>;
   mascotas: Mascota[];
   citas: Cita[];
   recordatorios: Recordatorio[];
@@ -117,17 +120,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [recordatorios, setRecordatorios] = React.useState<Recordatorio[]>([]);
   const [tratamientos, setTratamientos] = React.useState<Tratamiento[]>([]);
 
-  const aplicarDatos = React.useCallback((datos: DatosApp) => {
-    setMascotas(datos.mascotas);
-    setCitas(datos.citas);
-    setRecordatorios(datos.recordatorios);
+  const cambiosLocales = React.useRef<CambiosLocales>({
+    mascotas: new Set(), citas: new Set(), recordatorios: new Set(),
+  });
+  const [hayCambiosLocales, setHayCambiosLocales] = React.useState(false);
+  const limpiarCambiosLocales = React.useCallback(() => {
+    cambiosLocales.current.mascotas.clear();
+    cambiosLocales.current.citas.clear();
+    cambiosLocales.current.recordatorios.clear();
+    setHayCambiosLocales(false);
   }, []);
-  const { estadoDatos, cargarDatos, iniciarCarga, reiniciarCarga } = useCargaDatos(aplicarDatos);
+
+  const aplicarDatos = React.useCallback((datos: DatosApp) => {
+    setMascotas((prev) => conservarCambiosLocales(prev, datos.mascotas, cambiosLocales.current.mascotas));
+    setCitas((prev) => conservarCambiosLocales(prev, datos.citas, cambiosLocales.current.citas));
+    setRecordatorios((prev) => conservarCambiosLocales(prev, datos.recordatorios, cambiosLocales.current.recordatorios));
+  }, []);
+  const { estadoDatos, cargarDatos, iniciarCarga, reiniciarCarga, reintentarGuardado, confirmarRecordatorio } = useCargaDatos(aplicarDatos);
   const siguienteTratamiento = React.useRef(1);
   const agregarTratamiento = React.useCallback((datos: NuevoTratamiento) => {
     if (!mascotas.some((m) => m.id === datos.mascota_id)) throw new Error('Selecciona una mascota registrada.');
     const tratamiento = crearTratamiento(datos, siguienteTratamiento.current);
     siguienteTratamiento.current++;
+    setHayCambiosLocales(true);
+    cambiosLocales.current.mascotas.add(String(datos.mascota_id));
     setTratamientos((prev) => [...prev, tratamiento]);
   }, [mascotas]);
   const marcarToma = React.useCallback((id: number, fecha: string, estado: EstadoToma) => {
@@ -145,10 +161,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const agregarObservacion = React.useCallback((mascotaId: Identificador, datos: Omit<ObservacionSalud, 'id'>) => {
     validarObservacion(datos);
     if (!mascotas.some((m) => m.id === mascotaId)) throw new Error('Mascota no encontrada.');
+    setHayCambiosLocales(true);
+    cambiosLocales.current.mascotas.add(String(mascotaId));
     const observacion = { ...datos, titulo: datos.titulo.trim(), descripcion: datos.descripcion.trim(), id: siguienteObservacion.current++ };
     setMascotas((prev) => prev.map((m) => m.id === mascotaId ? { ...m, observaciones: [...(m.observaciones ?? []), observacion] } : m));
   }, [mascotas]);
   const adjuntarHistorial = React.useCallback((mascotaId: Identificador, clave: string, adjuntos: AdjuntoSalud[]) => {
+    setHayCambiosLocales(true);
+    cambiosLocales.current.mascotas.add(String(mascotaId));
     setMascotas((prev) => prev.map((m) => m.id === mascotaId ? { ...m, adjuntos_historial: {
       ...m.adjuntos_historial, [clave]: [...(m.adjuntos_historial?.[clave] ?? []), ...adjuntos],
     } } : m));
@@ -156,9 +176,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const completarCita = React.useCallback((id: Identificador) => {
     const cita = citas.find((c) => c.id === id);
     if (!cita || cita.estado === 'cancelado' || Date.parse(cita.fecha_hora) > Date.now()) throw new Error('La visita aún no puede marcarse como realizada.');
+    setHayCambiosLocales(true);
+    cambiosLocales.current.citas.add(String(id));
+    cambiosLocales.current.mascotas.add(String(cita.mascota_id));
+    recordatorios.filter((r) => r.cita_id === id).forEach((r) => {
+      cambiosLocales.current.recordatorios.add(String(r.id));
+      recordatoriosLocales.current.add(r.id);
+    });
     setCitas((prev) => prev.map((c) => c.id === id ? { ...c, estado: 'completado' } : c));
     setRecordatorios((prev) => prev.map((r) => r.cita_id === id ? { ...r, completado: true } : r));
-  }, [citas]);
+  }, [citas, recordatorios]);
   const siguienteCarnet = React.useRef(1);
   const guardarCarnet = React.useCallback((mascotaId: Identificador, datos: Omit<RegistroCarnet, 'id'>, id?: number) => {
     const error = validarCarnet(datos);
@@ -179,6 +206,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (siguiente && (!datos.fecha_aplicacion || interpretarFechaVisita(datos.fecha_aplicacion, '00:00')! >= interpretarFechaVisita(siguiente.fecha_aplicacion!, '00:00')!)) {
       throw new Error('Conserva una fecha anterior a la siguiente aplicación registrada.');
     }
+    setHayCambiosLocales(true);
+    cambiosLocales.current.mascotas.add(String(mascotaId));
     const registro = { ...datos, nombre: datos.nombre.trim(), id: id ?? siguienteCarnet.current++ };
     setMascotas((prev) => prev.map((m) => m.id === mascotaId ? { ...m, carnet: id === undefined
       ? [...(m.carnet ?? []), registro] : (m.carnet ?? []).map((r) => r.id === id ? registro : r) } : m));
@@ -186,12 +215,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const registrarPeso = React.useCallback((id: Identificador, peso: number, fecha: string) => {
     if (!mascotas.some((m) => m.id === id)) throw new Error('Mascota no encontrada.');
     const registro = crearRegistroPeso(peso, fecha);
+    setHayCambiosLocales(true);
+    cambiosLocales.current.mascotas.add(String(id));
     setMascotas((prev) => prev.map((m) => m.id === id ? aplicarRegistroPeso(m, registro) : m));
   }, [mascotas]);
   const actualizarFichaSalud = React.useCallback((id: Identificador, datos: DatosFichaSalud) => {
     const error = validarFichaSalud(datos);
     if (error) throw new Error(error);
     if (!mascotas.some((m) => m.id === id)) throw new Error('Mascota no encontrada.');
+    setHayCambiosLocales(true);
+    cambiosLocales.current.mascotas.add(String(id));
     setMascotas((prev) => prev.map((m) => m.id === id ? { ...m, ...datos,
       edad: datos.edad.trim(), alergias: datos.alergias.trim(), condiciones: datos.condiciones.trim(),
     } : m));
@@ -215,6 +248,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const clave = id ?? proximaVisitaId.current--;
     const cambios = { ...datos, titulo: datos.titulo.trim(), mascota_nombre: mascota?.nombre, vence_en: fecha.toISOString(), dia_repeticion: fecha.getDate() };
     recordatoriosLocales.current.add(clave);
+    setHayCambiosLocales(true);
+    cambiosLocales.current.recordatorios.add(String(clave));
+    if (mascota) cambiosLocales.current.mascotas.add(String(mascota.id));
     setRecordatorios((prev) => id === undefined
       ? [...prev, { ...cambios, id: clave, completado: false }]
       : prev.map((r) => r.id === id ? { ...r, ...cambios } : r));
@@ -224,8 +260,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const nuevaFecha = fechaRecordatorio(fecha);
     if (!nuevaFecha || nuevaFecha.getTime() <= Date.now()) throw new Error('Elige una fecha y hora futuras.');
     recordatoriosLocales.current.add(id);
+    setHayCambiosLocales(true);
+    cambiosLocales.current.recordatorios.add(String(id));
+    const recordatorio = recordatorios.find((r) => r.id === id);
+    if (recordatorio?.mascota_id != null) cambiosLocales.current.mascotas.add(String(recordatorio.mascota_id));
     setRecordatorios((prev) => prev.map((r) => r.id === id && !r.completado ? { ...r, vence_en: nuevaFecha.toISOString(), dia_repeticion: nuevaFecha.getDate() } : r));
-  }, []);
+  }, [recordatorios]);
 
   // Las visitas creadas en este avance se conservan durante la sesión.
   const agregarCita = React.useCallback((datos: { mascota_id: Identificador; motivo: string; fecha_hora: string }) => {
@@ -238,6 +278,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Selecciona una fecha y hora futuras.');
     }
     const id = proximaVisitaId.current--;
+    setHayCambiosLocales(true);
+    cambiosLocales.current.mascotas.add(String(mascota.id));
+    cambiosLocales.current.citas.add(String(id));
+    cambiosLocales.current.recordatorios.add(String(id));
+    recordatoriosLocales.current.add(id);
     setMascotas((prev) => prev.map((m) => m.id === mascota.id ? { ...m, estado: 'malestar', estado_salud: 'malestar',
       cuidados_registrados: m.estado === 'en_tratamiento' || m.estado === 'vacuna_pendiente'
         ? [...new Set([...(m.cuidados_registrados ?? []), m.estado])] : m.cuidados_registrados,
@@ -260,10 +305,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('El peso debe ser mayor que cero.');
     }
     const registro = peso !== null ? crearRegistroPeso(peso, fechaPesoHoy()) : null;
+    setHayCambiosLocales(true);
+    cambiosLocales.current.mascotas.add(String(id));
     setMascotas((prev) => prev.map((m) => m.id === id ? registro ? aplicarRegistroPeso(m, registro) : { ...m, peso: m.registros_peso?.length ? m.peso : null } : m));
   }, []);
 
   const actualizarPerfil = React.useCallback((datos: Pick<Usuario, 'nombre' | 'correo'>) => {
+    setHayCambiosLocales(true);
     setUsuario((actual) => actual ? {
       ...actual,
       nombre: datos.nombre.normalize('NFC').trim(),
@@ -280,6 +328,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const agregarMascota = React.useCallback((datos: Omit<Mascota, 'id'>): Mascota => {
     const base: Mascota = { ...datos, id: proximoId.current-- };
     const nueva = datos.peso != null ? aplicarRegistroPeso(base, crearRegistroPeso(datos.peso, fechaPesoHoy())) : base;
+    setHayCambiosLocales(true);
+    cambiosLocales.current.mascotas.add(String(nueva.id));
     setMascotas((prev) => [nueva, ...prev]);
     return nueva;
   }, []);
@@ -295,8 +345,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setTratamientos([]);
     recordatoriosLocales.current.clear();
     guardandoRecordatorios.current.clear();
-    void iniciarCarga(respuesta.token, datosDemo);
-  }, [iniciarCarga]);
+    limpiarCambiosLocales();
+    iniciarCarga(respuesta.token, respuesta.usuario.id, datosDemo);
+  }, [iniciarCarga, limpiarCambiosLocales]);
 
   const autenticar = React.useCallback(async (
     solicitar: (signal: AbortSignal) => Promise<AuthResponse>,
@@ -344,19 +395,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       guardandoRecordatorios.current.add(id);
       const sesion = versionSesion.current;
       try {
+        let confirmado: Recordatorio | undefined;
         if (token && conectado && esIdentificadorRemoto(id) && !recordatoriosLocales.current.has(id)) {
-          await apiTacharRecordatorio(token, id, completado);
+          confirmado = await apiTacharRecordatorio(token, id, completado);
         }
         if (sesion !== versionSesion.current) return;
+        if (!confirmado) {
+          recordatoriosLocales.current.add(id);
+          setHayCambiosLocales(true);
+          cambiosLocales.current.recordatorios.add(String(id));
+          const recordatorio = recordatorios.find((r) => r.id === id);
+          if (recordatorio?.mascota_id != null) cambiosLocales.current.mascotas.add(String(recordatorio.mascota_id));
+        }
         const ahora = Date.now();
         setRecordatorios((prev) => prev.map((r) => r.id === id ? completarRecordatorio(r, completado, ahora) : r));
+        if (confirmado) await confirmarRecordatorio(confirmado);
       } catch {
         throw new Error('No se pudo guardar el recordatorio. Conservamos su estado anterior. Vuelve a intentarlo.');
       } finally {
         if (sesion === versionSesion.current) guardandoRecordatorios.current.delete(id);
       }
     },
-    [token, conectado]
+    [token, conectado, recordatorios, confirmarRecordatorio]
   );
 
   // Cierra la sesión y limpia todos los datos de la app.
@@ -365,6 +425,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     autenticacionActual.current?.abort();
     autenticacionActual.current = null;
     reiniciarCarga();
+    limpiarCambiosLocales();
     guardandoRecordatorios.current.clear();
     setTratamientos([]);
     setUsuario(null);
@@ -374,7 +435,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setCitas([]);
     setRecordatorios([]);
     recordatoriosLocales.current.clear();
-  }, [reiniciarCarga]);
+  }, [reiniciarCarga, limpiarCambiosLocales]);
 
   // ==========================================================================
   // Valor expuesto por el contexto.
@@ -392,6 +453,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     conectado,
     modoDemo: token === 'token-demo',
     estadoDatos,
+    reintentarGuardado,
+    hayCambiosLocales,
     mascotas,
     citas,
     recordatorios,

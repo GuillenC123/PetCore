@@ -41,9 +41,13 @@ export interface CacheDatosApp {
 }
 
 export interface EstadoCargaDatos {
-  estado: 'inicial' | 'cargando' | 'listo' | 'error';
+  estado: 'inicial' | 'recuperando' | 'cargando' | 'listo' | 'error';
   error: string | null;
   datosDisponibles: boolean;
+  procedencia: 'api' | 'cache' | 'demo' | null;
+  actualizadoEn: string | null;
+  guardandoCache: boolean;
+  errorCache: string | null;
 }
 
 /** Estado de una cita veterinaria. */

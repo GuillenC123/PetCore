@@ -1,80 +1,8 @@
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const ts = require('typescript');
 
 // Simula únicamente React Native y el ciclo de hooks. Servicio HTTP, adaptación
 // de IDs, hook de carga y contexto se ejecutan desde sus archivos reales.
-const native = {
-  Platform: { select: (opciones) => opciones.default },
-  StyleSheet: { create: (estilos) => estilos },
-  View: 'View', Text: 'Text', Pressable: 'Pressable', ActivityIndicator: 'ActivityIndicator',
-};
-
-function crearReact() {
-  const slots = [];
-  let indice = 0;
-  const iguales = (a, b) => a && b && a.length === b.length && a.every((v, i) => Object.is(v, b[i]));
-  const react = {
-    createContext: () => ({ Provider: 'Provider' }),
-    useState(inicial) {
-      const posicion = indice++;
-      if (!slots[posicion]) {
-        const slot = { valor: typeof inicial === 'function' ? inicial() : inicial };
-        slot.set = (valor) => { slot.valor = typeof valor === 'function' ? valor(slot.valor) : valor; };
-        slots[posicion] = slot;
-      }
-      return [slots[posicion].valor, slots[posicion].set];
-    },
-    useRef(inicial) {
-      const posicion = indice++;
-      return slots[posicion] ?? (slots[posicion] = { current: inicial });
-    },
-    useCallback(fn, deps) {
-      const posicion = indice++;
-      if (!iguales(slots[posicion]?.deps, deps)) slots[posicion] = { deps, fn };
-      return slots[posicion].fn;
-    },
-    useEffect(fn, deps) {
-      const posicion = indice++;
-      if (!iguales(slots[posicion]?.deps, deps)) {
-        slots[posicion]?.cleanup?.();
-        slots[posicion] = { deps, cleanup: fn() };
-      }
-    },
-  };
-  return {
-    react,
-    render: (fn) => { indice = 0; return fn(); },
-    unmount: () => slots.forEach((slot) => slot.cleanup?.()),
-  };
-}
-
-function crearCargador(react) {
-  const cache = new Map();
-  function cargar(archivo) {
-    const absoluto = path.resolve(__dirname, '..', archivo);
-    if (cache.has(absoluto)) return cache.get(absoluto).exports;
-    const modulo = { exports: {} };
-    cache.set(absoluto, modulo);
-    const js = ts.transpileModule(fs.readFileSync(absoluto, 'utf8'), {
-      compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 },
-    }).outputText;
-    const resolver = (nombre) => {
-      if (nombre === 'react') return react;
-      if (nombre === 'react-native') return native;
-      if (nombre.endsWith('.css')) return {};
-      if (nombre.startsWith('@/') || nombre.startsWith('.')) {
-        const base = nombre.startsWith('@/') ? path.resolve(__dirname, '..', 'src', nombre.slice(2)) : path.resolve(path.dirname(absoluto), nombre);
-        return cargar(fs.existsSync(base + '.ts') ? base + '.ts' : base + '.tsx');
-      }
-      return require(nombre);
-    };
-    new Function('require', 'module', 'exports', js)(resolver, modulo, modulo.exports);
-    return modulo.exports;
-  }
-  return cargar;
-}
+const { crearReact, crearCargador, native } = require('./helpers/react-cargador.cjs');
 
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 function diferido() {
@@ -157,6 +85,10 @@ async function main() {
     const entregas = [];
     const aplicar = (valor) => entregas.push(valor);
     const renderHook = () => hooks.render(() => useCargaDatos(aplicar));
+    const iniciarHook = (token) => {
+      renderHook().iniciarCarga(token, token === 'B' ? 2 : 1);
+      return renderHook().cargarDatos();
+    };
     const fixture = async (url, opciones) => {
       const recurso = url.split('/').at(-1);
       if (modo === 'error' && recurso === 'recordatorios') return respuesta({ error: 'Consulta temporalmente fallida.' }, 503);
@@ -164,8 +96,8 @@ async function main() {
     };
     global.fetch = fixture;
     modo = 'error';
-    const inicio = renderHook().iniciarCarga('A');
-    assert.equal(renderHook().estadoDatos.estado, 'cargando');
+    const inicio = iniciarHook('A');
+    assert.equal(renderHook().estadoDatos.estado, 'recuperando');
     assert.equal(renderHook().estadoDatos.datosDisponibles, false);
     await inicio;
     assert.equal(renderHook().estadoDatos.estado, 'error');
@@ -197,27 +129,29 @@ async function main() {
       }
       return fixture(url, opciones);
     };
-    const anterior = renderHook().iniciarCarga('A');
+    const anterior = iniciarHook('A');
     await flush();
-    await renderHook().iniciarCarga('B');
+    await iniciarHook('B');
     const entregasAntes = entregas.length;
     atrasadas.splice(0).forEach((resolver) => resolver());
     await anterior;
     assert.equal(entregas.length, entregasAntes);
     assert.equal(entregas.at(-1).mascotas[0].id, 12);
-    const trasLogout = renderHook().iniciarCarga('A');
+    const trasLogout = iniciarHook('A');
     await flush();
+    const entregasTrasLogout = entregas.length;
     renderHook().reiniciarCarga();
     atrasadas.splice(0).forEach((resolver) => resolver());
     await trasLogout;
-    assert.equal(entregas.length, entregasAntes);
+    assert.equal(entregas.length, entregasTrasLogout);
     assert.equal(renderHook().estadoDatos.estado, 'inicial');
-    const trasUnmount = renderHook().iniciarCarga('A');
+    const trasUnmount = iniciarHook('A');
     await flush();
+    const entregasTrasUnmount = entregas.length;
     hooks.unmount();
     atrasadas.splice(0).forEach((resolver) => resolver());
     await trasUnmount;
-    assert.equal(entregas.length, entregasAntes);
+    assert.equal(entregas.length, entregasTrasUnmount);
 
     // Integración de autenticación real con consulta fallida: no entra en demo.
     let autenticacion = 'ok';
@@ -238,7 +172,7 @@ async function main() {
     const { AuthProvider } = load('src/context/AuthContext.tsx');
     const contexto = () => provider.render(() => AuthProvider({ children: null })).props.value;
     await contexto().login('ana.garcia@email.com', '123456');
-    await flush();
+    await contexto().cargarDatos();
     assert.equal(contexto().usuario.nombre, 'Usuario real');
     assert.equal(contexto().modoDemo, false);
     assert.equal(contexto().estadoDatos.estado, 'error');
@@ -246,7 +180,7 @@ async function main() {
     assert.equal(solicitudesContexto.filter((url) => url.endsWith('/auth/login')).length, 1);
     assert.equal(solicitudesContexto.length, 4);
     await contexto().registro('Usuario real', 'real@email.com', '123456');
-    await flush();
+    await contexto().cargarDatos();
     assert.equal(contexto().usuario.nombre, 'Usuario real');
     assert.equal(contexto().estadoDatos.estado, 'error');
     contexto().logout();
@@ -257,6 +191,7 @@ async function main() {
     await assert.rejects(contexto().login('otra@email.com', '123456'), /servidor/);
     assert.equal(contexto().usuario, null);
     await contexto().login('ana.garcia@email.com', '123456');
+    await contexto().cargarDatos();
     assert.equal(contexto().modoDemo, true);
     assert.equal(contexto().estadoDatos.estado, 'listo');
     assert.equal(contexto().mascotas[0].nombre, 'Luna');
@@ -272,7 +207,7 @@ async function main() {
 
     // La interfaz conserva el navegador montado, oculto y fuera de accesibilidad durante la carga.
     const { default: DataLoadState } = load('src/components/DataLoadState.tsx');
-    const props = { estado: { estado: 'cargando', error: null, datosDisponibles: false }, modoDemo: false, reintentar: async () => {}, salir: () => {}, children: 'contenido' };
+    const props = { estado: { estado: 'cargando', error: null, datosDisponibles: false }, modoDemo: false, reintentar: async () => {}, reintentarGuardado: async () => {}, salir: () => {}, children: 'contenido' };
     let arbol = DataLoadState(props);
     assert.equal(arbol.props.children[1].props.style.display, 'none');
     assert.equal(arbol.props.children[1].props.accessibilityElementsHidden, true);
