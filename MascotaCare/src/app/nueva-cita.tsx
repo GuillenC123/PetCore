@@ -24,7 +24,7 @@ export default function NuevaCitaScreen() {
   const guardando = useRef(false);
 
   const limpiarError = (campo: string) => setErrores((prev) => ({ ...prev, [campo]: '', general: '' }));
-  const guardar = () => {
+  const guardar = async () => {
     if (guardando.current) return;
     const erroresNuevos: Record<string, string> = {};
     if (!mascotas.some((m) => m.id === mascotaId)) erroresNuevos.mascota = 'Selecciona una mascota.';
@@ -36,7 +36,7 @@ export default function NuevaCitaScreen() {
     if (Object.keys(erroresNuevos).length || !fechaVisita || mascotaId === null) return;
     guardando.current = true;
     try {
-      agregarCita({ mascota_id: mascotaId, motivo, fecha_hora: fechaVisita.toISOString() });
+      await agregarCita({ mascota_id: mascotaId, motivo, fecha_hora: fechaVisita.toISOString() });
       router.replace({ pathname: '/citas', params: { creada: '1' } });
     } catch (error) {
       guardando.current = false;

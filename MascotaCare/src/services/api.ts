@@ -2,7 +2,7 @@
 import { Platform } from 'react-native';
 
 import { normalizarIdentificador } from '@/utils/identificadores';
-import type { ApiError, AuthResponse, Cita, DatosApp, Identificador, Mascota, Recordatorio, Usuario } from '@/types';
+import type { ApiError, AuthResponse, Cita, DatosApp, EstadoCita, EstadoMascota, Identificador, Mascota, Recordatorio, Usuario } from '@/types';
 
 const HOST = Platform.select({ android: '10.0.2.2', default: 'localhost' });
 export const API_URL = (process.env.EXPO_PUBLIC_API_URL?.trim() || `http://${HOST}:4000/api`).replace(/\/+$/, '');
@@ -166,6 +166,42 @@ export async function apiTacharRecordatorio(token: string, id: Identificador, co
     method: 'PUT', headers: autorizar(token), body: JSON.stringify({ completado }),
   });
   return adaptar(() => recordatorioApi(datos));
+}
+
+/** Cuerpo que acepta POST /api/mascotas (sin campos locales de salud). */
+export interface MascotaNueva {
+  nombre: string;
+  raza: string;
+  especie: string;
+  edad: string;
+  estado: EstadoMascota;
+  imagen?: string | null;
+}
+
+/** Crea una mascota en la BD y devuelve la fila con su id definitivo. */
+export async function apiCrearMascota(token: string, datos: MascotaNueva, signal?: AbortSignal): Promise<Mascota> {
+  const respuesta = await request<Mascota>('/mascotas', {
+    method: 'POST', headers: autorizar(token), signal, body: JSON.stringify(datos),
+  });
+  return adaptar(() => mascotaApi(respuesta));
+}
+
+/** Cuerpo que acepta POST /api/citas. */
+export interface CitaNueva {
+  titulo: string;
+  mascota_id: Identificador;
+  fecha_hora: string;
+  doctor?: string | null;
+  clinica?: string | null;
+  estado?: EstadoCita;
+}
+
+/** Crea una cita en la BD y devuelve la fila con su id definitivo. */
+export async function apiCrearCita(token: string, datos: CitaNueva, signal?: AbortSignal): Promise<Cita> {
+  const respuesta = await request<Cita>('/citas', {
+    method: 'POST', headers: autorizar(token), signal, body: JSON.stringify(datos),
+  });
+  return adaptar(() => citaApi(respuesta));
 }
 
 export type { Usuario, Mascota, Cita, Recordatorio };

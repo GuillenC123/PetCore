@@ -33,6 +33,8 @@ import {
   apiLogin,
   apiRegistro,
   apiTacharRecordatorio,
+  apiCrearMascota,
+  apiCrearCita,
 } from '@/services/api';
 import type {
   AuthResponse,
@@ -48,6 +50,7 @@ import type {
   Mascota,
   Recordatorio,
   Usuario,
+  EstadoMascota,
 } from '@/types';
 
 // ---------------------------------------------------------------------------
@@ -92,9 +95,9 @@ interface AuthContextValue {
   tacharRecordatorio: (id: Identificador, completado: boolean) => Promise<void>;
   guardarRecordatorio: (datos: Omit<Recordatorio, 'id' | 'completado'>, id?: Identificador) => void;
   posponerRecordatorio: (id: Identificador, fecha: string) => void;
-  /** Añade una mascota al estado local (aporta el id automáticamente). */
-  agregarMascota: (datos: Omit<Mascota, 'id'>) => Mascota;
-  agregarCita: (datos: { mascota_id: Identificador; motivo: string; fecha_hora: string }) => void;
+  /** Añade una mascota; con la API activa la persiste en la BD. */
+  agregarMascota: (datos: Omit<Mascota, 'id'>) => Promise<Mascota>;
+  agregarCita: (datos: { mascota_id: Identificador; motivo: string; fecha_hora: string }) => Promise<void>;
   actualizarPesoMascota: (id: Identificador, peso: number | null) => void;
   registrarPeso: (id: Identificador, peso: number, fecha: string) => void;
   actualizarFichaSalud: (id: Identificador, datos: DatosFichaSalud) => void;
@@ -267,8 +270,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRecordatorios((prev) => prev.map((r) => r.id === id && !r.completado ? { ...r, vence_en: nuevaFecha.toISOString(), dia_repeticion: nuevaFecha.getDate() } : r));
   }, [recordatorios]);
 
-  // Las visitas creadas en este avance se conservan durante la sesión.
-  const agregarCita = React.useCallback((datos: { mascota_id: Identificador; motivo: string; fecha_hora: string }) => {
+  // Las visitas creadas: persisten en BD si la API está activa.
+  const agregarCita = React.useCallback(async (datos: { mascota_id: Identificador; motivo: string; fecha_hora: string }) => {
     const mascota = mascotas.find((m) => m.id === datos.mascota_id);
     if (!mascota) throw new Error('Selecciona una mascota registrada.');
     const fecha = new Date(datos.fecha_hora);
@@ -277,16 +280,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!Number.isFinite(fecha.getTime()) || fecha.getTime() <= Date.now()) {
       throw new Error('Selecciona una fecha y hora futuras.');
     }
+
+    // Actualiza estado de mascota (local, como ya hacía la app)
+    setMascotas((prev) => prev.map((m) => m.id === mascota.id ? {
+      ...m, estado: 'malestar', estado_salud: 'malestar',
+      cuidados_registrados: m.estado === 'en_tratamiento' || m.estado === 'vacuna_pendiente'
+        ? [...new Set([...(m.cuidados_registrados ?? []), m.estado])] : m.cuidados_registrados,
+    } : m));
+
+    if (token && conectado) {
+      const creada = await apiCrearCita(token, {
+        titulo: motivo,
+        mascota_id: mascota.id,
+        fecha_hora: fecha.toISOString(),
+        doctor: null,
+        clinica: null,
+        estado: 'programado',
+      });
+      setHayCambiosLocales(true);
+      cambiosLocales.current.mascotas.add(String(mascota.id));
+      cambiosLocales.current.citas.add(String(creada.id));
+      setCitas((prev) => [...prev, creada]);
+      return;
+    }
+
     const id = proximaVisitaId.current--;
     setHayCambiosLocales(true);
     cambiosLocales.current.mascotas.add(String(mascota.id));
     cambiosLocales.current.citas.add(String(id));
     cambiosLocales.current.recordatorios.add(String(id));
     recordatoriosLocales.current.add(id);
-    setMascotas((prev) => prev.map((m) => m.id === mascota.id ? { ...m, estado: 'malestar', estado_salud: 'malestar',
-      cuidados_registrados: m.estado === 'en_tratamiento' || m.estado === 'vacuna_pendiente'
-        ? [...new Set([...(m.cuidados_registrados ?? []), m.estado])] : m.cuidados_registrados,
-    } : m));
     setCitas((prev) => [...prev, {
       id, mascota_id: mascota.id, mascota_nombre: mascota.nombre,
       titulo: motivo, fecha_hora: fecha.toISOString(),
@@ -298,7 +321,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       cita_id: id,
       vence_en: fecha.toISOString(), completado: false,
     }]);
-  }, [mascotas]);
+  }, [mascotas, token, conectado]);
 
   const actualizarPesoMascota = React.useCallback((id: Identificador, peso: number | null) => {
     if (peso !== null && (!Number.isFinite(peso) || peso <= 0)) {
@@ -319,20 +342,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } : actual);
   }, []);
 
-  /**
-   * Añade una mascota al estado local de la app. La nueva mascota recibe un id
-   * autoincrementado y se inserta al inicio de la lista. En el Avance 1 (sin
-   * persistencia) el registro sólo vive en memoria; en un avance posterior se
-   * sincronizará con la API.
-   */
-  const agregarMascota = React.useCallback((datos: Omit<Mascota, 'id'>): Mascota => {
+  const agregarMascota = React.useCallback(async (datos: Omit<Mascota, 'id'>): Promise<Mascota> => {
+    if (token && conectado) {
+      const creada = await apiCrearMascota(token, {
+        nombre: datos.nombre.trim(),
+        raza: datos.raza.trim(),
+        especie: datos.especie.trim(),
+        edad: datos.edad.trim(),
+        estado: (datos.estado ?? 'saludable') as EstadoMascota,
+        imagen: datos.imagen ?? null,
+      });
+      setHayCambiosLocales(true);
+      cambiosLocales.current.mascotas.add(String(creada.id));
+      setMascotas((prev) => [creada, ...prev]);
+      return creada;
+    }
     const base: Mascota = { ...datos, id: proximoId.current-- };
     const nueva = datos.peso != null ? aplicarRegistroPeso(base, crearRegistroPeso(datos.peso, fechaPesoHoy())) : base;
     setHayCambiosLocales(true);
     cambiosLocales.current.mascotas.add(String(nueva.id));
     setMascotas((prev) => [nueva, ...prev]);
     return nueva;
-  }, []);
+  }, [token, conectado]);
 
   /** La autenticación habilita la sesión; la consulta tiene sus propios estados. */
   const aplicarSesion = React.useCallback((respuesta: AuthResponse, datosDemo?: DatosApp) => {

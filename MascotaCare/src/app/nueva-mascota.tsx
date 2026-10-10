@@ -73,23 +73,23 @@ export default function NuevaMascotaScreen() {
   // -------------------------------------------------------------------------
   // GUARDAR: si pasa la validación, crea la mascota y vuelve a la lista.
   // -------------------------------------------------------------------------
-  const guardar = () => {
+  const guardar = async () => {
     if (!validar()) return;
 
-    // La mascota arranca con estado "saludable"; en avances futuros se podrá
-    // elegir otro estado al crearla.
-    agregarMascota({
-      nombre: nombre.trim(),
-      especie,
-      raza: raza.trim(),
-      edad: edad.trim(),
-      peso: peso.trim() ? Number(peso.trim().replace(',', '.')) : null,
-      estado: 'saludable' as EstadoMascota,
-      imagen: null,
-    });
-
-    // Navegamos hacia atrás (a Mis Mascotas) filmando la nueva tarjeta.
-    router.back();
+    try {
+      await agregarMascota({
+        nombre: nombre.trim(),
+        especie,
+        raza: raza.trim(),
+        edad: edad.trim(),
+        peso: peso.trim() ? Number(peso.trim().replace(',', '.')) : null,
+        estado: 'saludable' as EstadoMascota,
+        imagen: null,
+      });
+      router.back();
+    } catch (e) {
+      setErrores({ general: e instanceof Error ? e.message : 'No se pudo guardar la mascota.' });
+    }
   };
 
   return (
@@ -190,6 +190,7 @@ export default function NuevaMascotaScreen() {
             style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>
             <Text style={styles.buttonText}>Guardar Mascota</Text>
           </Pressable>
+          {!!errores.general && <Text style={styles.error} accessibilityRole="alert">{errores.general}</Text>}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -286,4 +287,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+  error: { fontSize: 14, color: AppColors.danger },
 });
