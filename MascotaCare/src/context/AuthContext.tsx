@@ -40,6 +40,7 @@ import {
   apiActualizarMascota,
   apiRegistrarPeso,
   apiCrearCita,
+  apiCompletarCita,
 } from '@/services/api';
 import type {
   AuthResponse,
@@ -75,7 +76,7 @@ function mensajeServidorNoDisponible(): string {
 // ---------------------------------------------------------------------------
 
 interface AuthContextValue {
-  completarCita: (id: Identificador) => void;
+  completarCita: (id: Identificador) => Promise<void>;
   agregarObservacion: (mascotaId: Identificador, datos: Omit<ObservacionSalud, 'id'>) => void;
   adjuntarHistorial: (mascotaId: Identificador, clave: string, adjuntos: AdjuntoSalud[]) => void;
   guardarCarnet: (mascotaId: Identificador, datos: Omit<RegistroCarnet, 'id'>, id?: number) => void;
@@ -147,6 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
   const { estadoDatos, cargarDatos, iniciarCarga, reiniciarCarga, reintentarGuardado, confirmarRecordatorio } = useCargaDatos(aplicarDatos);
   const siguienteTratamiento = React.useRef(1);
+  const versionSesion = React.useRef(0);
   const agregarTratamiento = React.useCallback((datos: NuevoTratamiento) => {
     if (!mascotas.some((m) => m.id === datos.mascota_id)) throw new Error('Selecciona una mascota registrada.');
     const tratamiento = crearTratamiento(datos, siguienteTratamiento.current);
@@ -182,9 +184,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ...m.adjuntos_historial, [clave]: [...(m.adjuntos_historial?.[clave] ?? []), ...adjuntos],
     } } : m));
   }, []);
-  const completarCita = React.useCallback((id: Identificador) => {
+  const completarCita = React.useCallback(async (id: Identificador) => {
     const cita = citas.find((c) => c.id === id);
     if (!cita || cita.estado === 'cancelado' || Date.parse(cita.fecha_hora) > Date.now()) throw new Error('La visita aún no puede marcarse como realizada.');
+    const sesion = versionSesion.current;
+    if (token && conectado && esIdentificadorRemoto(id)) {
+      const confirmada = await apiCompletarCita(token, id);
+      if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
+      setHayCambiosLocales(true);
+      cambiosLocales.current.citas.add(String(id));
+      cambiosLocales.current.mascotas.add(String(cita.mascota_id));
+      setCitas((prev) => prev.map((c) => c.id === id ? { ...c, ...confirmada.cita } : c));
+      if (confirmada.recordatorio) {
+        cambiosLocales.current.recordatorios.add(String(confirmada.recordatorio.id));
+        setRecordatorios((prev) => prev.map((r) => r.id === confirmada.recordatorio!.id
+          ? { ...r, ...confirmada.recordatorio } : r));
+        await confirmarRecordatorio(confirmada.recordatorio);
+      }
+      return;
+    }
     setHayCambiosLocales(true);
     cambiosLocales.current.citas.add(String(id));
     cambiosLocales.current.mascotas.add(String(cita.mascota_id));
@@ -194,7 +212,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     setCitas((prev) => prev.map((c) => c.id === id ? { ...c, estado: 'completado' } : c));
     setRecordatorios((prev) => prev.map((r) => r.cita_id === id ? { ...r, completado: true } : r));
-  }, [citas, recordatorios]);
+  }, [citas, recordatorios, token, conectado, confirmarRecordatorio]);
   const siguienteCarnet = React.useRef(1);
   const guardarCarnet = React.useCallback((mascotaId: Identificador, datos: Omit<RegistroCarnet, 'id'>, id?: number) => {
     const error = validarCarnet(datos);
@@ -221,7 +239,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setMascotas((prev) => prev.map((m) => m.id === mascotaId ? { ...m, carnet: id === undefined
       ? [...(m.carnet ?? []), registro] : (m.carnet ?? []).map((r) => r.id === id ? registro : r) } : m));
   }, [mascotas]);
-  const versionSesion = React.useRef(0);
   const registrarPeso = React.useCallback(async (id: Identificador, peso: number, fecha: string) => {
     if (!mascotas.some((m) => m.id === id)) throw new Error('Mascota no encontrada.');
     const registro = crearRegistroPeso(peso, fecha);

@@ -245,6 +245,11 @@ export interface CitaProgramada {
   mascota: Mascota;
 }
 
+export interface CitaCompletada {
+  cita: Cita;
+  recordatorio: Recordatorio | null;
+}
+
 /** Crea atómicamente cita, recordatorio y estado de la mascota. */
 export async function apiCrearCita(token: string, datos: CitaNueva, signal?: AbortSignal): Promise<CitaProgramada> {
   const respuesta = await request<CitaProgramada>('/citas', {
@@ -254,6 +259,17 @@ export async function apiCrearCita(token: string, datos: CitaNueva, signal?: Abo
     cita: citaApi(respuesta.cita),
     recordatorio: recordatorioApi(respuesta.recordatorio),
     mascota: mascotaApi(respuesta.mascota),
+  }));
+}
+
+/** Completa la visita y su recordatorio asociado en una única transacción. */
+export async function apiCompletarCita(token: string, id: Identificador): Promise<CitaCompletada> {
+  const respuesta = await request<CitaCompletada>(`/citas/${encodeURIComponent(id)}/completar`, {
+    method: 'POST', headers: autorizar(token), body: JSON.stringify({}),
+  });
+  return adaptar(() => ({
+    cita: citaApi(respuesta.cita),
+    recordatorio: respuesta.recordatorio === null ? null : recordatorioApi(respuesta.recordatorio),
   }));
 }
 

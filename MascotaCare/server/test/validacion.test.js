@@ -173,6 +173,32 @@ test('validación de las rutas HTTP', async (t) => {
     assert.match(consultas[4].sql, /estado = 'malestar'/);
     assert.match(consultas[5].sql, /^COMMIT$/);
   });
+  await t.test('completa de forma atómica una cita pasada y su recordatorio', async () => {
+    consultas.length = 0;
+    const citaCompletada = { id: '10', mascota_id: '1', titulo: 'Control', fecha_hora: '2020-01-01T12:00:00.000Z', doctor: null, clinica: null, estado: 'completado' };
+    const recordatorioCompletado = { id: '11', mascota_id: '1', cita_id: '10', titulo: 'Visita veterinaria', descripcion: 'Control', tipo: 'cita', vence_en: '2020-01-01T12:00:00.000Z', repeticion: 'ninguna', completado: true };
+    resultados = [
+      { rowCount: 1, rows: [{ id: '10', fecha_hora: citaCompletada.fecha_hora, estado: 'programado' }] },
+      { rowCount: 1, rows: [citaCompletada] },
+      { rowCount: 1, rows: [recordatorioCompletado] },
+    ];
+    const respuesta = await enviar('POST', '/citas/10/completar', {});
+    assert.equal(respuesta.status, 200);
+    assert.deepEqual(await respuesta.json(), { cita: citaCompletada, recordatorio: recordatorioCompletado });
+    assert.match(consultas[0].sql, /^BEGIN$/);
+    assert.match(consultas[1].sql, /FOR UPDATE/);
+    assert.match(consultas[2].sql, /UPDATE CitaMedica SET estado = 'completado'/);
+    assert.match(consultas[3].sql, /UPDATE Recordatorio SET completado = true/);
+    assert.match(consultas[4].sql, /^COMMIT$/);
+  });
+  await t.test('no completa una cita futura', async () => {
+    consultas.length = 0;
+    resultados = [{ rowCount: 1, rows: [{ id: '10', fecha_hora: '2999-01-01T12:00:00.000Z', estado: 'programado' }] }];
+    const respuesta = await enviar('POST', '/citas/10/completar', {});
+    assert.equal(respuesta.status, 409);
+    assert.match((await respuesta.json()).error, /aún no puede/);
+    assert.match(consultas[2].sql, /^ROLLBACK$/);
+  });
   await t.test('devuelve conflicto si el UPDATE no permite reabrir una cita existente', async () => {
     consultas.length = 0;
     resultados = [{ rowCount: 0, rows: [] }, { rowCount: 1, rows: [{ id: '1' }] }];

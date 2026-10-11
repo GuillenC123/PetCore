@@ -15,6 +15,7 @@ const esquemas = require('../validation/esquemas');
 
 const router = Router();
 const columnasMascota = 'id, nombre, raza, especie, edad, estado, imagen, creado_en, peso, registros_peso, nacimiento, sexo, alergias, condiciones';
+const columnasRecordatorio = 'id, titulo, descripcion, tipo, vence_en, repeticion, ultima_realizacion, dia_repeticion, completado, mascota_id, cita_id';
 
 router.use('/:id', validar(esquemas.paramsId, { origen: 'params', obligatorios: ['id'] }));
 
@@ -100,6 +101,61 @@ router.post('/', validar(esquemas.crearCita, { obligatorios: ['titulo', 'mascota
     if (conexion && transaccionActiva) await conexion.query('ROLLBACK');
     console.error('Error creando la cita:', err);
     res.status(500).json({ error: 'Error interno del servidor.' });
+  } finally {
+    conexion?.release();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// COMPLETAR CITA Y SU RECORDATORIO VINCULADO
+// ---------------------------------------------------------------------------
+router.post('/:id/completar', async (req, res) => {
+  let conexion;
+  let transaccionActiva = false;
+  try {
+    conexion = await pool.connect();
+    await conexion.query('BEGIN');
+    transaccionActiva = true;
+    const existente = await conexion.query(
+      `SELECT id, fecha_hora, estado
+       FROM CitaMedica WHERE id = $1 AND usuario_id = $2 FOR UPDATE`,
+      [req.params.id, req.usuario.id]
+    );
+    if (!existente.rowCount) {
+      await conexion.query('ROLLBACK');
+      transaccionActiva = false;
+      return res.status(404).json({ error: 'Cita no encontrada.' });
+    }
+    const citaActual = existente.rows[0];
+    if (citaActual.estado === 'cancelado' || citaActual.estado === 'completado') {
+      await conexion.query('ROLLBACK');
+      transaccionActiva = false;
+      return res.status(409).json({ error: 'La cita ya no se puede completar.' });
+    }
+    if (new Date(citaActual.fecha_hora).getTime() > Date.now()) {
+      await conexion.query('ROLLBACK');
+      transaccionActiva = false;
+      return res.status(409).json({ error: 'La cita aún no puede marcarse como realizada.' });
+    }
+    const cita = await conexion.query(
+      `UPDATE CitaMedica SET estado = 'completado'
+       WHERE id = $1 AND usuario_id = $2
+       RETURNING id, titulo, fecha_hora, doctor, clinica, estado, mascota_id`,
+      [req.params.id, req.usuario.id]
+    );
+    const recordatorio = await conexion.query(
+      `UPDATE Recordatorio SET completado = true
+       WHERE cita_id = $1 AND usuario_id = $2
+       RETURNING ${columnasRecordatorio}`,
+      [req.params.id, req.usuario.id]
+    );
+    await conexion.query('COMMIT');
+    transaccionActiva = false;
+    return res.json({ cita: cita.rows[0], recordatorio: recordatorio.rows[0] ?? null });
+  } catch (err) {
+    if (conexion && transaccionActiva) await conexion.query('ROLLBACK');
+    console.error('Error completando la cita:', err);
+    return res.status(500).json({ error: 'Error interno del servidor.' });
   } finally {
     conexion?.release();
   }
