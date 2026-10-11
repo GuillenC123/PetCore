@@ -8,12 +8,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import FormInput from '@/components/FormInput';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
+import { useAviso } from '@/context/AvisosContext';
 import { interpretarFechaVisita } from '@/utils/citas';
 import { buscarPorId } from '@/utils/identificadores';
 import type { Identificador } from '@/types';
 
 export default function NuevaCitaScreen() {
-  const { mascotas, agregarCita } = useAuth();
+  const { mascotas, agregarCita, modoDemo } = useAuth();
+  const mostrarAviso = useAviso();
   const params = useLocalSearchParams<{ mascotaId?: string }>();
   const [seleccionada, setMascotaId] = useState<Identificador | null>(null);
   const mascotaId = seleccionada ?? buscarPorId(mascotas, params.mascotaId)?.id ?? null;
@@ -37,6 +39,7 @@ export default function NuevaCitaScreen() {
     guardando.current = true;
     try {
       await agregarCita({ mascota_id: mascotaId, motivo, fecha_hora: fechaVisita.toISOString() });
+      mostrarAviso(modoDemo ? 'Cita guardada para esta sesión.' : 'Cita guardada.');
       router.replace({ pathname: '/citas', params: { creada: '1' } });
     } catch (error) {
       guardando.current = false;

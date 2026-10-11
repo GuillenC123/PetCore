@@ -1,4 +1,3 @@
-import type { Identificador } from '@/types';
 import { layoutStyles } from '@/components/AdaptiveLayout';
 // ============================================================================
 // mascota-detalle.tsx - Pantalla de Detalle de una Mascota
@@ -13,16 +12,14 @@ import { layoutStyles } from '@/components/AdaptiveLayout';
 
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import PetHealthStatus from '@/components/PetHealthStatus';
-import FormInput from '@/components/FormInput';
+import WeightTracker from '@/components/WeightTracker';
 import PetImage from '@/components/PetImage';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-import { validarPeso } from '@/utils/validaciones';
 import { edadMascota } from '@/utils/salud';
 
 export default function MascotaDetalleScreen() {
@@ -85,7 +82,7 @@ export default function MascotaDetalleScreen() {
           <Fila icon="hourglass-outline" etiqueta="Edad" valor={edadMascota(mascota)} />
           <Separador />
           <Fila icon="scale-outline" etiqueta="Peso" valor={mascota.peso != null ? `${mascota.peso.toLocaleString('es-PE')} kg` : 'Sin registrar'} />
-          <EditorPeso key={mascota.id} id={mascota.id} pesoActual={mascota.peso} />
+          <WeightTracker key={mascota.id} mascota={mascota} />
         </View>
 
         {/* ---- Tarjeta de resumen de cuidados ---- */}
@@ -102,48 +99,6 @@ export default function MascotaDetalleScreen() {
         </View>
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-function EditorPeso({ id, pesoActual }: { id: Identificador; pesoActual?: number | null }) {
-  const { actualizarPesoMascota } = useAuth();
-  const [editando, setEditando] = useState(false);
-  const [peso, setPeso] = useState('');
-  const [error, setError] = useState<string>();
-  const [guardado, setGuardado] = useState(false);
-
-  const guardar = () => {
-    const mensaje = peso.trim() ? validarPeso(peso) : 'Ingresa el peso en kg.';
-    setError(mensaje);
-    if (mensaje) return;
-    actualizarPesoMascota(id, peso.trim() ? Number(peso.trim().replace(',', '.')) : null);
-    setEditando(false);
-    setGuardado(true);
-  };
-
-  return (
-    <View style={{ gap: 10 }}>
-      {editando ? (
-        <>
-          <Text style={styles.cardTexto}>Peso en kg. Se registrará con la fecha de hoy.</Text>
-          <FormInput accessibilityLabel="Peso en kilogramos" placeholder="Ej. 4,5" keyboardType="decimal-pad"
-            value={peso} onChangeText={(valor) => { setPeso(valor); setError(undefined); }} error={error} />
-          <Pressable accessibilityRole="button" style={styles.action} onPress={guardar}>
-            <Text style={styles.actionText}>Guardar peso</Text>
-          </Pressable>
-          <Pressable accessibilityRole="button" style={styles.action} onPress={() => setEditando(false)}>
-            <Text style={styles.actionText}>Cancelar</Text>
-          </Pressable>
-        </>
-      ) : (
-        <Pressable accessibilityRole="button" style={styles.action} onPress={() => {
-          setPeso(pesoActual?.toString() ?? ''); setError(undefined); setGuardado(false); setEditando(true);
-        }}>
-          <Text style={styles.actionText}>{pesoActual != null ? 'Actualizar peso' : 'Registrar peso'}</Text>
-        </Pressable>
-      )}
-      {guardado && <Text accessibilityRole="alert" style={styles.cardTexto}>Peso actualizado para esta sesión.</Text>}
-    </View>
   );
 }
 

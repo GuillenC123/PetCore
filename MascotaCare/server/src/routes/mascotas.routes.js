@@ -17,6 +17,8 @@ const validar = require('../middleware/validar');
 const esquemas = require('../validation/esquemas');
 
 const router = Router();
+const columnas = 'id, nombre, raza, especie, edad, estado, imagen, creado_en, peso, registros_peso, nacimiento, sexo, alergias, condiciones';
+const hoy = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
 
 router.use('/:id', validar(esquemas.paramsId, { origen: 'params', obligatorios: ['id'] }));
 
@@ -26,7 +28,7 @@ router.use('/:id', validar(esquemas.paramsId, { origen: 'params', obligatorios: 
 router.get('/', async (req, res) => {
   try {
     const resultado = await pool.query(
-      `SELECT id, nombre, raza, especie, edad, estado, imagen, creado_en
+      `SELECT id, nombre, raza, especie, edad, estado, imagen, creado_en, peso, registros_peso, nacimiento, sexo, alergias, condiciones
        FROM Mascota
        WHERE usuario_id = $1
        ORDER BY id`,
@@ -45,7 +47,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const resultado = await pool.query(
-      `SELECT id, nombre, raza, especie, edad, estado, imagen, creado_en
+      `SELECT id, nombre, raza, especie, edad, estado, imagen, creado_en, peso, registros_peso, nacimiento, sexo, alergias, condiciones
        FROM Mascota
        WHERE id = $1 AND usuario_id = $2`,
       [req.params.id, req.usuario.id]
@@ -67,13 +69,14 @@ router.get('/:id', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.post('/', validar(esquemas.mascota, { obligatorios: ['nombre', 'raza', 'especie', 'edad'] }), async (req, res) => {
   try {
-    const { nombre, raza, especie, edad, estado, imagen } = req.body;
-
+    const { nombre, raza, especie, edad, estado, imagen, peso = null, nacimiento = null,
+      sexo = 'desconocido', alergias = '', condiciones = '' } = req.body;
+    const registros = peso === null ? [] : [{ peso, fecha: hoy() }];
     const resultado = await pool.query(
-      `INSERT INTO Mascota (usuario_id, nombre, raza, especie, edad, estado, imagen)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, nombre, raza, especie, edad, estado, imagen, creado_en`,
-      [req.usuario.id, nombre, raza, especie, edad, estado || 'saludable', imagen || null]
+      `INSERT INTO Mascota (usuario_id, nombre, raza, especie, edad, estado, imagen, peso, registros_peso, nacimiento, sexo, alergias, condiciones)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING ${columnas}`,
+      [req.usuario.id, nombre, raza, especie, edad, estado || 'saludable', imagen || null,
+        peso, JSON.stringify(registros), nacimiento, sexo, alergias, condiciones]
     );
 
     res.status(201).json(resultado.rows[0]);
@@ -86,34 +89,44 @@ router.post('/', validar(esquemas.mascota, { obligatorios: ['nombre', 'raza', 'e
 // ---------------------------------------------------------------------------
 // ACTUALIZAR MASCOTA
 // ---------------------------------------------------------------------------
-router.put('/:id', validar(esquemas.mascota, { parcial: true }), async (req, res) => {
+// Bloquear la fila evita perder mediciones concurrentes. Solo se reciben
+// campos del esquema validado y todos los valores van parametrizados.
+async function actualizar(req, res, registro) {
+  let conexion;
   try {
-    const { nombre, raza, especie, edad, estado, imagen } = req.body;
-
-    // Con COALESCE solo actualizamos los campos enviados; el resto se conserva.
-    const resultado = await pool.query(
-      `UPDATE Mascota SET
-          nombre    = COALESCE($3, nombre),
-          raza      = COALESCE($4, raza),
-          especie   = COALESCE($5, especie),
-          edad      = COALESCE($6, edad),
-          estado    = COALESCE($7, estado),
-          imagen    = COALESCE($8, imagen)
-       WHERE id = $1 AND usuario_id = $2
-       RETURNING id, nombre, raza, especie, edad, estado, imagen, creado_en`,
-      [req.params.id, req.usuario.id, nombre, raza, especie, edad, estado, imagen]
-    );
-
-    if (resultado.rowCount === 0) {
+    conexion = await pool.connect();
+    await conexion.query('BEGIN');
+    const actual = await conexion.query('SELECT * FROM Mascota WHERE id = $1 AND usuario_id = $2 FOR UPDATE', [req.params.id, req.usuario.id]);
+    if (!actual.rowCount) {
+      await conexion.query('ROLLBACK');
       return res.status(404).json({ error: 'Mascota no encontrada.' });
     }
-
+    const cambios = registro ? {} : { ...req.body };
+    const medicion = registro || (typeof cambios.peso === 'number' ? { peso: cambios.peso, fecha: hoy() } : null);
+    if (medicion) {
+      const historial = [...actual.rows[0].registros_peso.filter((r) => r.fecha !== medicion.fecha), medicion]
+        .sort((a, b) => a.fecha.localeCompare(b.fecha));
+      cambios.registros_peso = JSON.stringify(historial);
+      cambios.peso = historial[historial.length - 1].peso;
+    } else if (cambios.peso === null && actual.rows[0].registros_peso.length) {
+      delete cambios.peso;
+    }
+    const campos = Object.keys(cambios);
+    const resultado = campos.length ? await conexion.query(
+      `UPDATE Mascota SET ${campos.map((campo, i) => `${campo} = $${i + 3}`).join(', ')}
+       WHERE id = $1 AND usuario_id = $2 RETURNING ${columnas}`,
+      [req.params.id, req.usuario.id, ...Object.values(cambios)]
+    ) : await conexion.query(`SELECT ${columnas} FROM Mascota WHERE id = $1 AND usuario_id = $2`, [req.params.id, req.usuario.id]);
+    await conexion.query('COMMIT');
     res.json(resultado.rows[0]);
   } catch (err) {
-    console.error('Error actualizando la mascota:', err);
+    if (conexion) await conexion.query('ROLLBACK');
+    console.error('Error actualizando mascota:', err);
     res.status(500).json({ error: 'Error interno del servidor.' });
-  }
-});
+  } finally { conexion?.release(); }
+}
+router.put('/:id', validar(esquemas.mascota, { parcial: true }), (req, res) => actualizar(req, res));
+router.post('/:id/pesos', validar(esquemas.peso, { obligatorios: ['peso', 'fecha'] }), (req, res) => actualizar(req, res, req.body));
 
 // ---------------------------------------------------------------------------
 // ELIMINAR MASCOTA

@@ -41,6 +41,13 @@ test('validación de las rutas HTTP', async (t) => {
     ['POST', '/auth/login', { correo: ['ana@example.com'], password: '123456' }],
     ['POST', '/auth/login', { correo: 'sin-correo', password: '123456' }],
     ['POST', '/auth/login', {}],
+    ['POST', '/mascotas', { ...mascota, peso: -1 }],
+    ['POST', '/mascotas', { ...mascota, sexo: 'invalido' }],
+    ['POST', '/mascotas', { ...mascota, nacimiento: '31/02/2020' }],
+    ['POST', '/mascotas', { ...mascota, alergias: 'a'.repeat(1001) }],
+    ['POST', '/mascotas/1/pesos', { peso: null, fecha: '2020-01-01' }],
+    ['POST', '/mascotas/1/pesos', { peso: 5, fecha: '2999-01-01' }],
+    ['POST', '/mascotas/1/pesos', { peso: 5, fecha: '2020-02-30' }],
     ['POST', '/mascotas', []],
     ['POST', '/mascotas', undefined],
     ['POST', '/mascotas', { ...mascota, nombre: {} }],
@@ -86,7 +93,7 @@ test('validación de las rutas HTTP', async (t) => {
     consultas.length = 0;
     const respuesta = await enviar('POST', '/mascotas', { ...mascota, nombre: ' Luna ', imagen: null });
     assert.equal(respuesta.status, 201);
-    assert.deepEqual(consultas[0].parametros, ['1', 'Luna', 'Mestiza', 'Perro', '3 años', 'saludable', null]);
+    assert.deepEqual(consultas[0].parametros, ['1', 'Luna', 'Mestiza', 'Perro', '3 años', 'saludable', null, null, '[]', null, 'desconocido', '', '']);
   });
   await t.test('conserva IDs BIGINT sin perder precisión', async () => {
     consultas.length = 0;

@@ -168,8 +168,13 @@ export async function apiTacharRecordatorio(token: string, id: Identificador, co
   return adaptar(() => recordatorioApi(datos));
 }
 
-/** Cuerpo que acepta POST /api/mascotas (sin campos locales de salud). */
+/** Datos básicos y ficha de salud persistidos en la API. */
 export interface MascotaNueva {
+  peso?: number | null;
+  nacimiento?: string | null;
+  sexo?: Mascota['sexo'];
+  alergias?: string;
+  condiciones?: string;
   nombre: string;
   raza: string;
   especie: string;
@@ -182,6 +187,20 @@ export interface MascotaNueva {
 export async function apiCrearMascota(token: string, datos: MascotaNueva, signal?: AbortSignal): Promise<Mascota> {
   const respuesta = await request<Mascota>('/mascotas', {
     method: 'POST', headers: autorizar(token), signal, body: JSON.stringify(datos),
+  });
+  return adaptar(() => mascotaApi(respuesta));
+}
+
+export async function apiActualizarMascota(token: string, id: Identificador, datos: Partial<MascotaNueva>): Promise<Mascota> {
+  const respuesta = await request<Mascota>(`/mascotas/${encodeURIComponent(id)}`, {
+    method: 'PUT', headers: autorizar(token), body: JSON.stringify(datos),
+  });
+  return adaptar(() => mascotaApi(respuesta));
+}
+
+export async function apiRegistrarPeso(token: string, id: Identificador, registro: { peso: number; fecha: string }): Promise<Mascota> {
+  const respuesta = await request<Mascota>(`/mascotas/${encodeURIComponent(id)}/pesos`, {
+    method: 'POST', headers: autorizar(token), body: JSON.stringify(registro),
   });
   return adaptar(() => mascotaApi(respuesta));
 }

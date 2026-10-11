@@ -33,7 +33,7 @@ async function main() {
     useCallback: fn => fn, createElement: (_t, props) => props,
   };
   let intentos = 0, fallar = true, resolver;
-  const api = { apiTacharRecordatorio: async (_token, id, completado) => { intentos++; if (fallar) throw new Error('Fallo de red'); if (resolver === 'esperar') await new Promise(resolve => {resolver = resolve;}); return { id, completado }; } };
+  const api = { apiCrearCita: async (_token, datos) => ({ ...datos, id: 50, estado: 'pendiente' }), apiTacharRecordatorio: async (_token, id, completado) => { intentos++; if (fallar) throw new Error('Fallo de red'); if (resolver === 'esperar') await new Promise(resolve => {resolver = resolve;}); return { id, completado }; } };
   react.useEffect = () => {};
   const { AuthProvider } = cargar('src/context/AuthContext.tsx', nombre => nombre === '@/hooks/use-carga-datos' ? require('./helpers/carga-datos.cjs') : nombre === 'react' ? react : nombre === '@/services/api' ? api : nombre.startsWith('@/utils/') ? cargar(`src/utils/${nombre.slice(8)}.ts`) : {});
   const contexto = () => { indice = 0; indiceRef = 0; return AuthProvider({children:null}).value; };
@@ -49,7 +49,7 @@ async function main() {
   await assert.rejects(ctx.tacharRecordatorio(1,false), /se est/);
   resolver(); await pendiente;
   assert.equal(memoria[5][0].completado,false);
-  ctx.agregarCita({mascota_id:1,motivo:'Malestar',fecha_hora:new Date(Date.now()+86400000).toISOString()});
+  await ctx.agregarCita({mascota_id:1,motivo:'Malestar',fecha_hora:new Date(Date.now()+86400000).toISOString()});
   assert.equal(memoria[3][0].estado_salud,'malestar');
   assert.ok(memoria[3][0].cuidados_registrados.includes('vacuna_pendiente'));
   // Una respuesta tardía no cambia los datos de otra sesión.

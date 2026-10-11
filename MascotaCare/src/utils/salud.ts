@@ -3,6 +3,7 @@ import { interpretarFechaVisita } from './citas';
 import { validarPeso, validarTexto } from './validaciones';
 
 export interface DatosFichaSalud {
+  especie?: string;
   nacimiento: string | null;
   edad: string;
   sexo: NonNullable<Mascota['sexo']>;

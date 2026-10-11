@@ -25,29 +25,40 @@ export default function DataLoadState({
   const cargando = ['inicial', 'recuperando', 'cargando'].includes(estado.estado);
   const ocupado = cargando || estado.guardandoCache;
   const mostrarContenido = !activo || estado.datosDisponibles;
+  const mostrarAviso = estado.estado !== 'listo' || ocupado || !estado.datosDisponibles
+    || Boolean(estado.error || estado.errorCache);
+
   const procedencia = estado.procedencia === 'cache' ? 'Datos guardados en este dispositivo'
-    : modoDemo ? 'Modo demostración · datos de ejemplo' : 'Datos actualizados';
+    : modoDemo ? 'Modo demostración · datos de ejemplo' : 'Datos recibidos';
   const fecha = estado.actualizadoEn ? new Date(estado.actualizadoEn).toLocaleString('es-PE') : null;
 
   return (
     <View style={styles.container}>
       {activo && (
-        <View style={estado.datosDisponibles ? [styles.notice, { paddingTop: Math.max(12, insets.top) }] : styles.initial}
+        <View style={estado.datosDisponibles ? [styles.notice,
+          !mostrarAviso && styles.compactNotice,
+          { paddingTop: Math.max(12, insets.top) }] : styles.initial}
           accessibilityLiveRegion="polite">
-          {cargando && <ActivityIndicator color={AppColors.primary} accessibilityLabel="Actualizando datos" />}
-          <Text style={styles.message}>
-            {estado.datosDisponibles ? `${modoDemo && estado.procedencia === 'cache' ? 'Demostración · ' : ''}${procedencia}${fecha ? ` · ${fecha}` : ''}`
-              : estado.estado === 'recuperando' ? 'Recuperando tus datos…' : cargando ? 'Cargando tus datos…' : 'No se pudieron cargar tus datos.'}
-          </Text>
-          {estado.datosDisponibles && cargando && <Text style={styles.detail}>Buscando cambios…</Text>}
-          {estado.error && <Text accessibilityRole="alert" style={styles.error}>{estado.error}</Text>}
-          {estado.errorCache && <Text accessibilityRole="alert" style={styles.error}>{estado.errorCache}</Text>}
-          {estado.guardandoCache && <Text style={styles.detail}>Guardando copia en este dispositivo…</Text>}
-          {hayCambiosLocales && <Text style={styles.detail}>Tus ediciones locales se conservan durante esta sesión.</Text>}
+          {mostrarAviso && (
+            <>
+              {cargando && <ActivityIndicator color={AppColors.primary} accessibilityLabel="Actualizando datos" />}
+              <Text style={styles.message}>
+                {estado.datosDisponibles ? `${modoDemo && estado.procedencia === 'cache' ? 'Demostración · ' : ''}${procedencia}${fecha ? ` · ${fecha}` : ''}`
+                  : estado.estado === 'recuperando' ? 'Recuperando tus datos…' : cargando ? 'Cargando tus datos…' : 'No se pudieron cargar tus datos.'}
+              </Text>
+              {estado.datosDisponibles && cargando && <Text style={styles.detail}>Buscando cambios…</Text>}
+              {estado.error && <Text accessibilityRole="alert" style={styles.error}>{estado.error}</Text>}
+              {estado.errorCache && <Text accessibilityRole="alert" style={styles.error}>{estado.errorCache}</Text>}
+              {estado.guardandoCache && <Text style={styles.detail}>Guardando copia en este dispositivo…</Text>}
+              {hayCambiosLocales && <Text style={styles.detail}>Tus ediciones locales se conservan durante esta sesión.</Text>}
+            </>
+          )}
+          {!mostrarAviso && modoDemo && <Text style={styles.detail}>Modo demostración</Text>}
           <View style={styles.actions}>
-            <Pressable accessibilityRole="button" disabled={ocupado} style={[styles.button, ocupado && styles.disabled]}
+            <Pressable accessibilityRole="button" disabled={ocupado} style={[styles.button, ocupado && styles.disabled,
+              !mostrarAviso && styles.compactButton]}
               onPress={() => { void reintentar(); }}>
-              <Text style={styles.buttonText}>{estado.estado === 'error' ? 'Reintentar' : 'Actualizar'}</Text>
+              <Text style={[styles.buttonText, !mostrarAviso && styles.compactButtonText]}>{estado.estado === 'error' ? 'Reintentar' : 'Actualizar'}</Text>
             </Pressable>
             {estado.errorCache && estado.datosDisponibles && (
               <Pressable accessibilityRole="button" disabled={ocupado} style={[styles.button, ocupado && styles.disabled]}
@@ -77,6 +88,9 @@ const styles = StyleSheet.create({
   content: { flex: 1 }, hidden: { display: 'none' },
   initial: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, gap: 12 },
   notice: { padding: 12, gap: 6, backgroundColor: AppColors.infoSoft },
+  compactNotice: { backgroundColor: AppColors.background, paddingBottom: 0, gap: 0 },
+  compactButton: { backgroundColor: 'transparent' },
+  compactButtonText: { color: AppColors.primaryDark },
   message: { fontSize: 14, color: AppColors.text, textAlign: 'center' },
   detail: { color: AppColors.textSecondary, fontSize: 12, textAlign: 'center' },
   error: { color: AppColors.danger, fontSize: 14, textAlign: 'center' },

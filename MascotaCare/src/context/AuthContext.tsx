@@ -34,6 +34,8 @@ import {
   apiRegistro,
   apiTacharRecordatorio,
   apiCrearMascota,
+  apiActualizarMascota,
+  apiRegistrarPeso,
   apiCrearCita,
 } from '@/services/api';
 import type {
@@ -98,9 +100,9 @@ interface AuthContextValue {
   /** Añade una mascota; con la API activa la persiste en la BD. */
   agregarMascota: (datos: Omit<Mascota, 'id'>) => Promise<Mascota>;
   agregarCita: (datos: { mascota_id: Identificador; motivo: string; fecha_hora: string }) => Promise<void>;
-  actualizarPesoMascota: (id: Identificador, peso: number | null) => void;
-  registrarPeso: (id: Identificador, peso: number, fecha: string) => void;
-  actualizarFichaSalud: (id: Identificador, datos: DatosFichaSalud) => void;
+  actualizarPesoMascota: (id: Identificador, peso: number | null) => Promise<void>;
+  registrarPeso: (id: Identificador, peso: number, fecha: string) => Promise<void>;
+  actualizarFichaSalud: (id: Identificador, datos: DatosFichaSalud) => Promise<void>;
   /** Actualiza el perfil en memoria durante la sesión, sin llamar a la API. */
   actualizarPerfil: (datos: Pick<Usuario, 'nombre' | 'correo'>) => void;
 }
@@ -215,26 +217,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setMascotas((prev) => prev.map((m) => m.id === mascotaId ? { ...m, carnet: id === undefined
       ? [...(m.carnet ?? []), registro] : (m.carnet ?? []).map((r) => r.id === id ? registro : r) } : m));
   }, [mascotas]);
-  const registrarPeso = React.useCallback((id: Identificador, peso: number, fecha: string) => {
+  const versionSesion = React.useRef(0);
+  const registrarPeso = React.useCallback(async (id: Identificador, peso: number, fecha: string) => {
     if (!mascotas.some((m) => m.id === id)) throw new Error('Mascota no encontrada.');
     const registro = crearRegistroPeso(peso, fecha);
+    const sesion = versionSesion.current;
+    const guardada = token && conectado ? await apiRegistrarPeso(token, id, registro) : null;
+    if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
     setHayCambiosLocales(true);
     cambiosLocales.current.mascotas.add(String(id));
-    setMascotas((prev) => prev.map((m) => m.id === id ? aplicarRegistroPeso(m, registro) : m));
-  }, [mascotas]);
-  const actualizarFichaSalud = React.useCallback((id: Identificador, datos: DatosFichaSalud) => {
+    setMascotas((prev) => prev.map((m) => m.id === id
+      ? guardada ? { ...m, peso: guardada.peso, registros_peso: guardada.registros_peso } : aplicarRegistroPeso(m, registro) : m));
+  }, [mascotas, token, conectado]);
+  const actualizarFichaSalud = React.useCallback(async (id: Identificador, datos: DatosFichaSalud) => {
     const error = validarFichaSalud(datos);
     if (error) throw new Error(error);
-    if (!mascotas.some((m) => m.id === id)) throw new Error('Mascota no encontrada.');
+    const actual = mascotas.find((m) => m.id === id);
+    if (!actual) throw new Error('Mascota no encontrada.');
+    const sesion = versionSesion.current;
+    const cambios = { ...datos, edad: datos.edad.trim(), alergias: datos.alergias.trim(), condiciones: datos.condiciones.trim() };
+    const payload: Partial<typeof cambios> = { ...cambios };
+    if (datos.peso === (actual.peso ?? null)) delete payload.peso;
+    const guardada = token && conectado ? await apiActualizarMascota(token, id, payload) : null;
+    if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
     setHayCambiosLocales(true);
     cambiosLocales.current.mascotas.add(String(id));
-    setMascotas((prev) => prev.map((m) => m.id === id ? { ...m, ...datos,
-      edad: datos.edad.trim(), alergias: datos.alergias.trim(), condiciones: datos.condiciones.trim(),
-    } : m));
-  }, [mascotas]);
+    setMascotas((prev) => prev.map((m) => {
+      if (m.id !== id) return m;
+      if (guardada) return { ...m, ...guardada };
+      const nueva = { ...m, ...cambios };
+      return datos.peso !== null && datos.peso !== actual.peso
+        ? aplicarRegistroPeso(nueva, crearRegistroPeso(datos.peso, fechaPesoHoy())) : nueva;
+    }));
+  }, [mascotas, token, conectado]);
   const recordatoriosLocales = React.useRef(new Set<Identificador>());
   const guardandoRecordatorios = React.useRef(new Set<Identificador>());
-  const versionSesion = React.useRef(0);
   const autenticacionActual = React.useRef<AbortController | null>(null);
 
   React.useEffect(() => () => {
@@ -323,15 +340,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }]);
   }, [mascotas, token, conectado]);
 
-  const actualizarPesoMascota = React.useCallback((id: Identificador, peso: number | null) => {
-    if (peso !== null && (!Number.isFinite(peso) || peso <= 0)) {
-      throw new Error('El peso debe ser mayor que cero.');
-    }
-    const registro = peso !== null ? crearRegistroPeso(peso, fechaPesoHoy()) : null;
-    setHayCambiosLocales(true);
-    cambiosLocales.current.mascotas.add(String(id));
-    setMascotas((prev) => prev.map((m) => m.id === id ? registro ? aplicarRegistroPeso(m, registro) : { ...m, peso: m.registros_peso?.length ? m.peso : null } : m));
-  }, []);
+  const actualizarPesoMascota = React.useCallback(async (id: Identificador, peso: number | null) => {
+    if (peso === null) throw new Error('Ingresa el peso en kg.');
+    await registrarPeso(id, peso, fechaPesoHoy());
+  }, [registrarPeso]);
 
   const actualizarPerfil = React.useCallback((datos: Pick<Usuario, 'nombre' | 'correo'>) => {
     setHayCambiosLocales(true);
@@ -345,6 +357,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const agregarMascota = React.useCallback(async (datos: Omit<Mascota, 'id'>): Promise<Mascota> => {
     if (token && conectado) {
       const creada = await apiCrearMascota(token, {
+        peso: datos.peso ?? null,
+        nacimiento: datos.nacimiento ?? null,
+        sexo: datos.sexo ?? 'desconocido',
+        alergias: datos.alergias ?? '',
+        condiciones: datos.condiciones ?? '',
         nombre: datos.nombre.trim(),
         raza: datos.raza.trim(),
         especie: datos.especie.trim(),

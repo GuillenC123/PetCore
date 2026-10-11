@@ -1,15 +1,19 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Mascota } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { fechaPesoHoy, puntosPeso } from '@/utils/peso';
 import { validarPeso } from '@/utils/validaciones';
 import FormInput from './FormInput';
+import { useAviso } from '@/context/AvisosContext';
 
 const fechaVisible = (fecha: string) => fecha.split('-').reverse().join('/');
 
 export default function WeightTracker({ mascota }: { mascota: Mascota }) {
-  const { registrarPeso } = useAuth();
+  const { registrarPeso, modoDemo } = useAuth();
+  const mostrarAviso = useAviso();
+  const bloqueo = useRef(false);
+  const [guardando, setGuardando] = useState(false);
   const [peso, setPeso] = useState('');
   const [fecha, setFecha] = useState(fechaPesoHoy);
   const [error, setError] = useState('');
@@ -18,14 +22,17 @@ export default function WeightTracker({ mascota }: { mascota: Mascota }) {
   const [limite, setLimite] = useState(10);
   const registros = [...(mascota.registros_peso ?? [])].sort((a, b) => a.fecha.localeCompare(b.fecha));
   const puntos = puntosPeso(registros, Math.max(1, ancho - 24), 130);
-  const guardar = () => {
+  const guardar = async () => {
+    if (bloqueo.current) return;
     setMensaje('');
     const validacion = validarPeso(peso);
     if (!peso.trim() || validacion) { setError(validacion ?? 'Ingresa el peso en kg.'); return; }
+    bloqueo.current = true; setGuardando(true);
     try {
-      registrarPeso(mascota.id, Number(peso.trim().replace(',', '.')), fecha);
-      setError(''); setPeso(''); setMensaje('Peso guardado para esta sesión.');
+      await registrarPeso(mascota.id, Number(peso.trim().replace(',', '.')), fecha);
+      setError(''); setPeso(''); mostrarAviso(modoDemo ? 'Peso guardado para esta sesión.' : 'Peso guardado.');
     } catch (err) { setError(err instanceof Error ? err.message : 'No se pudo guardar.'); }
+    finally { bloqueo.current = false; setGuardando(false); }
   };
   return <View style={styles.section}>
     <Text style={styles.title}>Seguimiento de peso</Text>
@@ -33,10 +40,10 @@ export default function WeightTracker({ mascota }: { mascota: Mascota }) {
     <FormInput accessibilityLabel="Nuevo peso en kilogramos" keyboardType="decimal-pad" placeholder="Ej. 4,5" value={peso} onChangeText={setPeso} />
     <Text style={styles.label}>Fecha de medición</Text>
     <FormInput dateMode="date" accessibilityLabel="Fecha de medición del peso" placeholder="DD/MM/AAAA" maxLength={10} value={fecha} onChangeText={setFecha} />
-    <Text style={styles.text}>Un registro por día. Guardar una fecha existente reemplaza su peso. Los cambios se conservan durante esta sesión.</Text>
+    <Text style={styles.text}>Un registro por día. Guardar una fecha existente reemplaza su peso.</Text>
     {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
     {!!mensaje && <Text accessibilityRole="alert" style={styles.text}>{mensaje}</Text>}
-    <Pressable accessibilityRole="button" style={styles.button} onPress={guardar}><Text style={styles.buttonText}>Guardar peso</Text></Pressable>
+    <Pressable disabled={guardando} accessibilityState={{ disabled: guardando, busy: guardando }} accessibilityRole="button" style={styles.button} onPress={guardar}><Text style={styles.buttonText}>{guardando ? 'Guardando…' : 'Guardar peso'}</Text></Pressable>
     {registros.length ? <>
       <Text style={styles.label}>Evolución del peso (kg)</Text>
       <Text style={styles.text}>Mínimo: {Math.min(...registros.map((r) => r.peso))} kg · Máximo: {Math.max(...registros.map((r) => r.peso))} kg</Text>

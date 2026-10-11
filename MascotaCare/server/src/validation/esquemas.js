@@ -1,6 +1,15 @@
 const { campo, cadena, enumeracion, identificador, correo, password, fecha, fechaHora } = require('./reglas');
 
+const peso = campo((valor) => typeof valor === 'number' && Number.isFinite(valor) && valor > 0,
+ 'Ingresa un peso mayor que cero en kg.', { nullable: true });
+const diaPasado = (valor) => fecha(valor) && valor <= new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
 const mascota = {
+ peso,
+ sexo: enumeracion(['macho', 'hembra', 'desconocido']),
+ nacimiento: campo((valor) => typeof valor === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(valor)
+  && diaPasado(valor.split('/').reverse().join('-')), 'Ingresa un nacimiento válido que no sea futuro.', { nullable: true }),
+ alergias: cadena(1000, 0),
+ condiciones: cadena(1000, 0),
   nombre: cadena(120, 2),
   raza: cadena(120),
   especie: cadena(60),
@@ -27,6 +36,7 @@ module.exports = {
   registro: { nombre: cadena(120, 2), correo, password },
   login: { correo, password },
   mascota,
+  peso: { peso: { ...peso, nullable: false }, fecha: campo(diaPasado, "Ingresa una fecha válida que no sea futura (AAAA-MM-DD).") },
   cita,
   crearCita: { ...cita, mascota_id: identificador },
   recordatorio,

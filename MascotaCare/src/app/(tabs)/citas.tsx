@@ -32,14 +32,6 @@ export default function CitasScreen() {
           <Text style={styles.title}>Agenda de cuidados</Text>
           <Text style={styles.subtitle}>Visitas, medicamentos y recordatorios en un solo lugar.</Text>
         </View>
-        {creada === '1' && (
-          <View style={styles.notice}>
-            <Text accessibilityRole="alert" style={styles.subtitle}>Recordatorio guardado para esta sesión. También puedes verlo en la campana.</Text>
-            <Pressable accessibilityRole="button" onPress={() => router.setParams({ creada: '' })}>
-              <Text style={styles.dismiss}>Entendido</Text>
-            </Pressable>
-          </View>
-        )}
         <Pressable accessibilityRole="button" style={styles.button} onPress={() => router.push('/nueva-cita')}>
           <Text style={styles.buttonText}>Añadir visita veterinaria</Text>
         </Pressable>
@@ -56,8 +48,6 @@ export default function CitasScreen() {
 const styles = StyleSheet.create({
   button: { padding: 16, borderRadius: 16, backgroundColor: '#0369A1', alignItems: 'center' },
   buttonText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
-  notice: { padding: 16, borderRadius: 14, backgroundColor: AppColors.successSoft, gap: 8 },
-  dismiss: { color: '#0369A1', fontWeight: '700', paddingVertical: 8 },
   safe: {
     flex: 1,
     backgroundColor: AppColors.background,

@@ -286,3 +286,21 @@ La rama de evidencias añadirá archivos en `docs/evidencias/` en la raíz y los
 7. Actualización de los datos guardados tras otra consulta de API.
 
 Cada evidencia debe indicar plataforma, pasos, resultado y si utiliza API, caché o demo. Consulta el [plan por ramas](../docs/PLAN-DESARROLLO.md).
+
+
+### Datos de mascota y ficha de salud
+
+Añadir mascota y editar Datos de salud usan `src/components/PetDataFields.tsx`:
+tipo de animal (Perro, Gato u Otro), edad aproximada o nacimiento, sexo y peso.
+Alergias y condiciones son opcionales y pueden completarse después en la ficha.
+El peso es opcional; si se introduce, crea la medición del día. El seguimiento
+permite registrar otra fecha o corregirla, conservando como peso actual la
+medición más reciente. Estos datos se guardan en PostgreSQL en una sesión real;
+el modo demostración los conserva solo durante la sesión.
+
+Para una base de datos existente, desde `server` ejecutar `npm run db:migrate`
+y reiniciar la API. La migración añade columnas sin borrar mascotas.
+Las instalaciones nuevas ya incluyen las columnas en `server/db/schema.sql`.
+`npm run test:salud` desde `server`, con la API local levantada, comprueba el alta,
+la edición y recarga de la ficha y el historial de peso. Crea una cuenta temporal
+y elimina sus datos al terminar. `npm test` ejecuta las pruebas HTTP sin PostgreSQL.
