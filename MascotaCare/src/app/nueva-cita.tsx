@@ -87,8 +87,8 @@ export default function NuevaCitaScreen() {
                 <Text style={styles.label}>Motivo o malestar</Text>
                 <FormInput accessibilityLabel="Motivo o malestar" placeholder="Describe lo que has observado en tu mascota"
                   value={motivo} onChangeText={(value) => { setMotivo(value); limpiarError('motivo'); }}
-                  multiline maxLength={1000} style={styles.reason} error={errores.motivo} />
-                <Text style={styles.description}>{motivo.length}/1000 caracteres</Text>
+                  multiline maxLength={200} style={styles.reason} error={errores.motivo} />
+                <Text style={styles.description}>{motivo.length}/200 caracteres</Text>
               </View>
               <View style={styles.group}>
                 <Text style={styles.label}>Fecha de la visita</Text>

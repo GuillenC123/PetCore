@@ -9,12 +9,15 @@ process.env.JWT_SECRET = 'secreto-de-prueba-con-al-menos-treinta-y-dos-caractere
 // La prueba recorre las rutas HTTP reales, sustituyendo únicamente PostgreSQL.
 const consultas = [];
 let resultados = [];
+const consultar = async (sql, parametros) => {
+  consultas.push({ sql, parametros });
+  if (/^\s*(BEGIN|COMMIT|ROLLBACK)\s*$/i.test(sql)) return { rowCount: 0, rows: [] };
+  return resultados.shift() || { rowCount: 1, rows: [{ id: '1' }] };
+};
 const dbPath = require.resolve('../src/db');
 require.cache[dbPath] = { id: dbPath, filename: dbPath, loaded: true, exports: {
-  query: async (sql, parametros) => {
-    consultas.push({ sql, parametros });
-    return resultados.shift() || { rowCount: 1, rows: [{ id: '1' }] };
-  },
+  query: consultar,
+  connect: async () => ({ query: consultar, release() {} }),
 } };
 
 test('validación de las rutas HTTP', async (t) => {
@@ -120,6 +123,28 @@ test('validación de las rutas HTTP', async (t) => {
     resultados = [{ rowCount: 0, rows: [] }];
     assert.equal((await enviar('POST', '/citas', cita)).status, 400);
     assert.equal((await enviar('POST', '/citas', cita)).status, 201);
+  });
+  await t.test('crea de forma atómica cita, recordatorio y estado malestar', async () => {
+    consultas.length = 0;
+    const citaCreada = { id: '10', ...cita, estado: 'programado', doctor: null, clinica: null };
+    const recordatorioCreado = { id: '11', mascota_id: '1', cita_id: '10', titulo: 'Visita veterinaria', descripcion: 'Control', tipo: 'cita', vence_en: '2026-09-06', completado: false };
+    const mascotaActualizada = { id: '1', nombre: 'Luna', raza: 'Mestiza', especie: 'Perro', edad: '3 años', estado: 'malestar', imagen: null };
+    resultados = [
+      { rowCount: 1, rows: [{ id: '1', nombre: 'Luna' }] },
+      { rowCount: 1, rows: [citaCreada] },
+      { rowCount: 1, rows: [recordatorioCreado] },
+      { rowCount: 1, rows: [mascotaActualizada] },
+    ];
+    const respuesta = await enviar('POST', '/citas', { ...cita, estado: 'programado' });
+    assert.equal(respuesta.status, 201);
+    assert.deepEqual(await respuesta.json(), {
+      cita: citaCreada, recordatorio: recordatorioCreado, mascota: mascotaActualizada,
+    });
+    assert.match(consultas[0].sql, /^BEGIN$/);
+    assert.match(consultas[1].sql, /FOR UPDATE/);
+    assert.match(consultas[3].sql, /INSERT INTO Recordatorio/);
+    assert.match(consultas[4].sql, /estado = 'malestar'/);
+    assert.match(consultas[5].sql, /^COMMIT$/);
   });
   await t.test('devuelve conflicto si el UPDATE no permite reabrir una cita existente', async () => {
     consultas.length = 0;

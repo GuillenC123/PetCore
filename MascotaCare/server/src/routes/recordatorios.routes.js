@@ -24,7 +24,7 @@ router.get('/', validar(esquemas.filtroRecordatorios, { origen: 'query' }), asyn
     const soloPendientes = req.query.solo_pendientes === 'true';
 
     let sql = `
-      SELECT r.id, r.titulo, r.descripcion, r.tipo, r.vence_en, r.completado,
+      SELECT r.id, r.titulo, r.descripcion, r.tipo, r.vence_en, r.completado, r.cita_id,
              m.nombre AS mascota_nombre, r.mascota_id
       FROM Recordatorio r
       LEFT JOIN Mascota m ON m.id = r.mascota_id
@@ -60,7 +60,7 @@ router.put('/:id', validar(esquemas.recordatorio, { parcial: true }), async (req
           vence_en    = COALESCE($5, vence_en),
           completado  = COALESCE($6, completado)
        WHERE id = $1 AND usuario_id = $2
-       RETURNING id, titulo, descripcion, vence_en, tipo, completado, mascota_id`,
+       RETURNING id, titulo, descripcion, vence_en, tipo, completado, mascota_id, cita_id`,
       [req.params.id, req.usuario.id, titulo, descripcion, vence_en, completado]
     );
 

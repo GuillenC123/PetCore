@@ -134,6 +134,7 @@ CREATE TABLE IF NOT EXISTS Recordatorio (
     id                BIGSERIAL PRIMARY KEY,
     usuario_id        BIGINT       NOT NULL,
     mascota_id        BIGINT,
+    cita_id           BIGINT       UNIQUE,
     titulo            VARCHAR(200) NOT NULL,
     descripcion       VARCHAR(300),
     tipo              tipo_recordatorio NOT NULL DEFAULT 'general',
@@ -144,7 +145,9 @@ CREATE TABLE IF NOT EXISTS Recordatorio (
     CONSTRAINT fk_recordatorio_usuario
         FOREIGN KEY (usuario_id) REFERENCES Usuario (id) ON DELETE CASCADE,
     CONSTRAINT fk_recordatorio_mascota
-        FOREIGN KEY (mascota_id) REFERENCES Mascota (id) ON DELETE CASCADE
+        FOREIGN KEY (mascota_id) REFERENCES Mascota (id) ON DELETE CASCADE,
+    CONSTRAINT fk_recordatorio_cita
+        FOREIGN KEY (cita_id) REFERENCES CitaMedica (id) ON DELETE CASCADE
 );
 
 -- Índice para listar recordatorios pendientes de un usuario.

@@ -14,6 +14,7 @@ const validar = require('../middleware/validar');
 const esquemas = require('../validation/esquemas');
 
 const router = Router();
+const columnasMascota = 'id, nombre, raza, especie, edad, estado, imagen, creado_en, peso, registros_peso, nacimiento, sexo, alergias, condiciones';
 
 router.use('/:id', validar(esquemas.paramsId, { origen: 'params', obligatorios: ['id'] }));
 
@@ -49,32 +50,58 @@ router.get('/', validar(esquemas.filtroCitas, { origen: 'query' }), async (req, 
 });
 
 // ---------------------------------------------------------------------------
-// CREAR CITA
+// CREAR CITA, SU RECORDATORIO Y EL ESTADO DE LA MASCOTA
 // ---------------------------------------------------------------------------
 router.post('/', validar(esquemas.crearCita, { obligatorios: ['titulo', 'mascota_id', 'fecha_hora'] }), async (req, res) => {
+  let conexion;
+  let transaccionActiva = false;
   try {
     const { titulo, mascota_id, fecha_hora, doctor, clinica, estado } = req.body;
+    conexion = await pool.connect();
+    await conexion.query('BEGIN');
+    transaccionActiva = true;
 
-    // Verifica que la mascota pertenezca al usuario autenticado.
-    const mascota = await pool.query(
-      'SELECT id FROM Mascota WHERE id = $1 AND usuario_id = $2',
+    // El bloqueo evita que dos citas simultáneas creen estados incoherentes.
+    const mascota = await conexion.query(
+      'SELECT id, nombre FROM Mascota WHERE id = $1 AND usuario_id = $2 FOR UPDATE',
       [mascota_id, req.usuario.id]
     );
     if (mascota.rowCount === 0) {
+      await conexion.query('ROLLBACK');
+      transaccionActiva = false;
       return res.status(400).json({ error: 'Mascota inválida.' });
     }
 
-    const resultado = await pool.query(
+    const cita = await conexion.query(
       `INSERT INTO CitaMedica (usuario_id, mascota_id, titulo, fecha_hora, doctor, clinica, estado)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id, titulo, fecha_hora, doctor, clinica, estado, mascota_id`,
       [req.usuario.id, mascota_id, titulo, new Date(fecha_hora), doctor, clinica, estado || 'pendiente']
     );
+    const recordatorio = await conexion.query(
+      `INSERT INTO Recordatorio (usuario_id, mascota_id, cita_id, titulo, descripcion, tipo, vence_en)
+       VALUES ($1, $2, $3, 'Visita veterinaria', $4, 'cita', ($5::timestamptz AT TIME ZONE 'America/Lima')::date)
+       RETURNING id, titulo, descripcion, tipo, vence_en, completado, mascota_id, cita_id`,
+      [req.usuario.id, mascota_id, cita.rows[0].id, titulo, fecha_hora]
+    );
+    const mascotaActualizada = await conexion.query(
+      `UPDATE Mascota SET estado = 'malestar'
+       WHERE id = $1 AND usuario_id = $2
+       RETURNING ${columnasMascota}`,
+      [mascota_id, req.usuario.id]
+    );
 
-    res.status(201).json(resultado.rows[0]);
+    await conexion.query('COMMIT');
+    transaccionActiva = false;
+    res.status(201).json({
+      cita: cita.rows[0], recordatorio: recordatorio.rows[0], mascota: mascotaActualizada.rows[0],
+    });
   } catch (err) {
+    if (conexion && transaccionActiva) await conexion.query('ROLLBACK');
     console.error('Error creando la cita:', err);
     res.status(500).json({ error: 'Error interno del servidor.' });
+  } finally {
+    conexion?.release();
   }
 });
 

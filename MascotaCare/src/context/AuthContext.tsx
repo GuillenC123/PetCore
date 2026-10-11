@@ -293,20 +293,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!mascota) throw new Error('Selecciona una mascota registrada.');
     const fecha = new Date(datos.fecha_hora);
     const motivo = datos.motivo.trim();
-    if (!motivo || motivo.length > 1000) throw new Error('Escribe un motivo de hasta 1000 caracteres.');
+    if (!motivo || motivo.length > 200) throw new Error('Escribe un motivo de hasta 200 caracteres.');
     if (!Number.isFinite(fecha.getTime()) || fecha.getTime() <= Date.now()) {
       throw new Error('Selecciona una fecha y hora futuras.');
     }
 
-    // Actualiza estado de mascota (local, como ya hacía la app)
-    setMascotas((prev) => prev.map((m) => m.id === mascota.id ? {
-      ...m, estado: 'malestar', estado_salud: 'malestar',
-      cuidados_registrados: m.estado === 'en_tratamiento' || m.estado === 'vacuna_pendiente'
-        ? [...new Set([...(m.cuidados_registrados ?? []), m.estado])] : m.cuidados_registrados,
-    } : m));
-
     if (token && conectado) {
-      const creada = await apiCrearCita(token, {
+      const programada = await apiCrearCita(token, {
         titulo: motivo,
         mascota_id: mascota.id,
         fecha_hora: fecha.toISOString(),
@@ -316,14 +309,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       setHayCambiosLocales(true);
       cambiosLocales.current.mascotas.add(String(mascota.id));
-      cambiosLocales.current.citas.add(String(creada.id));
-      setCitas((prev) => [...prev, creada]);
+      cambiosLocales.current.citas.add(String(programada.cita.id));
+      cambiosLocales.current.recordatorios.add(String(programada.recordatorio.id));
+      setMascotas((prev) => prev.map((m) => m.id === mascota.id ? {
+        ...m, ...programada.mascota, estado_salud: 'malestar',
+        cuidados_registrados: m.estado === 'en_tratamiento' || m.estado === 'vacuna_pendiente'
+          ? [...new Set([...(m.cuidados_registrados ?? []), m.estado])] : m.cuidados_registrados,
+      } : m));
+      setCitas((prev) => [...prev, { ...programada.cita, mascota_nombre: mascota.nombre }]);
+      setRecordatorios((prev) => [...prev, { ...programada.recordatorio, mascota_nombre: mascota.nombre }]);
       return;
     }
 
     const id = proximaVisitaId.current--;
     setHayCambiosLocales(true);
     cambiosLocales.current.mascotas.add(String(mascota.id));
+    setMascotas((prev) => prev.map((m) => m.id === mascota.id ? {
+      ...m, estado: 'malestar', estado_salud: 'malestar',
+      cuidados_registrados: m.estado === 'en_tratamiento' || m.estado === 'vacuna_pendiente'
+        ? [...new Set([...(m.cuidados_registrados ?? []), m.estado])] : m.cuidados_registrados,
+    } : m));
     cambiosLocales.current.citas.add(String(id));
     cambiosLocales.current.recordatorios.add(String(id));
     recordatoriosLocales.current.add(id);

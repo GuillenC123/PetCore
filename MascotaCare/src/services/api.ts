@@ -215,12 +215,22 @@ export interface CitaNueva {
   estado?: EstadoCita;
 }
 
-/** Crea una cita en la BD y devuelve la fila con su id definitivo. */
-export async function apiCrearCita(token: string, datos: CitaNueva, signal?: AbortSignal): Promise<Cita> {
-  const respuesta = await request<Cita>('/citas', {
+export interface CitaProgramada {
+  cita: Cita;
+  recordatorio: Recordatorio;
+  mascota: Mascota;
+}
+
+/** Crea atómicamente cita, recordatorio y estado de la mascota. */
+export async function apiCrearCita(token: string, datos: CitaNueva, signal?: AbortSignal): Promise<CitaProgramada> {
+  const respuesta = await request<CitaProgramada>('/citas', {
     method: 'POST', headers: autorizar(token), signal, body: JSON.stringify(datos),
   });
-  return adaptar(() => citaApi(respuesta));
+  return adaptar(() => ({
+    cita: citaApi(respuesta.cita),
+    recordatorio: recordatorioApi(respuesta.recordatorio),
+    mascota: mascotaApi(respuesta.mascota),
+  }));
 }
 
 export type { Usuario, Mascota, Cita, Recordatorio };
