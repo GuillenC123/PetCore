@@ -26,7 +26,7 @@
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'estado_mascota') THEN
-        CREATE TYPE estado_mascota AS ENUM ('saludable', 'vacuna_pendiente', 'en_tratamiento');
+        CREATE TYPE estado_mascota AS ENUM ('saludable', 'malestar', 'vacuna_pendiente', 'en_tratamiento');
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'estado_cita') THEN
         CREATE TYPE estado_cita AS ENUM ('confirmado', 'pendiente', 'programado', 'cancelado', 'completado');

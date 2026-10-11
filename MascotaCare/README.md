@@ -87,7 +87,7 @@ MascotaCare/
 
 La sesión tampoco se recupera automáticamente. Los cambios locales se protegen al actualizar las listas durante la sesión y se pierden al reiniciar o salir. La copia de respuestas de API permanece por usuario y se reutiliza después de autenticarse nuevamente. Aunque la API tiene creación y edición de mascotas y citas, el frontend aún no las utiliza para esas acciones.
 
-PostgreSQL contiene `Usuario`, `Mascota`, `CitaMedica` y `Recordatorio`. El seguimiento de salud avanzado no tiene persistencia equivalente. El servidor no admite `malestar` y guarda vencimientos como fechas sin hora ni repetición.
+PostgreSQL contiene `Usuario`, `Mascota`, `CitaMedica` y `Recordatorio`. El seguimiento de salud avanzado no tiene persistencia equivalente. El servidor admite `malestar`; los vencimientos todavía se guardan como fechas sin hora ni repetición.
 
 ## Ejecutar el proyecto
 

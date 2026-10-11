@@ -99,6 +99,12 @@ test('validación de las rutas HTTP', async (t) => {
     assert.equal(respuesta.status, 201);
     assert.deepEqual(consultas[0].parametros, ['1', 'Luna', 'Mestiza', 'Perro', '3 años', 'saludable', null, null, '[]', null, 'desconocido', '', '']);
   });
+  await t.test('acepta malestar como estado de mascota', async () => {
+    consultas.length = 0;
+    const respuesta = await enviar('POST', '/mascotas', { ...mascota, estado: 'malestar' });
+    assert.equal(respuesta.status, 201);
+    assert.equal(consultas[0].parametros[5], 'malestar');
+  });
   await t.test('conserva IDs BIGINT sin perder precisión', async () => {
     consultas.length = 0;
     assert.equal((await enviar('GET', '/citas?mascota_id=9223372036854775807')).status, 200);

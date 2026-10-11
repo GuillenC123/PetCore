@@ -15,7 +15,7 @@ const mascota = {
   especie: cadena(60),
   // La edad se guarda como texto (por ejemplo, "3 años" o "6 meses").
   edad: cadena(60),
-  estado: enumeracion(['saludable', 'vacuna_pendiente', 'en_tratamiento']),
+  estado: enumeracion(['saludable', 'malestar', 'vacuna_pendiente', 'en_tratamiento']),
   imagen: cadena(500, 0, { nullable: true }),
 };
 const cita = {
