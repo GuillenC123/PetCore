@@ -250,6 +250,11 @@ export interface CitaCompletada {
   recordatorio: Recordatorio | null;
 }
 
+export interface CitaActualizada {
+  cita: Cita;
+  recordatorio: Recordatorio | null;
+}
+
 /** Crea atómicamente cita, recordatorio y estado de la mascota. */
 export async function apiCrearCita(token: string, datos: CitaNueva, signal?: AbortSignal): Promise<CitaProgramada> {
   const respuesta = await request<CitaProgramada>('/citas', {
@@ -270,6 +275,19 @@ export async function apiCompletarCita(token: string, id: Identificador): Promis
   return adaptar(() => ({
     cita: citaApi(respuesta.cita),
     recordatorio: respuesta.recordatorio === null ? null : recordatorioApi(respuesta.recordatorio),
+  }));
+}
+
+/** Edita o cancela una cita y mantiene sincronizado su recordatorio asociado. */
+export async function apiActualizarCita(token: string, id: Identificador,
+  datos: Partial<Pick<Cita, 'titulo' | 'fecha_hora' | 'doctor' | 'clinica' | 'estado'>>): Promise<CitaActualizada> {
+  const respuesta = await request<Cita & { recordatorio?: Recordatorio | null }>(`/citas/${encodeURIComponent(id)}`, {
+    method: 'PUT', headers: autorizar(token), body: JSON.stringify(datos),
+  });
+  const { recordatorio, ...cita } = respuesta;
+  return adaptar(() => ({
+    cita: citaApi(cita),
+    recordatorio: recordatorio == null ? null : recordatorioApi(recordatorio),
   }));
 }
 

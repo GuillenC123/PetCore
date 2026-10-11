@@ -1,7 +1,7 @@
 import type { Identificador } from '@/types';
 import { useState } from 'react';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useAhora } from '@/hooks/use-ahora';
 import { crearAgenda, filtrarAgenda, type FiltroAgenda } from '@/utils/agenda';
@@ -11,7 +11,7 @@ import SaveFeedback from './SaveFeedback';
 import { AdaptiveColumns } from './AdaptiveLayout';
 
 export default function CareAgenda({ initialFilter = 'Hoy', compact = false }: { initialFilter?: FiltroAgenda; compact?: boolean }) {
-  const { mascotas, citas, tratamientos, recordatorios, marcarToma, tacharRecordatorio, completarCita } = useAuth();
+  const { mascotas, citas, tratamientos, recordatorios, marcarToma, tacharRecordatorio, completarCita, cancelarCita } = useAuth();
   const ahora = useAhora();
   const [filtro, setFiltro] = useState<FiltroAgenda>(initialFilter);
   const [mascotaId, setMascotaId] = useState<Identificador | null>(null);
@@ -41,7 +41,18 @@ export default function CareAgenda({ initialFilter = 'Hoy', compact = false }: {
       {Date.parse(e.fecha) < ahora && <Text style={styles.overdue}>Vencido · pendiente de registrar</Text>}
       {compact && <Pressable accessibilityRole="button" accessibilityState={{ expanded: abierto === e.clave }} onPress={() => setAbierto(abierto === e.clave ? null : e.clave)} style={{ paddingVertical: 10 }}><Text style={{ color: '#0369A1', fontWeight: '600' }}>{abierto === e.clave ? 'Cerrar acciones' : 'Ver detalle y registrar'}</Text></Pressable>}
       {(!compact || abierto === e.clave) && <>
-      {e.tipo === 'cita' && <Boton label="Marcar visita realizada" disabled={guardado.guardando || Date.parse(e.fecha) > ahora} onPress={() => ejecutar(() => completarCita(e.id))} />}
+      {e.tipo === 'cita' && <>
+        <Boton label="Marcar visita realizada" disabled={guardado.guardando || Date.parse(e.fecha) > ahora} onPress={() => ejecutar(() => completarCita(e.id))} />
+        <Boton label="Editar visita" disabled={guardado.guardando || Date.parse(e.fecha) <= ahora} onPress={() => router.push({ pathname: '/editar-cita' as never, params: { id: String(e.id) } })} />
+        <Boton label="Cancelar visita" disabled={guardado.guardando} onPress={() => Alert.alert(
+          'Cancelar visita',
+          'La cita y su recordatorio dejarán de aparecer como pendientes.',
+          [
+            { text: 'Volver', style: 'cancel' },
+            { text: 'Cancelar visita', style: 'destructive', onPress: () => ejecutar(() => cancelarCita(e.id)) },
+          ],
+        )} />
+      </>}
       {e.tipo === 'medicamento' && <View style={styles.options}>
         <Boton label="Administrada" disabled={guardado.guardando || Date.parse(e.fecha) > ahora} onPress={() => ejecutar(() => marcarToma(e.id, e.fecha, 'administrada'))} />
         <Boton label="Omitida" disabled={guardado.guardando || Date.parse(e.fecha) > ahora} onPress={() => ejecutar(() => marcarToma(e.id, e.fecha, 'omitida'))} />

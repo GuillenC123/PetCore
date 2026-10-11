@@ -49,7 +49,7 @@ const secciones: {
   {
     titulo: 'Agenda de cuidados',
     icono: 'calendar-outline',
-    descripcion: 'Agenda reúne visitas, tomas pendientes y recordatorios. Filtra por mascota y por Hoy, Esta semana (lunes a domingo), Vencidos o Todos. Marca visitas realizadas y tomas administradas u omitidas desde sus tarjetas. Usa Añadir visita veterinaria para agendar.',
+    descripcion: 'Agenda reúne visitas, tomas pendientes y recordatorios. Filtra por mascota y por Hoy, Esta semana (lunes a domingo), Vencidos o Todos. Marca visitas realizadas y tomas administradas u omitidas desde sus tarjetas. Puedes editar o cancelar una visita futura; al hacerlo, su aviso también se actualiza o deja de estar pendiente. Usa Añadir visita veterinaria para agendar.',
   },
   {
     titulo: 'Historial de salud',

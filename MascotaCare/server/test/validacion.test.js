@@ -199,12 +199,42 @@ test('validación de las rutas HTTP', async (t) => {
     assert.match((await respuesta.json()).error, /aún no puede/);
     assert.match(consultas[2].sql, /^ROLLBACK$/);
   });
-  await t.test('devuelve conflicto si el UPDATE no permite reabrir una cita existente', async () => {
+  await t.test('sincroniza al reprogramar una cita y su recordatorio', async () => {
     consultas.length = 0;
-    resultados = [{ rowCount: 0, rows: [] }, { rowCount: 1, rows: [{ id: '1' }] }];
+    const citaActualizada = { id: '10', mascota_id: '1', titulo: 'Control actualizado', fecha_hora: '2028-02-29T10:30:00.000Z', doctor: null, clinica: null, estado: 'programado' };
+    const recordatorioActualizado = { id: '11', mascota_id: '1', cita_id: '10', titulo: 'Visita veterinaria', descripcion: 'Control actualizado', tipo: 'cita', vence_en: '2028-02-29T10:30:00.000Z', repeticion: 'ninguna', completado: false };
+    resultados = [
+      { rowCount: 1, rows: [{ id: '10', estado: 'programado' }] },
+      { rowCount: 1, rows: [citaActualizada] },
+      { rowCount: 1, rows: [recordatorioActualizado] },
+    ];
+    const respuesta = await enviar('PUT', '/citas/10', { titulo: 'Control actualizado', fecha_hora: '2028-02-29T10:30:00Z' });
+    assert.equal(respuesta.status, 200);
+    assert.deepEqual(await respuesta.json(), { ...citaActualizada, recordatorio: recordatorioActualizado });
+    assert.match(consultas[1].sql, /FOR UPDATE/);
+    assert.match(consultas[3].sql, /UPDATE Recordatorio SET/);
+    assert.match(consultas[4].sql, /^COMMIT$/);
+  });
+  await t.test('cancela una cita y completa su recordatorio asociado', async () => {
+    consultas.length = 0;
+    const citaCancelada = { id: '10', mascota_id: '1', titulo: 'Control', fecha_hora: '2028-02-29T10:30:00.000Z', doctor: null, clinica: null, estado: 'cancelado' };
+    const recordatorioCancelado = { id: '11', mascota_id: '1', cita_id: '10', titulo: 'Visita veterinaria', descripcion: 'Control', tipo: 'cita', vence_en: '2028-02-29T10:30:00.000Z', repeticion: 'ninguna', completado: true };
+    resultados = [
+      { rowCount: 1, rows: [{ id: '10', estado: 'programado' }] },
+      { rowCount: 1, rows: [citaCancelada] },
+      { rowCount: 1, rows: [recordatorioCancelado] },
+    ];
+    const respuesta = await enviar('PUT', '/citas/10', { estado: 'cancelado' });
+    assert.equal(respuesta.status, 200);
+    assert.deepEqual(await respuesta.json(), { ...citaCancelada, recordatorio: recordatorioCancelado });
+    assert.equal(consultas[3].parametros[4], true);
+  });
+  await t.test('devuelve conflicto si el UPDATE intenta reabrir una cita existente', async () => {
+    consultas.length = 0;
+    resultados = [{ rowCount: 1, rows: [{ id: '1', estado: 'completado' }] }];
     assert.equal((await enviar('PUT', '/citas/1', { estado: 'pendiente' })).status, 409);
-    assert.match(consultas[0].sql, /AND \(estado NOT IN/);
-    resultados = [{ rowCount: 0, rows: [] }, { rowCount: 0, rows: [] }];
+    assert.match(consultas[1].sql, /FOR UPDATE/);
+    resultados = [{ rowCount: 0, rows: [] }];
     assert.equal((await enviar('PUT', '/citas/1', { estado: 'pendiente' })).status, 404);
   });
   await t.test('normaliza el correo y acepta una contraseña de 72 bytes', async () => {

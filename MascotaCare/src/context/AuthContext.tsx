@@ -41,6 +41,7 @@ import {
   apiRegistrarPeso,
   apiCrearCita,
   apiCompletarCita,
+  apiActualizarCita,
 } from '@/services/api';
 import type {
   AuthResponse,
@@ -77,6 +78,8 @@ function mensajeServidorNoDisponible(): string {
 
 interface AuthContextValue {
   completarCita: (id: Identificador) => Promise<void>;
+  actualizarCita: (id: Identificador, datos: Partial<Pick<Cita, 'titulo' | 'fecha_hora'>>) => Promise<void>;
+  cancelarCita: (id: Identificador) => Promise<void>;
   agregarObservacion: (mascotaId: Identificador, datos: Omit<ObservacionSalud, 'id'>) => void;
   adjuntarHistorial: (mascotaId: Identificador, clave: string, adjuntos: AdjuntoSalud[]) => void;
   guardarCarnet: (mascotaId: Identificador, datos: Omit<RegistroCarnet, 'id'>, id?: number) => void;
@@ -213,6 +216,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setCitas((prev) => prev.map((c) => c.id === id ? { ...c, estado: 'completado' } : c));
     setRecordatorios((prev) => prev.map((r) => r.cita_id === id ? { ...r, completado: true } : r));
   }, [citas, recordatorios, token, conectado, confirmarRecordatorio]);
+  const actualizarCita = React.useCallback(async (id: Identificador, datos: Partial<Pick<Cita, 'titulo' | 'fecha_hora' | 'estado'>>) => {
+    const cita = citas.find((c) => c.id === id);
+    if (!cita || cita.estado === 'cancelado' || cita.estado === 'completado') throw new Error('La cita ya no se puede editar.');
+    const titulo = datos.titulo?.trim();
+    if (titulo !== undefined && (!titulo || titulo.length > 200)) throw new Error('Escribe un motivo de hasta 200 caracteres.');
+    if (datos.fecha_hora !== undefined && (!Number.isFinite(Date.parse(datos.fecha_hora)) || Date.parse(datos.fecha_hora) <= Date.now())) {
+      throw new Error('Selecciona una fecha y hora futuras.');
+    }
+    const cambios = { ...datos, ...(titulo === undefined ? {} : { titulo }) };
+    const sesion = versionSesion.current;
+    if (token && conectado && esIdentificadorRemoto(id)) {
+      const confirmada = await apiActualizarCita(token, id, cambios);
+      if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
+      setHayCambiosLocales(true);
+      cambiosLocales.current.citas.add(String(id));
+      setCitas((prev) => prev.map((c) => c.id === id ? { ...c, ...confirmada.cita } : c));
+      if (confirmada.recordatorio) {
+        cambiosLocales.current.recordatorios.add(String(confirmada.recordatorio.id));
+        setRecordatorios((prev) => prev.map((r) => r.id === confirmada.recordatorio!.id
+          ? { ...r, ...confirmada.recordatorio } : r));
+        await confirmarRecordatorio(confirmada.recordatorio);
+      }
+      return;
+    }
+    setHayCambiosLocales(true);
+    cambiosLocales.current.citas.add(String(id));
+    const aviso = recordatorios.find((r) => r.cita_id === id);
+    if (aviso) {
+      cambiosLocales.current.recordatorios.add(String(aviso.id));
+      recordatoriosLocales.current.add(aviso.id);
+    }
+    setCitas((prev) => prev.map((c) => c.id === id ? { ...c, ...cambios } : c));
+    setRecordatorios((prev) => prev.map((r) => r.cita_id === id ? {
+      ...r,
+      ...(titulo === undefined ? {} : { descripcion: titulo }),
+      ...(cambios.fecha_hora === undefined ? {} : { vence_en: cambios.fecha_hora }),
+      ...(cambios.estado === 'cancelado' ? { completado: true } : {}),
+    } : r));
+  }, [citas, recordatorios, token, conectado, confirmarRecordatorio]);
+  const cancelarCita = React.useCallback(async (id: Identificador) => {
+    await actualizarCita(id, { estado: 'cancelado' });
+  }, [actualizarCita]);
   const siguienteCarnet = React.useRef(1);
   const guardarCarnet = React.useCallback((mascotaId: Identificador, datos: Omit<RegistroCarnet, 'id'>, id?: number) => {
     const error = validarCarnet(datos);
@@ -563,6 +608,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ==========================================================================
   const value: AuthContextValue = {
     completarCita,
+    actualizarCita,
+    cancelarCita,
     agregarObservacion,
     adjuntarHistorial,
     guardarCarnet,
