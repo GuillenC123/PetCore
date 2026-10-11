@@ -1,6 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const express = require('express');
+const jwt = require('jsonwebtoken');
 
 // Las rutas cargan la misma configuración que producción, sin depender de .env.
 process.env.DATABASE_URL = 'postgres://usuario:password@localhost:5432/mascotacare_test';
@@ -31,9 +32,9 @@ test('validación de las rutas HTTP', async (t) => {
   await new Promise((resolve) => server.once('listening', resolve));
   t.after(() => new Promise((resolve) => server.close(resolve)));
   const url = `http://127.0.0.1:${server.address().port}`;
-  const enviar = (metodo, ruta, body) => fetch(url + ruta, {
+  const enviar = (metodo, ruta, body, token) => fetch(url + ruta, {
     method: metodo,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 
@@ -256,5 +257,16 @@ test('validación de las rutas HTTP', async (t) => {
       ...registro, correo: ' ANA@example.com ', password: 'á'.repeat(36),
     })).status, 201);
     assert.equal(consultas[0].parametros[0], 'ana@example.com');
+  });
+  await t.test('actualiza el perfil autenticado y renueva su token', async () => {
+    consultas.length = 0;
+    const token = jwt.sign({ id: '1', nombre: 'Ana', correo: 'ana@example.com' }, process.env.JWT_SECRET);
+    resultados = [{ rowCount: 1, rows: [{ id: '1', nombre: 'Ana Pérez', correo: 'ana.perez@example.com' }] }];
+    const respuesta = await enviar('PUT', '/auth/perfil', { nombre: ' Ana Pérez ', correo: ' ANA.PEREZ@example.com ' }, token);
+    assert.equal(respuesta.status, 200);
+    const cuerpo = await respuesta.json();
+    assert.equal(cuerpo.usuario.correo, 'ana.perez@example.com');
+    assert.equal(jwt.verify(cuerpo.token, process.env.JWT_SECRET).correo, 'ana.perez@example.com');
+    assert.deepEqual(consultas[0].parametros.slice(0, 3), ['1', 'Ana Pérez', 'ana.perez@example.com']);
   });
 });

@@ -32,6 +32,7 @@ import {
   esErrorDeRed,
   apiLogin,
   apiRegistro,
+  apiActualizarPerfil,
   apiTacharRecordatorio,
   apiCrearRecordatorio,
   apiActualizarRecordatorio,
@@ -112,8 +113,7 @@ interface AuthContextValue {
   actualizarPesoMascota: (id: Identificador, peso: number | null) => Promise<void>;
   registrarPeso: (id: Identificador, peso: number, fecha: string) => Promise<void>;
   actualizarFichaSalud: (id: Identificador, datos: DatosFichaSalud) => Promise<void>;
-  /** Actualiza el perfil en memoria durante la sesión, sin llamar a la API. */
-  actualizarPerfil: (datos: Pick<Usuario, 'nombre' | 'correo'>) => void;
+  actualizarPerfil: (datos: Pick<Usuario, 'nombre' | 'correo'>) => Promise<void>;
 }
 
 // Valor inicial por defecto del contexto (para TypeScript).
@@ -505,14 +505,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await registrarPeso(id, peso, fechaPesoHoy());
   }, [registrarPeso]);
 
-  const actualizarPerfil = React.useCallback((datos: Pick<Usuario, 'nombre' | 'correo'>) => {
+  const actualizarPerfil = React.useCallback(async (datos: Pick<Usuario, 'nombre' | 'correo'>) => {
+    const nombre = datos.nombre.normalize('NFC').trim();
+    const correo = datos.correo.trim().toLowerCase();
+    const sesion = versionSesion.current;
+    if (token && conectado) {
+      const respuesta = await apiActualizarPerfil(token, { nombre, correo });
+      if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
+      setUsuario(respuesta.usuario);
+      setToken(respuesta.token);
+      return;
+    }
     setHayCambiosLocales(true);
     setUsuario((actual) => actual ? {
       ...actual,
-      nombre: datos.nombre.normalize('NFC').trim(),
-      correo: datos.correo.trim().toLowerCase(),
+      nombre, correo,
     } : actual);
-  }, []);
+  }, [token, conectado]);
 
   const agregarMascota = React.useCallback(async (datos: Omit<Mascota, 'id'>): Promise<Mascota> => {
     if (token && conectado) {

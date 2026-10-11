@@ -154,6 +154,13 @@ export async function apiRegistro(nombre: string, correo: string, password: stri
   return sesionApi(datos);
 }
 
+export async function apiActualizarPerfil(token: string, datos: Pick<Usuario, 'nombre' | 'correo'>): Promise<AuthResponse> {
+  const respuesta = await request<AuthResponse>('/auth/perfil', {
+    method: 'PUT', headers: autorizar(token), body: JSON.stringify(datos),
+  });
+  return sesionApi(respuesta);
+}
+
 function autorizar(token: string): RequestInit['headers'] {
   return { Authorization: `Bearer ${token}` };
 }

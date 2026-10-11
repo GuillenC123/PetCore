@@ -84,7 +84,7 @@ const secciones: {
   {
     titulo: 'Tu sesión',
     icono: 'log-out-outline',
-    descripcion: 'Para salir, entra en Perfil → Cerrar sesión. Los nuevos datos de mascotas, fichas de salud, visitas, tratamientos, mediciones, carnet, observaciones y adjuntos, así como los cambios locales de perfil, se conservan durante la sesión. Todavía no cuentan con guardado permanente: al reiniciar la app o volver a iniciar sesión pueden perderse. Los recordatorios conectados al servidor sí se guardan de forma permanente.',
+    descripcion: 'Para salir, entra en Perfil → Cerrar sesión. Con la API conectada, mascotas, ficha de salud, visitas, tratamientos, mediciones, carnet, observaciones, recordatorios y perfil se guardan en tu cuenta. Los adjuntos de salud y el modo demostración se conservan solo durante la sesión.',
   },
 ];
 

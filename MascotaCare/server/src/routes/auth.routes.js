@@ -15,6 +15,7 @@ const jwt = require('jsonwebtoken');
 const pool = require('../db');
 const { obtenerConfiguracion } = require('../config');
 const validar = require('../middleware/validar');
+const authMiddleware = require('../middleware/auth');
 const esquemas = require('../validation/esquemas');
 
 const { jwtSecret: JWT_SECRET, jwtExpiresIn: JWT_EXPIRES_IN } = obtenerConfiguracion();
@@ -101,6 +102,26 @@ router.post('/login', validar(esquemas.login, { obligatorios: ['correo', 'passwo
   } catch (err) {
     console.error('Error en login:', err);
     res.status(500).json({ error: 'Error interno del servidor.' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PERFIL
+// ---------------------------------------------------------------------------
+router.put('/perfil', authMiddleware, validar(esquemas.perfil, { obligatorios: ['nombre', 'correo'] }), async (req, res) => {
+  try {
+    const resultado = await pool.query(
+      `UPDATE Usuario SET nombre = $2, correo = $3, actualizado_en = NOW()
+       WHERE id = $1
+       RETURNING id, nombre, correo`,
+      [req.usuario.id, req.body.nombre, req.body.correo]
+    );
+    const usuario = resultado.rows[0];
+    return res.json({ usuario, token: firmarToken(usuario) });
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Ya existe una cuenta con este correo.' });
+    console.error('Error actualizando el perfil:', err);
+    return res.status(500).json({ error: 'Error interno del servidor.' });
   }
 });
 

@@ -40,6 +40,7 @@ const recordatorio = {
 module.exports = {
   registro: { nombre: cadena(120, 2), correo, password },
   login: { correo, password },
+  perfil: { nombre: cadena(120, 2), correo },
   mascota,
   peso: { peso: { ...peso, nullable: false }, fecha: campo(diaPasado, "Ingresa una fecha válida que no sea futura (AAAA-MM-DD).") },
   cita,
