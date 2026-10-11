@@ -34,7 +34,7 @@ const secciones: {
   {
     titulo: 'Seguimiento de peso',
     icono: 'scale-outline',
-    descripcion: 'En Ficha de salud, selecciona una mascota, abre Peso y registra su peso en kg y la fecha de medición. Consulta la gráfica y el historial. Puedes corregir una medición guardando de nuevo su fecha; se mantiene un registro por día. La medición más reciente determina el peso actual. Los cambios se conservan durante la sesión.',
+    descripcion: 'En Ficha de salud, selecciona una mascota, abre Peso y registra su peso en kg y la fecha de medición. Consulta la gráfica y el historial. Puedes corregir una medición guardando de nuevo su fecha; se mantiene un registro por día. La medición más reciente determina el peso actual. Con la API conectada, los cambios se guardan en tu cuenta.',
   },
   {
     titulo: 'Carnet de vacunas y desparasitación',
@@ -69,7 +69,7 @@ const secciones: {
   {
     titulo: 'Editar tu perfil',
     icono: 'person-outline',
-    descripcion: 'En Perfil → Editar Perfil puedes cambiar tu nombre y correo. El nombre admite letras, espacios y tildes, entre 2 y 120 caracteres. El correo debe tener un formato como nombre@dominio.com. Pulsa “Guardar cambios” y verás la confirmación. “Cancelar” descarta los cambios que no hayas guardado.',
+    descripcion: 'En Perfil → Editar Perfil puedes cambiar tu nombre y correo. El nombre admite letras, espacios y tildes, entre 2 y 120 caracteres. El correo debe tener un formato como nombre@dominio.com. Pulsa “Guardar cambios” y verás la confirmación; con la API conectada el cambio se guarda en tu cuenta. “Cancelar” descarta los cambios que no hayas guardado.',
   },
   {
     titulo: 'Mensajes de los formularios',

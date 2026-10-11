@@ -86,7 +86,7 @@ MascotaCare/
 | Editar perfil | PostgreSQL mediante API, o memoria de la sesión en demostración. |
 | Adjuntos de salud | Memoria de la sesión. |
 
-La sesión tampoco se recupera automáticamente. Los cambios locales se protegen al actualizar las listas durante la sesión y se pierden al reiniciar o salir. La copia de respuestas de API permanece por usuario y se reutiliza después de autenticarse nuevamente. La app usa la API para crear mascotas y visitas, actualizar la ficha básica y el peso, y editar, cancelar o completar visitas.
+La sesión tampoco se recupera automáticamente. Los cambios locales se protegen al actualizar las listas durante la sesión y se pierden al reiniciar o salir. La copia de respuestas de API permanece por usuario y se reutiliza después de autenticarse nuevamente. La app usa la API para crear mascotas y visitas, actualizar ficha, peso, perfil y salud clínica, y editar, cancelar o completar visitas.
 
 PostgreSQL contiene `Usuario`, `Mascota`, `CitaMedica` y `Recordatorio`. Los datos clínicos estructurados (carnet, tratamientos, tomas y observaciones) se guardan con la mascota. Los adjuntos mantienen su URI local hasta incorporar almacenamiento de archivos. El servidor admite `malestar`; los recordatorios guardan fecha y hora, repetición y el último momento de realización.
 
@@ -247,7 +247,7 @@ El hook `src/hooks/use-carga-datos.ts` utiliza `src/services/storage.ts`. Mantie
 - El destino contiene `usuarioId` y `origen` (`api` o `demo`). Un destino inválido rechaza sin acceder al almacenamiento.
 - La clave es `petcore:cache:v1:<origen>:usuario:<id>`. IDs seguros numéricos y sus equivalentes en texto comparten la misma clave; BIGINT grandes conservan su precisión.
 - La instantánea contiene versión, propietario, origen, fecha de actualización y las tres listas. Se valida antes de guardar y después de leer.
-- Se guardan los campos de las respuestas actuales de mascotas y citas, y los campos de recordatorios, incluidas las opciones de repetición cuando existen. No incluye sesión, tokens, contraseñas ni los registros locales avanzados de salud.
+- Se guardan los campos de las respuestas actuales de mascotas y citas, y los campos de recordatorios, incluidas las opciones de repetición cuando existen. No incluye sesión, tokens, contraseñas, adjuntos locales ni las colecciones clínicas, que se recuperan desde la API al actualizar los datos.
 - Las operaciones de una clave se ejecutan en orden; usuarios u orígenes distintos pueden operar simultáneamente. Una escritura captura sus datos al solicitarla.
 - Una lectura corrupta o incompatible no borra automáticamente el contenido. El hook informa fallos de recuperación o guardado en `estadoDatos.errorCache` sin descartar los datos disponibles.
 

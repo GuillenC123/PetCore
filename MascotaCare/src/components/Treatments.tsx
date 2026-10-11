@@ -53,7 +53,7 @@ function Formulario({ mascotaId, cerrar }: { mascotaId: Identificador; cerrar: (
     <Text style={styles.label}>Horarios diarios (24 horas)</Text>
     <TimeSchedule value={horarios} onChange={setHorarios} />
     <Text style={styles.text}>Se generará una toma por horario cada día, desde la fecha de inicio. Usa los horarios indicados por el veterinario y la hora local de tu dispositivo.</Text>
-    <Text style={styles.text}>Los datos se conservan durante esta sesión.</Text>
+    <Text style={styles.text}>Los datos se guardan en tu cuenta al conectarte; en modo demostración se conservan durante esta sesión.</Text>
     {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
     <Boton label="Guardar tratamiento" onPress={guardar} />
     <Boton label="Cancelar" onPress={() => cerrar(false)} />
