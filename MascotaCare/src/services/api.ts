@@ -2,7 +2,7 @@
 import { Platform } from 'react-native';
 
 import { normalizarIdentificador } from '@/utils/identificadores';
-import type { ApiError, AuthResponse, Cita, DatosApp, EstadoCita, EstadoMascota, Identificador, Mascota, Recordatorio, Usuario } from '@/types';
+import type { ApiError, AuthResponse, Cita, DatosApp, EstadoCita, EstadoMascota, Identificador, Mascota, ObservacionSalud, Recordatorio, RegistroCarnet, Tratamiento, Usuario } from '@/types';
 
 const HOST = Platform.select({ android: '10.0.2.2', default: 'localhost' });
 export const API_URL = (process.env.EXPO_PUBLIC_API_URL?.trim() || `http://${HOST}:4000/api`).replace(/\/+$/, '');
@@ -77,13 +77,28 @@ function adaptar<T>(transformar: () => T): T {
   }
 }
 
-function mascotaApi(dato: Mascota): Mascota {
+type MascotaRespuesta = Mascota & { datos_salud?: { carnet?: RegistroCarnet[]; observaciones?: ObservacionSalud[]; tratamientos?: Tratamiento[] } };
+
+function mascotaApi(dato: MascotaRespuesta): Mascota {
   if (typeof dato.nombre !== 'string' || typeof dato.raza !== 'string' ||
       typeof dato.especie !== 'string' || typeof dato.edad !== 'string' ||
       !['saludable', 'malestar', 'vacuna_pendiente', 'en_tratamiento'].includes(dato.estado)) {
     throw new Error('Mascota inválida.');
   }
-  return { ...dato, id: normalizarIdentificador(dato.id) };
+  const salud = dato.datos_salud;
+  if (salud !== undefined && (salud === null || typeof salud !== 'object' || Array.isArray(salud) ||
+      (salud.carnet !== undefined && !Array.isArray(salud.carnet)) ||
+      (salud.observaciones !== undefined && !Array.isArray(salud.observaciones)) ||
+      (salud.tratamientos !== undefined && !Array.isArray(salud.tratamientos)))) {
+    throw new Error('Datos de salud inválidos.');
+  }
+  const { datos_salud, ...mascota } = dato;
+  return {
+    ...mascota, id: normalizarIdentificador(dato.id),
+    carnet: salud?.carnet ?? dato.carnet,
+    observaciones: salud?.observaciones ?? dato.observaciones,
+    tratamientos_salud: salud?.tratamientos ?? dato.tratamientos_salud,
+  };
 }
 
 function citaApi(dato: Cita): Cita {
@@ -225,6 +240,21 @@ export async function apiActualizarMascota(token: string, id: Identificador, dat
 export async function apiRegistrarPeso(token: string, id: Identificador, registro: { peso: number; fecha: string }): Promise<Mascota> {
   const respuesta = await request<Mascota>(`/mascotas/${encodeURIComponent(id)}/pesos`, {
     method: 'POST', headers: autorizar(token), body: JSON.stringify(registro),
+  });
+  return adaptar(() => mascotaApi(respuesta));
+}
+
+export type DatosSaludRemotos = Partial<Pick<Mascota, 'carnet' | 'observaciones' | 'tratamientos_salud'>>;
+
+/** Persiste colecciones clínicas estructuradas; los archivos locales no viajan a la API. */
+export async function apiActualizarSalud(token: string, id: Identificador, datos: DatosSaludRemotos): Promise<Mascota> {
+  const cuerpo = {
+    ...(datos.carnet === undefined ? {} : { carnet: datos.carnet }),
+    ...(datos.observaciones === undefined ? {} : { observaciones: datos.observaciones }),
+    ...(datos.tratamientos_salud === undefined ? {} : { tratamientos: datos.tratamientos_salud }),
+  };
+  const respuesta = await request<MascotaRespuesta>(`/mascotas/${encodeURIComponent(id)}/salud`, {
+    method: 'PUT', headers: autorizar(token), body: JSON.stringify(cuerpo),
   });
   return adaptar(() => mascotaApi(respuesta));
 }

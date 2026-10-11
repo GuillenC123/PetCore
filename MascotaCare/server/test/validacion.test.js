@@ -108,6 +108,18 @@ test('validación de las rutas HTTP', async (t) => {
     assert.equal(respuesta.status, 201);
     assert.equal(consultas[0].parametros[5], 'malestar');
   });
+  await t.test('persiste observaciones clínicas estructuradas sin adjuntos locales', async () => {
+    consultas.length = 0;
+    const observacion = { id: 1, tipo: 'consulta', titulo: 'Control anual', descripcion: 'Sin hallazgos.', fecha: '2026-01-01T00:00:00.000Z' };
+    resultados = [
+      { rowCount: 1, rows: [{ datos_salud: { carnet: [], observaciones: [], tratamientos: [] } }] },
+      { rowCount: 1, rows: [{ id: '1', datos_salud: { carnet: [], observaciones: [observacion], tratamientos: [] } }] },
+    ];
+    const respuesta = await enviar('PUT', '/mascotas/1/salud', { observaciones: [observacion] });
+    assert.equal(respuesta.status, 200);
+    assert.match(consultas[1].sql, /datos_salud = \$3::jsonb/);
+    assert.deepEqual(JSON.parse(consultas[1].parametros[2]), { carnet: [], observaciones: [observacion], tratamientos: [] });
+  });
   await t.test('conserva IDs BIGINT sin perder precisión', async () => {
     consultas.length = 0;
     assert.equal((await enviar('GET', '/citas?mascota_id=9223372036854775807')).status, 200);

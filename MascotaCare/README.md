@@ -82,11 +82,12 @@ MascotaCare/
 | Consulta de mascotas, citas y recordatorios | Copia local seguida de API, o mocks y copia independiente en demostración. |
 | Crear, editar, completar, posponer o eliminar recordatorios | Actualiza el servidor y después su copia local; si falla la API conserva su estado anterior. Los recordatorios asociados a una cita no se pueden eliminar. |
 | Crear mascotas, actualizar su ficha básica o peso, crear, editar, cancelar y completar visitas | PostgreSQL mediante API, o memoria de la sesión en demostración. |
-| Editar perfil, carnet, tratamientos, observaciones y adjuntos | Memoria de la sesión. |
+| Carnet, tratamientos, tomas y observaciones clínicas | PostgreSQL mediante API, o memoria de la sesión en demostración. |
+| Editar perfil y adjuntos de salud | Memoria de la sesión. |
 
 La sesión tampoco se recupera automáticamente. Los cambios locales se protegen al actualizar las listas durante la sesión y se pierden al reiniciar o salir. La copia de respuestas de API permanece por usuario y se reutiliza después de autenticarse nuevamente. La app usa la API para crear mascotas y visitas, actualizar la ficha básica y el peso, y editar, cancelar o completar visitas.
 
-PostgreSQL contiene `Usuario`, `Mascota`, `CitaMedica` y `Recordatorio`. El seguimiento de salud avanzado no tiene persistencia equivalente. El servidor admite `malestar`; los recordatorios guardan fecha y hora, repetición y el último momento de realización.
+PostgreSQL contiene `Usuario`, `Mascota`, `CitaMedica` y `Recordatorio`. Los datos clínicos estructurados (carnet, tratamientos, tomas y observaciones) se guardan con la mascota. Los adjuntos mantienen su URI local hasta incorporar almacenamiento de archivos. El servidor admite `malestar`; los recordatorios guardan fecha y hora, repetición y el último momento de realización.
 
 ## Ejecutar el proyecto
 

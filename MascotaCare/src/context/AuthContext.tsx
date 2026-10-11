@@ -42,6 +42,7 @@ import {
   apiCrearCita,
   apiCompletarCita,
   apiActualizarCita,
+  apiActualizarSalud,
 } from '@/services/api';
 import type {
   AuthResponse,
@@ -80,12 +81,12 @@ interface AuthContextValue {
   completarCita: (id: Identificador) => Promise<void>;
   actualizarCita: (id: Identificador, datos: Partial<Pick<Cita, 'titulo' | 'fecha_hora'>>) => Promise<void>;
   cancelarCita: (id: Identificador) => Promise<void>;
-  agregarObservacion: (mascotaId: Identificador, datos: Omit<ObservacionSalud, 'id'>) => void;
+  agregarObservacion: (mascotaId: Identificador, datos: Omit<ObservacionSalud, 'id'>) => Promise<void>;
   adjuntarHistorial: (mascotaId: Identificador, clave: string, adjuntos: AdjuntoSalud[]) => void;
-  guardarCarnet: (mascotaId: Identificador, datos: Omit<RegistroCarnet, 'id'>, id?: number) => void;
+  guardarCarnet: (mascotaId: Identificador, datos: Omit<RegistroCarnet, 'id'>, id?: number) => Promise<void>;
   tratamientos: Tratamiento[];
-  agregarTratamiento: (datos: NuevoTratamiento) => void;
-  marcarToma: (tratamientoId: number, fecha: string, estado: EstadoToma) => void;
+  agregarTratamiento: (datos: NuevoTratamiento) => Promise<void>;
+  marcarToma: (tratamientoId: number, fecha: string, estado: EstadoToma) => Promise<void>;
   usuario: Usuario | null;
   token: string | null;
   conectado: boolean;
@@ -148,38 +149,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setMascotas((prev) => conservarCambiosLocales(prev, datos.mascotas, cambiosLocales.current.mascotas));
     setCitas((prev) => conservarCambiosLocales(prev, datos.citas, cambiosLocales.current.citas));
     setRecordatorios((prev) => conservarCambiosLocales(prev, datos.recordatorios, cambiosLocales.current.recordatorios));
+    if (datos.mascotas.some((m) => m.tratamientos_salud !== undefined)) {
+      setTratamientos(datos.mascotas.flatMap((m) => m.tratamientos_salud ?? []));
+    }
   }, []);
   const { estadoDatos, cargarDatos, iniciarCarga, reiniciarCarga, reintentarGuardado, confirmarRecordatorio } = useCargaDatos(aplicarDatos);
   const siguienteTratamiento = React.useRef(1);
   const versionSesion = React.useRef(0);
-  const agregarTratamiento = React.useCallback((datos: NuevoTratamiento) => {
+  const agregarTratamiento = React.useCallback(async (datos: NuevoTratamiento) => {
     if (!mascotas.some((m) => m.id === datos.mascota_id)) throw new Error('Selecciona una mascota registrada.');
     const tratamiento = crearTratamiento(datos, siguienteTratamiento.current);
     siguienteTratamiento.current++;
+    const lista = [...tratamientos.filter((t) => t.mascota_id === datos.mascota_id), tratamiento];
+    const sesion = versionSesion.current;
+    if (token && conectado && esIdentificadorRemoto(datos.mascota_id)) {
+      const mascota = await apiActualizarSalud(token, datos.mascota_id, { tratamientos_salud: lista });
+      if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
+      setMascotas((prev) => prev.map((m) => m.id === datos.mascota_id ? { ...m, ...mascota } : m));
+      setTratamientos((prev) => [...prev.filter((t) => t.mascota_id !== datos.mascota_id), ...(mascota.tratamientos_salud ?? [])]);
+      return;
+    }
     setHayCambiosLocales(true);
     cambiosLocales.current.mascotas.add(String(datos.mascota_id));
     setTratamientos((prev) => [...prev, tratamiento]);
-  }, [mascotas]);
-  const marcarToma = React.useCallback((id: number, fecha: string, estado: EstadoToma) => {
+  }, [mascotas, tratamientos, token, conectado]);
+  const marcarToma = React.useCallback(async (id: number, fecha: string, estado: EstadoToma) => {
     const tratamiento = tratamientos.find((t) => t.id === id);
     if (!tratamiento) throw new Error('Tratamiento no encontrado.');
     const ahora = Date.now();
-    registrarToma(tratamiento, fecha, estado, ahora);
-    setTratamientos((prev) => prev.map((t) => t.id === id ? registrarToma(t, fecha, estado, ahora) : t));
-  }, [tratamientos]);
+    const actualizado = registrarToma(tratamiento, fecha, estado, ahora);
+    const lista = tratamientos.filter((t) => t.mascota_id === tratamiento.mascota_id).map((t) => t.id === id ? actualizado : t);
+    const sesion = versionSesion.current;
+    if (token && conectado && esIdentificadorRemoto(tratamiento.mascota_id)) {
+      const mascota = await apiActualizarSalud(token, tratamiento.mascota_id, { tratamientos_salud: lista });
+      if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
+      setMascotas((prev) => prev.map((m) => m.id === tratamiento.mascota_id ? { ...m, ...mascota } : m));
+      setTratamientos((prev) => [...prev.filter((t) => t.mascota_id !== tratamiento.mascota_id), ...(mascota.tratamientos_salud ?? [])]);
+      return;
+    }
+    setHayCambiosLocales(true);
+    cambiosLocales.current.mascotas.add(String(tratamiento.mascota_id));
+    setTratamientos((prev) => prev.map((t) => t.id === id ? actualizado : t));
+  }, [tratamientos, token, conectado]);
 
   // IDs negativos para que las mascotas locales no colisionen con PostgreSQL.
   const proximoId = React.useRef(-1);
   const proximaVisitaId = React.useRef(-1);
   const siguienteObservacion = React.useRef(1);
-  const agregarObservacion = React.useCallback((mascotaId: Identificador, datos: Omit<ObservacionSalud, 'id'>) => {
+  const agregarObservacion = React.useCallback(async (mascotaId: Identificador, datos: Omit<ObservacionSalud, 'id'>) => {
     validarObservacion(datos);
-    if (!mascotas.some((m) => m.id === mascotaId)) throw new Error('Mascota no encontrada.');
+    const mascota = mascotas.find((m) => m.id === mascotaId);
+    if (!mascota) throw new Error('Mascota no encontrada.');
+    const observacion = { ...datos, titulo: datos.titulo.trim(), descripcion: datos.descripcion.trim(), id: siguienteObservacion.current++ };
+    const lista = [...(mascota.observaciones ?? []), observacion];
+    const sesion = versionSesion.current;
+    if (token && conectado && esIdentificadorRemoto(mascotaId)) {
+      const guardada = await apiActualizarSalud(token, mascotaId, { observaciones: lista });
+      if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
+      setMascotas((prev) => prev.map((m) => m.id === mascotaId ? { ...m, ...guardada } : m));
+      return;
+    }
     setHayCambiosLocales(true);
     cambiosLocales.current.mascotas.add(String(mascotaId));
-    const observacion = { ...datos, titulo: datos.titulo.trim(), descripcion: datos.descripcion.trim(), id: siguienteObservacion.current++ };
     setMascotas((prev) => prev.map((m) => m.id === mascotaId ? { ...m, observaciones: [...(m.observaciones ?? []), observacion] } : m));
-  }, [mascotas]);
+  }, [mascotas, token, conectado]);
   const adjuntarHistorial = React.useCallback((mascotaId: Identificador, clave: string, adjuntos: AdjuntoSalud[]) => {
     setHayCambiosLocales(true);
     cambiosLocales.current.mascotas.add(String(mascotaId));
@@ -259,7 +292,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await actualizarCita(id, { estado: 'cancelado' });
   }, [actualizarCita]);
   const siguienteCarnet = React.useRef(1);
-  const guardarCarnet = React.useCallback((mascotaId: Identificador, datos: Omit<RegistroCarnet, 'id'>, id?: number) => {
+  const guardarCarnet = React.useCallback(async (mascotaId: Identificador, datos: Omit<RegistroCarnet, 'id'>, id?: number) => {
     const error = validarCarnet(datos);
     if (error) throw new Error(error);
     const mascota = mascotas.find((m) => m.id === mascotaId);
@@ -278,12 +311,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (siguiente && (!datos.fecha_aplicacion || interpretarFechaVisita(datos.fecha_aplicacion, '00:00')! >= interpretarFechaVisita(siguiente.fecha_aplicacion!, '00:00')!)) {
       throw new Error('Conserva una fecha anterior a la siguiente aplicación registrada.');
     }
+    const registro = { ...datos, nombre: datos.nombre.trim(), id: id ?? siguienteCarnet.current++ };
+    const lista = id === undefined ? [...(mascota.carnet ?? []), registro] : (mascota.carnet ?? []).map((r) => r.id === id ? registro : r);
+    const sesion = versionSesion.current;
+    if (token && conectado && esIdentificadorRemoto(mascotaId)) {
+      const guardada = await apiActualizarSalud(token, mascotaId, { carnet: lista });
+      if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
+      const comprobantes = new Map((mascota.carnet ?? []).map((r) => [r.id, r.comprobante]));
+      const carnet = (guardada.carnet ?? []).map((r) => ({ ...r, comprobante: comprobantes.get(r.id) ?? null }));
+      setMascotas((prev) => prev.map((m) => m.id === mascotaId ? { ...m, ...guardada, carnet } : m));
+      return;
+    }
     setHayCambiosLocales(true);
     cambiosLocales.current.mascotas.add(String(mascotaId));
-    const registro = { ...datos, nombre: datos.nombre.trim(), id: id ?? siguienteCarnet.current++ };
     setMascotas((prev) => prev.map((m) => m.id === mascotaId ? { ...m, carnet: id === undefined
       ? [...(m.carnet ?? []), registro] : (m.carnet ?? []).map((r) => r.id === id ? registro : r) } : m));
-  }, [mascotas]);
+  }, [mascotas, token, conectado]);
   const registrarPeso = React.useCallback(async (id: Identificador, peso: number, fecha: string) => {
     if (!mascotas.some((m) => m.id === id)) throw new Error('Mascota no encontrada.');
     const registro = crearRegistroPeso(peso, fecha);

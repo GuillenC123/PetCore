@@ -86,6 +86,7 @@ export interface Mascota {
   registros_peso?: RegistroPeso[];
   carnet?: RegistroCarnet[];
   observaciones?: ObservacionSalud[];
+  tratamientos_salud?: Tratamiento[];
   adjuntos_historial?: Record<string, AdjuntoSalud[]>;
   nacimiento?: string | null;
   sexo?: 'macho' | 'hembra' | 'desconocido';

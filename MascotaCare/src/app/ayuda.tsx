@@ -29,7 +29,7 @@ const secciones: {
   {
     titulo: 'Tratamientos y medicamentos',
     icono: 'medkit-outline',
-    descripcion: 'En Ficha de salud, selecciona una mascota, abre Tratamientos y pulsa Añadir tratamiento. Transcribe las indicaciones del veterinario, la fecha de inicio, duración y horarios diarios. Consulta las tomas por día y marca cada una como administrada u omitida cuando llegue su horario. Puedes deshacer un registro incorrecto. Los datos se conservan durante la sesión.',
+    descripcion: 'En Ficha de salud, selecciona una mascota, abre Tratamientos y pulsa Añadir tratamiento. Transcribe las indicaciones del veterinario, la fecha de inicio, duración y horarios diarios. Consulta las tomas por día y marca cada una como administrada u omitida cuando llegue su horario. Puedes deshacer un registro incorrecto. Con la API conectada, los tratamientos y tomas se guardan en tu cuenta.',
   },
   {
     titulo: 'Seguimiento de peso',
@@ -39,7 +39,7 @@ const secciones: {
   {
     titulo: 'Carnet de vacunas y desparasitación',
     icono: 'shield-checkmark-outline',
-    descripcion: 'En Ficha de salud, abre Vacunas y desparasitación y añade una aplicación o una próxima fecha indicada por el veterinario y adjunta una foto del comprobante. El historial conserva las aplicaciones realizadas; las próximas fechas aparecen como próximas o vencidas. Pulsa Registrar aplicación en un pendiente para registrar el siguiente cuidado. Los datos y fotos se conservan durante la sesión.',
+    descripcion: 'En Ficha de salud, abre Vacunas y desparasitación y añade una aplicación o una próxima fecha indicada por el veterinario y adjunta una foto del comprobante. El historial conserva las aplicaciones realizadas; las próximas fechas aparecen como próximas o vencidas. Pulsa Registrar aplicación en un pendiente para registrar el siguiente cuidado. Con la API conectada, los datos del carnet se guardan en tu cuenta; las fotos permanecen solo en este dispositivo.',
   },
   {
     titulo: 'Añadir y consultar mascotas',
@@ -54,7 +54,7 @@ const secciones: {
   {
     titulo: 'Historial de salud',
     icono: 'time-outline',
-    descripcion: 'En Ficha de salud, abre Historial de salud para consultar la línea de tiempo de la mascota. Incluye visitas marcadas como realizadas, vacunas, desparasitaciones y tratamientos que ya comenzaron. Registra consultas anteriores u observaciones y adjunta PDF o fotografías a cada evento. Los archivos se conservan durante la sesión.',
+    descripcion: 'En Ficha de salud, abre Historial de salud para consultar la línea de tiempo de la mascota. Incluye visitas marcadas como realizadas, vacunas, desparasitaciones y tratamientos que ya comenzaron. Registra consultas anteriores u observaciones y adjunta PDF o fotografías a cada evento. Con la API conectada, las consultas y observaciones se guardan en tu cuenta; los archivos adjuntos permanecen durante la sesión.',
   },
   {
     titulo: 'Notificaciones y recordatorios',

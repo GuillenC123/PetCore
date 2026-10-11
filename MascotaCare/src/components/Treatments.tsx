@@ -9,7 +9,7 @@ import FormInput from './FormInput';
 import TimeSchedule from './TimeSchedule';
 
 export default function Treatments({ mascotaId, nombre }: { mascotaId: Identificador; nombre: string }) {
-  const { tratamientos } = useAuth();
+  const { tratamientos, conectado } = useAuth();
   const [creando, setCreando] = useState(false);
   const [mensaje, setMensaje] = useState('');
   const lista = tratamientos.filter((t) => t.mascota_id === mascotaId);
@@ -17,7 +17,7 @@ export default function Treatments({ mascotaId, nombre }: { mascotaId: Identific
     <Text style={styles.title}>Tratamientos y medicamentos</Text>
     <Text style={styles.text}>Indicaciones y registro de tomas de {nombre}.</Text>
     {creando ? <Formulario mascotaId={mascotaId} cerrar={(guardado) => {
-      setCreando(false); setMensaje(guardado ? 'Tratamiento guardado para esta sesión.' : '');
+      setCreando(false); setMensaje(guardado ? conectado ? 'Tratamiento guardado en tu cuenta.' : 'Tratamiento guardado para esta sesión.' : '');
     }} /> : <Boton label="Añadir tratamiento" onPress={() => { setMensaje(''); setCreando(true); }} />}
     {!!mensaje && <Text accessibilityRole="alert" style={styles.text}>{mensaje}</Text>}
     {!lista.length && !creando && <Text style={styles.text}>Aún no hay tratamientos registrados.</Text>}
@@ -33,10 +33,10 @@ function Formulario({ mascotaId, cerrar }: { mascotaId: Identificador; cerrar: (
   const [duracion, setDuracion] = useState('');
   const [horarios, setHorarios] = useState('');
   const [error, setError] = useState('');
-  const guardar = () => {
+  const guardar = async () => {
     if (!/^\d+$/.test(duracion.trim())) { setError('Escribe la duración en días completos.'); return; }
     try {
-      agregarTratamiento({ mascota_id: mascotaId, medicamento, indicaciones, inicio,
+      await agregarTratamiento({ mascota_id: mascotaId, medicamento, indicaciones, inicio,
         duracion_dias: Number(duracion), horarios: horarios.split(',') });
       cerrar(true);
     } catch (err) { setError(err instanceof Error ? err.message : 'No se pudo guardar.'); }
@@ -74,9 +74,9 @@ function TratamientoCard({ tratamiento: t }: { tratamiento: Tratamiento }) {
   const administradas = t.tomas.filter((toma) => toma.estado === 'administrada').length;
   const omitidas = t.tomas.filter((toma) => toma.estado === 'omitida').length;
   const sinRegistrar = t.tomas.filter((toma) => toma.estado === 'pendiente' && new Date(toma.fecha_hora).getTime() <= ahora).length;
-  const marcar = (fecha: string, estado: EstadoToma) => {
+  const marcar = async (fecha: string, estado: EstadoToma) => {
     try {
-      marcarToma(t.id, fecha, estado);
+      await marcarToma(t.id, fecha, estado);
       setMensaje(estado === 'pendiente' ? 'Registro deshecho.' : `Toma marcada como ${estado}.`);
     } catch (err) { setMensaje(err instanceof Error ? err.message : 'No se pudo registrar la toma.'); }
   };
