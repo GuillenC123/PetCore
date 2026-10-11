@@ -11,16 +11,13 @@
 const { Router } = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const dotenv = require('dotenv');
 
 const pool = require('../db');
+const { obtenerConfiguracion } = require('../config');
 const validar = require('../middleware/validar');
 const esquemas = require('../validation/esquemas');
 
-dotenv.config();
-
-const JWT_SECRET = process.env.JWT_SECRET || 'mascotacare_secreto_desarrollo';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const { jwtSecret: JWT_SECRET, jwtExpiresIn: JWT_EXPIRES_IN } = obtenerConfiguracion();
 
 // Número de rondas para generar el hash (a mayor número, más seguro y lento).
 const BCRYPT_SALT_ROUNDS = 10;

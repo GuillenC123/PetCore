@@ -144,7 +144,8 @@ Configura `.env`:
 
 - `PORT`: puerto HTTP, por defecto `4000`.
 - `DATABASE_URL`: conexión a tu PostgreSQL con usuario, contraseña, host, puerto y base de datos.
-- `JWT_SECRET`: valor propio para firmar tokens.
+- `JWT_SECRET`: valor propio para firmar tokens, de al menos 32 caracteres y distinto en cada entorno. Puedes generarlo con `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
+- `CORS_ORIGINS`: orígenes web autorizados separados por comas; para Expo web local usa `http://localhost:8081`. Las apps nativas no envían este origen.
 - `JWT_EXPIRES_IN`: duración del token; el ejemplo utiliza `7d`.
 
 Desde `MascotaCare/server/`, inicia la API para que dotenv lea ese `.env`:

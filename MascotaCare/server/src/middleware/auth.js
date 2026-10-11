@@ -8,11 +8,9 @@
 // ============================================================================
 
 const jwt = require('jsonwebtoken');
-const dotenv = require('dotenv');
+const { obtenerConfiguracion } = require('../config');
 
-dotenv.config();
-
-const JWT_SECRET = process.env.JWT_SECRET || 'mascotacare_secreto_desarrollo';
+const { jwtSecret: JWT_SECRET } = obtenerConfiguracion();
 
 /**
  * Middleware que protege las rutas que requieren iniciar sesión.

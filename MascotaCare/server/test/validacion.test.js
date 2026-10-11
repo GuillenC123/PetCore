@@ -2,6 +2,10 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const express = require('express');
 
+// Las rutas cargan la misma configuración que producción, sin depender de .env.
+process.env.DATABASE_URL = 'postgres://usuario:password@localhost:5432/mascotacare_test';
+process.env.JWT_SECRET = 'secreto-de-prueba-con-al-menos-treinta-y-dos-caracteres';
+
 // La prueba recorre las rutas HTTP reales, sustituyendo únicamente PostgreSQL.
 const consultas = [];
 let resultados = [];
