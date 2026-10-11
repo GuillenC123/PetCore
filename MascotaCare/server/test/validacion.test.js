@@ -115,9 +115,36 @@ test('validación de las rutas HTTP', async (t) => {
   });
   await t.test('acepta false y fechas bisiestas en actualizaciones parciales', async () => {
     consultas.length = 0;
-    assert.equal((await enviar('PUT', '/recordatorios/1', { completado: false, vence_en: '2028-02-29' })).status, 200);
-    assert.equal(consultas[0].parametros[5], false);
-    assert.equal(consultas[0].parametros[4], '2028-02-29');
+    assert.equal((await enviar('PUT', '/recordatorios/1', { completado: false, vence_en: '2028-02-29T10:30:00Z' })).status, 200);
+    assert.equal(consultas[2].parametros[2], '2028-02-29T10:30:00Z');
+    assert.equal(consultas[2].parametros[3], false);
+  });
+  await t.test('crea, repite y elimina recordatorios propios', async () => {
+    consultas.length = 0;
+    const creado = { id: '20', mascota_id: '1', titulo: 'Medicación', descripcion: null, tipo: 'dosis', vence_en: '2028-02-29T10:30:00.000Z', repeticion: 'diaria', dia_repeticion: 29, completado: false, cita_id: null };
+    resultados = [{ rowCount: 1, rows: [{ id: '1' }] }, { rowCount: 1, rows: [creado] }];
+    const alta = await enviar('POST', '/recordatorios', { titulo: 'Medicación', mascota_id: '1', tipo: 'dosis', vence_en: '2028-02-29T10:30:00Z', repeticion: 'diaria' });
+    assert.equal(alta.status, 201);
+    assert.deepEqual(await alta.json(), creado);
+
+    consultas.length = 0;
+    const repetido = { ...creado, vence_en: '2028-03-01T10:30:00.000Z', ultima_realizacion: '2028-02-29T12:00:00.000Z' };
+    resultados = [{ rowCount: 1, rows: [creado] }, { rowCount: 1, rows: [repetido] }];
+    const cambio = await enviar('PUT', '/recordatorios/20', { completado: true });
+    assert.equal(cambio.status, 200);
+    assert.equal((await cambio.json()).completado, false);
+    assert.match(consultas[2].sql, /ultima_realizacion/);
+
+    consultas.length = 0;
+    resultados = [{ rowCount: 1, rows: [] }];
+    assert.equal((await enviar('DELETE', '/recordatorios/20')).status, 204);
+  });
+  await t.test('protege la eliminación de recordatorios asociados a citas', async () => {
+    consultas.length = 0;
+    resultados = [{ rowCount: 0, rows: [] }, { rowCount: 1, rows: [{ cita_id: '10' }] }];
+    const respuesta = await enviar('DELETE', '/recordatorios/20');
+    assert.equal(respuesta.status, 409);
+    assert.match((await respuesta.json()).error, /asociado a una cita/);
   });
   await t.test('valida la propiedad de la mascota al crear citas', async () => {
     resultados = [{ rowCount: 0, rows: [] }];

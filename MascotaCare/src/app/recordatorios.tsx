@@ -10,7 +10,7 @@ import { AdaptiveColumns, layoutStyles } from '@/components/AdaptiveLayout';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import ReminderCard from '@/components/ReminderCard';
@@ -24,7 +24,7 @@ import { useAuth } from '@/context/AuthContext';
 import type { Recordatorio } from '@/types';
 
 export default function RecordatoriosScreen() {
-  const { recordatorios, tacharRecordatorio, posponerRecordatorio } = useAuth();
+  const { recordatorios, tacharRecordatorio, posponerRecordatorio, eliminarRecordatorio, conectado } = useAuth();
   const ahora = useAhora();
   const [editor, setEditor] = useState<Recordatorio | 'nuevo' | null>(null);
   const [mensaje, setMensaje] = useState('');
@@ -37,8 +37,20 @@ export default function RecordatoriosScreen() {
     const fecha = new Date(base);
     if (minutos === 1440) fecha.setDate(fecha.getDate() + 1);
     else fecha.setMinutes(fecha.getMinutes() + minutos);
-    posponerRecordatorio(r.id, fecha.toISOString());
-    setMensaje(r.cita_id !== undefined ? 'Aviso pospuesto. La fecha de la visita no cambia.' : 'Recordatorio pospuesto.');
+    void guardado.ejecutar(async () => {
+      await posponerRecordatorio(r.id, fecha.toISOString());
+      setMensaje(r.cita_id != null ? 'Aviso pospuesto. La fecha de la visita no cambia.' : 'Recordatorio pospuesto.');
+    });
+  };
+
+  const eliminar = (r: Recordatorio) => {
+    Alert.alert('Eliminar recordatorio', `¿Eliminar “${r.titulo}”? Esta acción no se puede deshacer.`, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Eliminar', style: 'destructive', onPress: () => void guardado.ejecutar(async () => {
+        await eliminarRecordatorio(r.id);
+        setMensaje('Recordatorio eliminado.');
+      }) },
+    ]);
   };
 
   // Al tocar el checkbox, cambiamos el estado completado del recordatorio.
@@ -74,7 +86,7 @@ export default function RecordatoriosScreen() {
         contentContainerStyle={[styles.content, editor ? layoutStyles.form : layoutStyles.page]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        <Text style={styles.empty}>Los cambios se conservan durante esta sesión.</Text>
+        <Text style={styles.empty}>{conectado ? 'Los cambios se guardan en tu cuenta.' : 'Los cambios se conservan durante esta sesión.'}</Text>
         {!!mensaje && <Text accessibilityRole="alert" style={styles.empty}>{mensaje}</Text>}
         <SaveFeedback {...guardado} />
         {editor ? <ReminderForm key={editor === 'nuevo' ? 'nuevo' : editor.id} recordatorio={editor === 'nuevo' ? undefined : editor}
@@ -86,7 +98,7 @@ export default function RecordatoriosScreen() {
           <Text style={styles.empty}>No tienes recordatorios.</Text>
         ) : (
           <AdaptiveColumns>{ordenados.map((r) => (
-            <ReminderCard key={r.id} recordatorio={r} disabled={guardado.guardando} onToggle={manejarToggle} ahora={ahora} onEdit={setEditor} onPostpone={posponer} />
+            <ReminderCard key={r.id} recordatorio={r} disabled={guardado.guardando} onToggle={manejarToggle} ahora={ahora} onEdit={setEditor} onPostpone={posponer} onDelete={eliminar} />
           ))}</AdaptiveColumns>
         )}
         </>}

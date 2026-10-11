@@ -54,22 +54,34 @@ const react = {
 };
 react.useEffect = () => {};
 const { AuthProvider } = cargar('src/context/AuthContext.tsx', nombre => nombre === '@/hooks/use-carga-datos' ? require('./helpers/carga-datos.cjs') : nombre === 'react' ? react : nombre === '@/utils/recordatorios' ? util : {});
-const contexto = AuthProvider({ children: null }).value;
+(async () => {
+const obtenerContexto = () => {
+  indice = 0;
+  return AuthProvider({ children: null }).value;
+};
+let contexto = obtenerContexto();
 const futuro = new Date(Date.now() + 86400000).toISOString();
 const datos = { titulo: 'Alimento', descripcion: null, tipo: 'alimento', mascota_id: 10, vence_en: futuro, repeticion: 'diaria' };
-assert.throws(() => contexto.guardarRecordatorio({ ...datos, titulo: '' }));
-assert.throws(() => contexto.guardarRecordatorio({ ...datos, mascota_id: 999 }));
-contexto.guardarRecordatorio(datos);
+await assert.rejects(contexto.guardarRecordatorio({ ...datos, titulo: '' }));
+await assert.rejects(contexto.guardarRecordatorio({ ...datos, mascota_id: 999 }));
+await contexto.guardarRecordatorio(datos);
+contexto = obtenerContexto();
 const id = estados[5][0].id;
 assert.equal(estados[5][0].mascota_nombre, 'Luna');
-contexto.guardarRecordatorio({ ...datos, titulo: 'Nuevo alimento' }, id);
+await contexto.guardarRecordatorio({ ...datos, titulo: 'Nuevo alimento' }, id);
+contexto = obtenerContexto();
 assert.equal(estados[5].length, 1);
 assert.equal(estados[5][0].titulo, 'Nuevo alimento');
 const aplazado = new Date(Date.now() + 2 * 86400000).toISOString();
-contexto.posponerRecordatorio(id, aplazado);
+await contexto.posponerRecordatorio(id, aplazado);
+contexto = obtenerContexto();
 assert.equal(estados[5][0].vence_en, aplazado);
-contexto.tacharRecordatorio(id, true);
+await contexto.tacharRecordatorio(id, true);
 assert.equal(estados[5][0].completado, false);
 assert.ok(new Date(estados[5][0].vence_en) > new Date(aplazado));
 assert.ok(estados[5][0].ultima_realizacion);
 console.log('OK: crear, editar, posponer, repetir, vencimientos y filtro de próximas citas.');
+})().catch(error => {
+  console.error(error);
+  process.exitCode = 1;
+});

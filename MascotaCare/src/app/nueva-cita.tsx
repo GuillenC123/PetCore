@@ -103,7 +103,7 @@ export default function NuevaCitaScreen() {
                 {!!errores.fecha && <Text style={styles.error} accessibilityRole="alert">{errores.fecha}</Text>}
               </View>
               </AdaptiveColumns>
-              <Text style={styles.description}>El recordatorio estará disponible en Citas y en la campana durante esta sesión.</Text>
+              <Text style={styles.description}>El recordatorio estará disponible en Citas y en la campana, y se guardará en tu cuenta al conectarte al servidor.</Text>
               {!!errores.general && <Text style={styles.error} accessibilityRole="alert">{errores.general}</Text>}
               <Pressable style={styles.button} onPress={guardar} accessibilityRole="button">
                 <Text style={styles.buttonText}>Guardar recordatorio</Text>

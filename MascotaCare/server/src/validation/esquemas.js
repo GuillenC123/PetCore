@@ -28,7 +28,12 @@ const cita = {
 const recordatorio = {
   titulo: cadena(200),
   descripcion: cadena(300, 0, { nullable: true }),
-  vence_en: campo(fecha, 'Ingresa una fecha válida con formato AAAA-MM-DD.'),
+  mascota_id: { ...identificador, nullable: true },
+  tipo: enumeracion(['vacuna', 'alimento', 'cita', 'dosis', 'general']),
+  vence_en: campo(fechaHora, 'Ingresa una fecha y hora ISO válida con zona horaria.'),
+  repeticion: enumeracion(['ninguna', 'diaria', 'semanal', 'mensual']),
+  dia_repeticion: campo((valor) => Number.isSafeInteger(valor) && valor >= 1 && valor <= 31,
+    'Debe ser un día entre 1 y 31.', { nullable: true }),
   completado: campo((valor) => typeof valor === 'boolean', 'Debe ser true o false (booleano).'),
 };
 
@@ -40,6 +45,7 @@ module.exports = {
   cita,
   crearCita: { ...cita, mascota_id: identificador },
   recordatorio,
+  crearRecordatorio: { ...recordatorio },
   paramsId: { id: identificador },
   filtroCitas: { mascota_id: identificador },
   filtroRecordatorios: { solo_pendientes: enumeracion(['true', 'false']) },

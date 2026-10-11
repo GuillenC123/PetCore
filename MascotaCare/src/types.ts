@@ -124,7 +124,7 @@ export interface Recordatorio {
   repeticion?: 'ninguna' | 'diaria' | 'semanal' | 'mensual';
   ultima_realizacion?: string;
   dia_repeticion?: number;
-  cita_id?: Identificador;
+  cita_id?: Identificador | null;
   id: Identificador;
   titulo: string;
   descripcion: string | null;

@@ -33,6 +33,9 @@ import {
   apiLogin,
   apiRegistro,
   apiTacharRecordatorio,
+  apiCrearRecordatorio,
+  apiActualizarRecordatorio,
+  apiEliminarRecordatorio,
   apiCrearMascota,
   apiActualizarMascota,
   apiRegistrarPeso,
@@ -95,8 +98,9 @@ interface AuthContextValue {
   logout: () => void;
   cargarDatos: () => Promise<void>;
   tacharRecordatorio: (id: Identificador, completado: boolean) => Promise<void>;
-  guardarRecordatorio: (datos: Omit<Recordatorio, 'id' | 'completado'>, id?: Identificador) => void;
-  posponerRecordatorio: (id: Identificador, fecha: string) => void;
+  guardarRecordatorio: (datos: Omit<Recordatorio, 'id' | 'completado'>, id?: Identificador) => Promise<void>;
+  posponerRecordatorio: (id: Identificador, fecha: string) => Promise<void>;
+  eliminarRecordatorio: (id: Identificador) => Promise<void>;
   /** Añade una mascota; con la API activa la persiste en la BD. */
   agregarMascota: (datos: Omit<Mascota, 'id'>) => Promise<Mascota>;
   agregarCita: (datos: { mascota_id: Identificador; motivo: string; fecha_hora: string }) => Promise<void>;
@@ -259,33 +263,79 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     autenticacionActual.current?.abort();
   }, []);
 
-  const guardarRecordatorio = React.useCallback((datos: Omit<Recordatorio, 'id' | 'completado'>, id?: Identificador) => {
-    if (!datos.titulo.trim() || datos.titulo.trim().length > 120) throw new Error('Escribe un título de hasta 120 caracteres.');
+  const guardarRecordatorio = React.useCallback(async (datos: Omit<Recordatorio, 'id' | 'completado'>, id?: Identificador) => {
+    if (!datos.titulo.trim() || datos.titulo.trim().length > 200) throw new Error('Escribe un título de hasta 200 caracteres.');
+    if ((datos.descripcion?.trim().length ?? 0) > 300) throw new Error('La descripción admite hasta 300 caracteres.');
     const fecha = fechaRecordatorio(datos.vence_en);
     if (!fecha || fecha.getTime() <= Date.now()) throw new Error('Elige una fecha y hora futuras.');
     const mascota = mascotas.find((m) => m.id === datos.mascota_id);
     if (datos.mascota_id !== null && !mascota) throw new Error('Selecciona una mascota registrada.');
+    const cambios = {
+      titulo: datos.titulo.trim(), descripcion: datos.descripcion?.trim() || null,
+      mascota_id: datos.mascota_id, tipo: datos.tipo, vence_en: fecha.toISOString(),
+      repeticion: datos.repeticion ?? 'ninguna', dia_repeticion: fecha.getDate(),
+    };
+    const sesion = versionSesion.current;
+    if (token && conectado) {
+      const confirmada = id === undefined
+        ? await apiCrearRecordatorio(token, cambios)
+        : await apiActualizarRecordatorio(token, id, cambios);
+      if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
+      setHayCambiosLocales(true);
+      cambiosLocales.current.recordatorios.add(String(confirmada.id));
+      if (mascota) cambiosLocales.current.mascotas.add(String(mascota.id));
+      const conNombre = { ...confirmada, mascota_nombre: mascota?.nombre };
+      setRecordatorios((prev) => id === undefined
+        ? [...prev, conNombre] : prev.map((r) => r.id === id ? { ...r, ...conNombre } : r));
+      return;
+    }
     const clave = id ?? proximaVisitaId.current--;
-    const cambios = { ...datos, titulo: datos.titulo.trim(), mascota_nombre: mascota?.nombre, vence_en: fecha.toISOString(), dia_repeticion: fecha.getDate() };
     recordatoriosLocales.current.add(clave);
     setHayCambiosLocales(true);
     cambiosLocales.current.recordatorios.add(String(clave));
     if (mascota) cambiosLocales.current.mascotas.add(String(mascota.id));
     setRecordatorios((prev) => id === undefined
-      ? [...prev, { ...cambios, id: clave, completado: false }]
-      : prev.map((r) => r.id === id ? { ...r, ...cambios } : r));
-  }, [mascotas]);
+      ? [...prev, { ...datos, ...cambios, mascota_nombre: mascota?.nombre, id: clave, completado: false }]
+      : prev.map((r) => r.id === id ? { ...r, ...cambios, mascota_nombre: mascota?.nombre } : r));
+  }, [mascotas, token, conectado]);
 
-  const posponerRecordatorio = React.useCallback((id: Identificador, fecha: string) => {
+  const posponerRecordatorio = React.useCallback(async (id: Identificador, fecha: string) => {
     const nuevaFecha = fechaRecordatorio(fecha);
     if (!nuevaFecha || nuevaFecha.getTime() <= Date.now()) throw new Error('Elige una fecha y hora futuras.');
+    const recordatorio = recordatorios.find((r) => r.id === id);
+    if (!recordatorio || recordatorio.completado) throw new Error('Recordatorio no encontrado o ya completado.');
+    const sesion = versionSesion.current;
+    if (token && conectado && esIdentificadorRemoto(id) && !recordatoriosLocales.current.has(id)) {
+      const confirmado = await apiActualizarRecordatorio(token, id, { vence_en: nuevaFecha.toISOString() });
+      if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
+      setHayCambiosLocales(true);
+      cambiosLocales.current.recordatorios.add(String(id));
+      setRecordatorios((prev) => prev.map((r) => r.id === id ? { ...r, ...confirmado } : r));
+      return;
+    }
     recordatoriosLocales.current.add(id);
     setHayCambiosLocales(true);
     cambiosLocales.current.recordatorios.add(String(id));
+    if (recordatorio.mascota_id != null) cambiosLocales.current.mascotas.add(String(recordatorio.mascota_id));
+    setRecordatorios((prev) => prev.map((r) => r.id === id ? { ...r, vence_en: nuevaFecha.toISOString(), dia_repeticion: nuevaFecha.getDate() } : r));
+  }, [recordatorios, token, conectado]);
+
+  const eliminarRecordatorio = React.useCallback(async (id: Identificador) => {
     const recordatorio = recordatorios.find((r) => r.id === id);
-    if (recordatorio?.mascota_id != null) cambiosLocales.current.mascotas.add(String(recordatorio.mascota_id));
-    setRecordatorios((prev) => prev.map((r) => r.id === id && !r.completado ? { ...r, vence_en: nuevaFecha.toISOString(), dia_repeticion: nuevaFecha.getDate() } : r));
-  }, [recordatorios]);
+    if (!recordatorio) throw new Error('Recordatorio no encontrado.');
+    if (recordatorio.cita_id != null) throw new Error('El recordatorio asociado a una cita se elimina al eliminar la cita.');
+    const sesion = versionSesion.current;
+    if (token && conectado && esIdentificadorRemoto(id) && !recordatoriosLocales.current.has(id)) {
+      await apiEliminarRecordatorio(token, id);
+      if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
+    } else {
+      recordatoriosLocales.current.add(id);
+    }
+    setHayCambiosLocales(true);
+    cambiosLocales.current.recordatorios.add(String(id));
+    if (recordatorio.mascota_id != null) cambiosLocales.current.mascotas.add(String(recordatorio.mascota_id));
+    setRecordatorios((prev) => prev.filter((r) => r.id !== id));
+  }, [recordatorios, token, conectado]);
 
   // Las visitas creadas: persisten en BD si la API está activa.
   const agregarCita = React.useCallback(async (datos: { mascota_id: Identificador; motivo: string; fecha_hora: string }) => {
@@ -461,7 +511,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (recordatorio?.mascota_id != null) cambiosLocales.current.mascotas.add(String(recordatorio.mascota_id));
         }
         const ahora = Date.now();
-        setRecordatorios((prev) => prev.map((r) => r.id === id ? completarRecordatorio(r, completado, ahora) : r));
+        setRecordatorios((prev) => prev.map((r) => r.id === id
+          ? confirmado ? { ...r, ...confirmado } : completarRecordatorio(r, completado, ahora) : r));
         if (confirmado) await confirmarRecordatorio(confirmado);
       } catch {
         throw new Error('No se pudo guardar el recordatorio. Conservamos su estado anterior. Vuelve a intentarlo.');
@@ -518,6 +569,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     tacharRecordatorio,
     guardarRecordatorio,
     posponerRecordatorio,
+    eliminarRecordatorio,
     agregarMascota,
     agregarCita,
     actualizarPesoMascota,

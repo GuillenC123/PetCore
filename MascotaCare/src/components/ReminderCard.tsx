@@ -24,9 +24,10 @@ interface ReminderCardProps {
   ahora: number;
   onEdit: (recordatorio: Recordatorio) => void;
   onPostpone: (recordatorio: Recordatorio, minutos: number) => void;
+  onDelete: (recordatorio: Recordatorio) => void;
 }
 
-export default function ReminderCard({ recordatorio, onToggle, ahora, onEdit, onPostpone, disabled = false }: ReminderCardProps) {
+export default function ReminderCard({ recordatorio, onToggle, ahora, onEdit, onPostpone, onDelete, disabled = false }: ReminderCardProps) {
   // El subtítulo en rojo con alerta corresponde a recordatorios que vencen hoy/mañana.
   const estado = estadoRecordatorio(recordatorio, ahora);
   const esUrgente = estado === 'Vencido' || estado === 'Hoy';
@@ -57,6 +58,7 @@ export default function ReminderCard({ recordatorio, onToggle, ahora, onEdit, on
             <Pressable disabled={disabled} accessibilityRole="button" onPress={() => onPostpone(recordatorio, 60)} style={styles.action}><Text style={styles.link}>Posponer 1 h</Text></Pressable>
             <Pressable disabled={disabled} accessibilityRole="button" onPress={() => onPostpone(recordatorio, 1440)} style={styles.action}><Text style={styles.link}>Posponer 1 día</Text></Pressable>
           </>}
+          {recordatorio.cita_id == null && <Pressable disabled={disabled} accessibilityRole="button" onPress={() => onDelete(recordatorio)} style={styles.action}><Text style={styles.delete}>Eliminar</Text></Pressable>}
         </View>
         {recordatorio.repeticion && recordatorio.repeticion !== 'ninguna' && <Text style={styles.subtitulo}>Completar programa la siguiente fecha.</Text>}
       </View>
@@ -81,6 +83,7 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   action: { paddingVertical: 12, paddingHorizontal: 4 },
   link: { color: '#0369A1', fontWeight: '600' },
+  delete: { color: AppColors.danger, fontWeight: '600' },
   card: {
     flexDirection: 'row',
     alignItems: 'center',

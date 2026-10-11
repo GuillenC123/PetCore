@@ -34,6 +34,9 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'tipo_recordatorio') THEN
         CREATE TYPE tipo_recordatorio AS ENUM ('vacuna', 'alimento', 'cita', 'dosis', 'general');
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'repeticion_recordatorio') THEN
+        CREATE TYPE repeticion_recordatorio AS ENUM ('ninguna', 'diaria', 'semanal', 'mensual');
+    END IF;
 END $$;
 
 -- ============================================================================
@@ -138,7 +141,10 @@ CREATE TABLE IF NOT EXISTS Recordatorio (
     titulo            VARCHAR(200) NOT NULL,
     descripcion       VARCHAR(300),
     tipo              tipo_recordatorio NOT NULL DEFAULT 'general',
-    vence_en          DATE,
+    vence_en          TIMESTAMPTZ,
+    repeticion        repeticion_recordatorio NOT NULL DEFAULT 'ninguna',
+    ultima_realizacion TIMESTAMPTZ,
+    dia_repeticion    SMALLINT CHECK (dia_repeticion BETWEEN 1 AND 31),
     completado        BOOLEAN      NOT NULL DEFAULT FALSE,
     creado_en         TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
 

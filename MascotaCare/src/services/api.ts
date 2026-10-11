@@ -96,13 +96,15 @@ function citaApi(dato: Cita): Cita {
 
 function recordatorioApi(dato: Recordatorio): Recordatorio {
   if (typeof dato.titulo !== 'string' || typeof dato.completado !== 'boolean' ||
-      !['vacuna', 'alimento', 'cita', 'dosis', 'general'].includes(dato.tipo)) {
+      !['vacuna', 'alimento', 'cita', 'dosis', 'general'].includes(dato.tipo) ||
+      (dato.repeticion !== undefined && !['ninguna', 'diaria', 'semanal', 'mensual'].includes(dato.repeticion))) {
     throw new Error('Recordatorio inválido.');
   }
   return {
     ...dato,
     id: normalizarIdentificador(dato.id),
     mascota_id: dato.mascota_id === null ? null : normalizarIdentificador(dato.mascota_id),
+    cita_id: dato.cita_id == null ? undefined : normalizarIdentificador(dato.cita_id),
   };
 }
 
@@ -166,6 +168,28 @@ export async function apiTacharRecordatorio(token: string, id: Identificador, co
     method: 'PUT', headers: autorizar(token), body: JSON.stringify({ completado }),
   });
   return adaptar(() => recordatorioApi(datos));
+}
+
+export type RecordatorioEditable = Pick<Recordatorio,
+  'titulo' | 'descripcion' | 'mascota_id' | 'tipo' | 'vence_en' | 'repeticion' | 'dia_repeticion'>;
+
+export async function apiCrearRecordatorio(token: string, datos: RecordatorioEditable): Promise<Recordatorio> {
+  const respuesta = await request<Recordatorio>('/recordatorios', {
+    method: 'POST', headers: autorizar(token), body: JSON.stringify(datos),
+  });
+  return adaptar(() => recordatorioApi(respuesta));
+}
+
+export async function apiActualizarRecordatorio(token: string, id: Identificador,
+  datos: Partial<RecordatorioEditable & Pick<Recordatorio, 'completado'>>): Promise<Recordatorio> {
+  const respuesta = await request<Recordatorio>(`/recordatorios/${encodeURIComponent(id)}`, {
+    method: 'PUT', headers: autorizar(token), body: JSON.stringify(datos),
+  });
+  return adaptar(() => recordatorioApi(respuesta));
+}
+
+export async function apiEliminarRecordatorio(token: string, id: Identificador): Promise<void> {
+  await request<void>(`/recordatorios/${encodeURIComponent(id)}`, { method: 'DELETE', headers: autorizar(token) });
 }
 
 /** Datos básicos y ficha de salud persistidos en la API. */

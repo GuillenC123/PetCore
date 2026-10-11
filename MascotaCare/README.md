@@ -80,14 +80,13 @@ MascotaCare/
 | --- | --- |
 | Registro de cuenta | PostgreSQL mediante API. |
 | Consulta de mascotas, citas y recordatorios | Copia local seguida de API, o mocks y copia independiente en demostración. |
-| Completar un recordatorio existente de API | Actualiza el servidor y después su copia local; si falla la API conserva su estado anterior. Un fallo de copia permite reintentar el guardado. |
+| Crear, editar, completar, posponer o eliminar recordatorios | Actualiza el servidor y después su copia local; si falla la API conserva su estado anterior. Los recordatorios asociados a una cita no se pueden eliminar. |
 | Crear mascotas o visitas; editar perfil | Memoria de la sesión. |
 | Ficha de salud, peso, carnet, tratamientos, observaciones y adjuntos | Memoria de la sesión. |
-| Crear, editar o posponer recordatorios | Memoria de la sesión. |
 
 La sesión tampoco se recupera automáticamente. Los cambios locales se protegen al actualizar las listas durante la sesión y se pierden al reiniciar o salir. La copia de respuestas de API permanece por usuario y se reutiliza después de autenticarse nuevamente. Aunque la API tiene creación y edición de mascotas y citas, el frontend aún no las utiliza para esas acciones.
 
-PostgreSQL contiene `Usuario`, `Mascota`, `CitaMedica` y `Recordatorio`. El seguimiento de salud avanzado no tiene persistencia equivalente. El servidor admite `malestar`; los vencimientos todavía se guardan como fechas sin hora ni repetición.
+PostgreSQL contiene `Usuario`, `Mascota`, `CitaMedica` y `Recordatorio`. El seguimiento de salud avanzado no tiene persistencia equivalente. El servidor admite `malestar`; los recordatorios guardan fecha y hora, repetición y el último momento de realización.
 
 ## Ejecutar el proyecto
 

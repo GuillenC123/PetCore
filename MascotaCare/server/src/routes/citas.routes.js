@@ -80,8 +80,8 @@ router.post('/', validar(esquemas.crearCita, { obligatorios: ['titulo', 'mascota
     );
     const recordatorio = await conexion.query(
       `INSERT INTO Recordatorio (usuario_id, mascota_id, cita_id, titulo, descripcion, tipo, vence_en)
-       VALUES ($1, $2, $3, 'Visita veterinaria', $4, 'cita', ($5::timestamptz AT TIME ZONE 'America/Lima')::date)
-       RETURNING id, titulo, descripcion, tipo, vence_en, completado, mascota_id, cita_id`,
+       VALUES ($1, $2, $3, 'Visita veterinaria', $4, 'cita', $5::timestamptz)
+       RETURNING id, titulo, descripcion, tipo, vence_en, repeticion, ultima_realizacion, dia_repeticion, completado, mascota_id, cita_id`,
       [req.usuario.id, mascota_id, cita.rows[0].id, titulo, fecha_hora]
     );
     const mascotaActualizada = await conexion.query(

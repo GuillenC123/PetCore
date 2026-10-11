@@ -18,34 +18,39 @@ export default function ReminderForm({ recordatorio, cerrar }: { recordatorio?: 
   const [fecha, setFecha] = useState(inicial ? `${String(inicial.getDate()).padStart(2, '0')}/${String(inicial.getMonth() + 1).padStart(2, '0')}/${inicial.getFullYear()}` : '');
   const [hora, setHora] = useState(inicial ? `${String(inicial.getHours()).padStart(2, '0')}:${String(inicial.getMinutes()).padStart(2, '0')}` : '');
   const [error, setError] = useState('');
+  const [guardando, setGuardando] = useState(false);
+  const vinculadoACita = recordatorio?.cita_id != null;
 
-  const guardar = () => {
+  const guardar = async () => {
+    if (guardando) return;
     const fechaElegida = interpretarFechaVisita(fecha, hora);
     if (!fechaElegida) { setError('Selecciona la fecha y la hora del recordatorio.'); return; }
     try {
-      guardarRecordatorio({ titulo, descripcion: descripcion.trim() || null, mascota_id: mascotaId, tipo,
-        repeticion, vence_en: fechaElegida.toISOString(), cita_id: recordatorio?.cita_id }, recordatorio?.id);
-      cerrar('Recordatorio guardado para esta sesión.');
+      setGuardando(true);
+      await guardarRecordatorio({ titulo, descripcion: descripcion.trim() || null, mascota_id: mascotaId, tipo,
+        repeticion, vence_en: fechaElegida.toISOString() }, recordatorio?.id);
+      cerrar('Recordatorio guardado.');
     } catch (err) { setError(err instanceof Error ? err.message : 'No se pudo guardar.'); }
+    finally { setGuardando(false); }
   };
 
   return (
     <View style={styles.form}>
       <Text style={styles.title}>{recordatorio ? 'Editar recordatorio' : 'Nuevo recordatorio'}</Text>
       <Text style={styles.label}>Título</Text>
-      <FormInput accessibilityLabel="Título" value={titulo} onChangeText={setTitulo} maxLength={120} placeholder="Ej. Comprar alimento" />
+      <FormInput editable={!guardando} accessibilityLabel="Título" value={titulo} onChangeText={setTitulo} maxLength={200} placeholder="Ej. Comprar alimento" />
       <Text style={styles.label}>Descripción (opcional)</Text>
-      <FormInput accessibilityLabel="Descripción" value={descripcion} onChangeText={setDescripcion} multiline maxLength={1000} placeholder="Añade los detalles" />
+      <FormInput editable={!guardando} accessibilityLabel="Descripción" value={descripcion} onChangeText={setDescripcion} multiline maxLength={300} placeholder="Añade los detalles" />
       <Text style={styles.label}>Mascota</Text>
       <View style={styles.options}>
         {[{ id: null, nombre: 'Sin mascota' }, ...mascotas].map((m) => (
-          <Opcion key={m.id ?? 'general'} label={m.nombre} activo={mascotaId === m.id} onPress={() => setMascotaId(m.id)} />
+          <Opcion key={m.id ?? 'general'} label={m.nombre} activo={mascotaId === m.id} disabled={vinculadoACita || guardando} onPress={() => setMascotaId(m.id)} />
         ))}
       </View>
       <Text style={styles.label}>Tipo</Text>
       <View style={styles.options}>
         {(Object.entries({ general: 'General', vacuna: 'Vacuna', alimento: 'Alimento', cita: 'Cita', dosis: 'Dosis' }) as [TipoRecordatorio, string][]).map(([value, label]) => (
-          <Opcion key={value} label={label} activo={tipo === value} onPress={() => setTipo(value)} />
+          <Opcion key={value} label={label} activo={tipo === value} disabled={vinculadoACita || guardando} onPress={() => setTipo(value)} />
         ))}
       </View>
       <Text style={styles.label}>Fecha del aviso</Text>
@@ -55,20 +60,20 @@ export default function ReminderForm({ recordatorio, cerrar }: { recordatorio?: 
       <Text style={styles.label}>Repetir</Text>
       <View style={styles.options}>
         {(Object.entries(REPETICIONES) as [NonNullable<Recordatorio['repeticion']>, string][]).map(([value, label]) => (
-          <Opcion key={value} label={label} activo={repeticion === value} onPress={() => setRepeticion(value)} />
+          <Opcion key={value} label={label} activo={repeticion === value} disabled={guardando} onPress={() => setRepeticion(value)} />
         ))}
       </View>
       {repeticion !== 'ninguna' && <Text>Al completar, se programará la siguiente fecha futura.</Text>}
-      {recordatorio?.cita_id !== undefined && <Text>Estos cambios afectan al aviso. La visita conserva su fecha, mascota y motivo originales.</Text>}
+      {vinculadoACita && <Text>La mascota y el tipo pertenecen a la cita y no se pueden cambiar.</Text>}
       {!!error && <Text style={styles.error} accessibilityRole="alert">{error}</Text>}
-      <Pressable accessibilityRole="button" style={styles.button} onPress={guardar}><Text style={styles.buttonText}>Guardar recordatorio</Text></Pressable>
-      <Pressable accessibilityRole="button" style={styles.button} onPress={() => cerrar()}><Text style={styles.buttonText}>Cancelar</Text></Pressable>
+      <Pressable disabled={guardando} accessibilityState={{ disabled: guardando, busy: guardando }} accessibilityRole="button" style={styles.button} onPress={guardar}><Text style={styles.buttonText}>{guardando ? 'Guardando…' : 'Guardar recordatorio'}</Text></Pressable>
+      <Pressable disabled={guardando} accessibilityRole="button" style={styles.button} onPress={() => cerrar()}><Text style={styles.buttonText}>Cancelar</Text></Pressable>
     </View>
   );
 }
 
-function Opcion({ label, activo, onPress }: { label: string; activo: boolean; onPress: () => void }) {
-  return <Pressable accessibilityRole="radio" accessibilityState={{ checked: activo }} onPress={onPress} style={[styles.option, activo && styles.active]}><Text>{label}</Text></Pressable>;
+function Opcion({ label, activo, disabled = false, onPress }: { label: string; activo: boolean; disabled?: boolean; onPress: () => void }) {
+  return <Pressable disabled={disabled} accessibilityRole="radio" accessibilityState={{ checked: activo, disabled }} onPress={onPress} style={[styles.option, activo && styles.active]}><Text>{label}</Text></Pressable>;
 }
 
 const styles = StyleSheet.create({

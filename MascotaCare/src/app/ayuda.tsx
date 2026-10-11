@@ -64,7 +64,7 @@ const secciones: {
   {
     titulo: 'Guardado y reintento',
     icono: 'refresh-outline',
-    descripcion: 'Al completar un recordatorio conectado al servidor, espera a que termine Guardando. Si falla, se conserva su estado anterior y aparece Reintentar. Pulsa ese botón para repetir el guardado. Durante el envío se bloquean las acciones de guardado para evitar pulsaciones duplicadas. Encontrarás estos mensajes en Recordatorios, Agenda y los cuidados de Inicio.',
+    descripcion: 'Al crear, editar, completar, posponer o eliminar un recordatorio conectado al servidor, espera a que termine Guardando. Si falla, se conserva el estado anterior y aparece Reintentar. Pulsa ese botón para repetir el guardado. Durante el envío se bloquean las acciones de guardado para evitar pulsaciones duplicadas. Encontrarás estos mensajes en Recordatorios, Agenda y los cuidados de Inicio.',
   },
   {
     titulo: 'Editar tu perfil',
@@ -84,7 +84,7 @@ const secciones: {
   {
     titulo: 'Tu sesión',
     icono: 'log-out-outline',
-    descripcion: 'Para salir, entra en Perfil → Cerrar sesión. Los nuevos datos de mascotas, fichas de salud, visitas, tratamientos, mediciones, carnet, observaciones y adjuntos, así como los cambios locales de perfil y recordatorios, se conservan durante la sesión. Todavía no cuentan con guardado permanente: al reiniciar la app o volver a iniciar sesión pueden perderse. Los recordatorios existentes conectados al servidor sí intentan guardar allí su estado de completado.',
+    descripcion: 'Para salir, entra en Perfil → Cerrar sesión. Los nuevos datos de mascotas, fichas de salud, visitas, tratamientos, mediciones, carnet, observaciones y adjuntos, así como los cambios locales de perfil, se conservan durante la sesión. Todavía no cuentan con guardado permanente: al reiniciar la app o volver a iniciar sesión pueden perderse. Los recordatorios conectados al servidor sí se guardan de forma permanente.',
   },
 ];
 

@@ -72,7 +72,7 @@ function recordatorioCache(valor: unknown): Recordatorio {
     vence_en: vencimiento, completado: dato.completado,
   };
   if (dato.mascota_nombre !== undefined) recordatorio.mascota_nombre = texto(dato.mascota_nombre);
-  if (dato.cita_id !== undefined) recordatorio.cita_id = normalizarIdentificador(dato.cita_id);
+  if (dato.cita_id != null) recordatorio.cita_id = normalizarIdentificador(dato.cita_id);
   if (dato.repeticion !== undefined) recordatorio.repeticion = enumeracion(dato.repeticion, ['ninguna', 'diaria', 'semanal', 'mensual'] as const);
   if (dato.ultima_realizacion !== undefined) recordatorio.ultima_realizacion = fechaIsoCache(dato.ultima_realizacion);
   if (dato.dia_repeticion !== undefined) {
@@ -104,7 +104,7 @@ export function prepararDatosCache(valor: unknown): DatosApp {
     throw new Error('La caché hace referencia a una mascota ausente.');
   }
   for (const recordatorio of recordatorios) {
-    if (recordatorio.cita_id === undefined) continue;
+    if (recordatorio.cita_id == null) continue;
     const cita = citasPorId.get(String(recordatorio.cita_id));
     if (!cita || cita.mascota_id !== recordatorio.mascota_id) throw new Error('La caché hace referencia a una visita inválida.');
   }
