@@ -32,9 +32,18 @@ import {
   esErrorDeRed,
   apiLogin,
   apiRegistro,
+  apiActualizarPerfil,
   apiTacharRecordatorio,
+  apiCrearRecordatorio,
+  apiActualizarRecordatorio,
+  apiEliminarRecordatorio,
   apiCrearMascota,
+  apiActualizarMascota,
+  apiRegistrarPeso,
   apiCrearCita,
+  apiCompletarCita,
+  apiActualizarCita,
+  apiActualizarSalud,
 } from '@/services/api';
 import type {
   AuthResponse,
@@ -70,13 +79,15 @@ function mensajeServidorNoDisponible(): string {
 // ---------------------------------------------------------------------------
 
 interface AuthContextValue {
-  completarCita: (id: Identificador) => void;
-  agregarObservacion: (mascotaId: Identificador, datos: Omit<ObservacionSalud, 'id'>) => void;
+  completarCita: (id: Identificador) => Promise<void>;
+  actualizarCita: (id: Identificador, datos: Partial<Pick<Cita, 'titulo' | 'fecha_hora'>>) => Promise<void>;
+  cancelarCita: (id: Identificador) => Promise<void>;
+  agregarObservacion: (mascotaId: Identificador, datos: Omit<ObservacionSalud, 'id'>) => Promise<void>;
   adjuntarHistorial: (mascotaId: Identificador, clave: string, adjuntos: AdjuntoSalud[]) => void;
-  guardarCarnet: (mascotaId: Identificador, datos: Omit<RegistroCarnet, 'id'>, id?: number) => void;
+  guardarCarnet: (mascotaId: Identificador, datos: Omit<RegistroCarnet, 'id'>, id?: number) => Promise<void>;
   tratamientos: Tratamiento[];
-  agregarTratamiento: (datos: NuevoTratamiento) => void;
-  marcarToma: (tratamientoId: number, fecha: string, estado: EstadoToma) => void;
+  agregarTratamiento: (datos: NuevoTratamiento) => Promise<void>;
+  marcarToma: (tratamientoId: number, fecha: string, estado: EstadoToma) => Promise<void>;
   usuario: Usuario | null;
   token: string | null;
   conectado: boolean;
@@ -93,16 +104,16 @@ interface AuthContextValue {
   logout: () => void;
   cargarDatos: () => Promise<void>;
   tacharRecordatorio: (id: Identificador, completado: boolean) => Promise<void>;
-  guardarRecordatorio: (datos: Omit<Recordatorio, 'id' | 'completado'>, id?: Identificador) => void;
-  posponerRecordatorio: (id: Identificador, fecha: string) => void;
+  guardarRecordatorio: (datos: Omit<Recordatorio, 'id' | 'completado'>, id?: Identificador) => Promise<void>;
+  posponerRecordatorio: (id: Identificador, fecha: string) => Promise<void>;
+  eliminarRecordatorio: (id: Identificador) => Promise<void>;
   /** Añade una mascota; con la API activa la persiste en la BD. */
   agregarMascota: (datos: Omit<Mascota, 'id'>) => Promise<Mascota>;
   agregarCita: (datos: { mascota_id: Identificador; motivo: string; fecha_hora: string }) => Promise<void>;
-  actualizarPesoMascota: (id: Identificador, peso: number | null) => void;
-  registrarPeso: (id: Identificador, peso: number, fecha: string) => void;
-  actualizarFichaSalud: (id: Identificador, datos: DatosFichaSalud) => void;
-  /** Actualiza el perfil en memoria durante la sesión, sin llamar a la API. */
-  actualizarPerfil: (datos: Pick<Usuario, 'nombre' | 'correo'>) => void;
+  actualizarPesoMascota: (id: Identificador, peso: number | null) => Promise<void>;
+  registrarPeso: (id: Identificador, peso: number, fecha: string) => Promise<void>;
+  actualizarFichaSalud: (id: Identificador, datos: DatosFichaSalud) => Promise<void>;
+  actualizarPerfil: (datos: Pick<Usuario, 'nombre' | 'correo'>) => Promise<void>;
 }
 
 // Valor inicial por defecto del contexto (para TypeScript).
@@ -138,37 +149,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setMascotas((prev) => conservarCambiosLocales(prev, datos.mascotas, cambiosLocales.current.mascotas));
     setCitas((prev) => conservarCambiosLocales(prev, datos.citas, cambiosLocales.current.citas));
     setRecordatorios((prev) => conservarCambiosLocales(prev, datos.recordatorios, cambiosLocales.current.recordatorios));
+    if (datos.mascotas.some((m) => m.tratamientos_salud !== undefined)) {
+      setTratamientos(datos.mascotas.flatMap((m) => m.tratamientos_salud ?? []));
+    }
   }, []);
   const { estadoDatos, cargarDatos, iniciarCarga, reiniciarCarga, reintentarGuardado, confirmarRecordatorio } = useCargaDatos(aplicarDatos);
   const siguienteTratamiento = React.useRef(1);
-  const agregarTratamiento = React.useCallback((datos: NuevoTratamiento) => {
+  const versionSesion = React.useRef(0);
+  const agregarTratamiento = React.useCallback(async (datos: NuevoTratamiento) => {
     if (!mascotas.some((m) => m.id === datos.mascota_id)) throw new Error('Selecciona una mascota registrada.');
     const tratamiento = crearTratamiento(datos, siguienteTratamiento.current);
     siguienteTratamiento.current++;
+    const lista = [...tratamientos.filter((t) => t.mascota_id === datos.mascota_id), tratamiento];
+    const sesion = versionSesion.current;
+    if (token && conectado && esIdentificadorRemoto(datos.mascota_id)) {
+      const mascota = await apiActualizarSalud(token, datos.mascota_id, { tratamientos_salud: lista });
+      if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
+      setMascotas((prev) => prev.map((m) => m.id === datos.mascota_id ? { ...m, ...mascota } : m));
+      setTratamientos((prev) => [...prev.filter((t) => t.mascota_id !== datos.mascota_id), ...(mascota.tratamientos_salud ?? [])]);
+      return;
+    }
     setHayCambiosLocales(true);
     cambiosLocales.current.mascotas.add(String(datos.mascota_id));
     setTratamientos((prev) => [...prev, tratamiento]);
-  }, [mascotas]);
-  const marcarToma = React.useCallback((id: number, fecha: string, estado: EstadoToma) => {
+  }, [mascotas, tratamientos, token, conectado]);
+  const marcarToma = React.useCallback(async (id: number, fecha: string, estado: EstadoToma) => {
     const tratamiento = tratamientos.find((t) => t.id === id);
     if (!tratamiento) throw new Error('Tratamiento no encontrado.');
     const ahora = Date.now();
-    registrarToma(tratamiento, fecha, estado, ahora);
-    setTratamientos((prev) => prev.map((t) => t.id === id ? registrarToma(t, fecha, estado, ahora) : t));
-  }, [tratamientos]);
+    const actualizado = registrarToma(tratamiento, fecha, estado, ahora);
+    const lista = tratamientos.filter((t) => t.mascota_id === tratamiento.mascota_id).map((t) => t.id === id ? actualizado : t);
+    const sesion = versionSesion.current;
+    if (token && conectado && esIdentificadorRemoto(tratamiento.mascota_id)) {
+      const mascota = await apiActualizarSalud(token, tratamiento.mascota_id, { tratamientos_salud: lista });
+      if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
+      setMascotas((prev) => prev.map((m) => m.id === tratamiento.mascota_id ? { ...m, ...mascota } : m));
+      setTratamientos((prev) => [...prev.filter((t) => t.mascota_id !== tratamiento.mascota_id), ...(mascota.tratamientos_salud ?? [])]);
+      return;
+    }
+    setHayCambiosLocales(true);
+    cambiosLocales.current.mascotas.add(String(tratamiento.mascota_id));
+    setTratamientos((prev) => prev.map((t) => t.id === id ? actualizado : t));
+  }, [tratamientos, token, conectado]);
 
   // IDs negativos para que las mascotas locales no colisionen con PostgreSQL.
   const proximoId = React.useRef(-1);
   const proximaVisitaId = React.useRef(-1);
   const siguienteObservacion = React.useRef(1);
-  const agregarObservacion = React.useCallback((mascotaId: Identificador, datos: Omit<ObservacionSalud, 'id'>) => {
+  const agregarObservacion = React.useCallback(async (mascotaId: Identificador, datos: Omit<ObservacionSalud, 'id'>) => {
     validarObservacion(datos);
-    if (!mascotas.some((m) => m.id === mascotaId)) throw new Error('Mascota no encontrada.');
+    const mascota = mascotas.find((m) => m.id === mascotaId);
+    if (!mascota) throw new Error('Mascota no encontrada.');
+    const observacion = { ...datos, titulo: datos.titulo.trim(), descripcion: datos.descripcion.trim(), id: siguienteObservacion.current++ };
+    const lista = [...(mascota.observaciones ?? []), observacion];
+    const sesion = versionSesion.current;
+    if (token && conectado && esIdentificadorRemoto(mascotaId)) {
+      const guardada = await apiActualizarSalud(token, mascotaId, { observaciones: lista });
+      if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
+      setMascotas((prev) => prev.map((m) => m.id === mascotaId ? { ...m, ...guardada } : m));
+      return;
+    }
     setHayCambiosLocales(true);
     cambiosLocales.current.mascotas.add(String(mascotaId));
-    const observacion = { ...datos, titulo: datos.titulo.trim(), descripcion: datos.descripcion.trim(), id: siguienteObservacion.current++ };
     setMascotas((prev) => prev.map((m) => m.id === mascotaId ? { ...m, observaciones: [...(m.observaciones ?? []), observacion] } : m));
-  }, [mascotas]);
+  }, [mascotas, token, conectado]);
   const adjuntarHistorial = React.useCallback((mascotaId: Identificador, clave: string, adjuntos: AdjuntoSalud[]) => {
     setHayCambiosLocales(true);
     cambiosLocales.current.mascotas.add(String(mascotaId));
@@ -176,9 +220,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ...m.adjuntos_historial, [clave]: [...(m.adjuntos_historial?.[clave] ?? []), ...adjuntos],
     } } : m));
   }, []);
-  const completarCita = React.useCallback((id: Identificador) => {
+  const completarCita = React.useCallback(async (id: Identificador) => {
     const cita = citas.find((c) => c.id === id);
     if (!cita || cita.estado === 'cancelado' || Date.parse(cita.fecha_hora) > Date.now()) throw new Error('La visita aún no puede marcarse como realizada.');
+    const sesion = versionSesion.current;
+    if (token && conectado && esIdentificadorRemoto(id)) {
+      const confirmada = await apiCompletarCita(token, id);
+      if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
+      setHayCambiosLocales(true);
+      cambiosLocales.current.citas.add(String(id));
+      cambiosLocales.current.mascotas.add(String(cita.mascota_id));
+      setCitas((prev) => prev.map((c) => c.id === id ? { ...c, ...confirmada.cita } : c));
+      if (confirmada.recordatorio) {
+        cambiosLocales.current.recordatorios.add(String(confirmada.recordatorio.id));
+        setRecordatorios((prev) => prev.map((r) => r.id === confirmada.recordatorio!.id
+          ? { ...r, ...confirmada.recordatorio } : r));
+        await confirmarRecordatorio(confirmada.recordatorio);
+      }
+      return;
+    }
     setHayCambiosLocales(true);
     cambiosLocales.current.citas.add(String(id));
     cambiosLocales.current.mascotas.add(String(cita.mascota_id));
@@ -188,9 +248,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     setCitas((prev) => prev.map((c) => c.id === id ? { ...c, estado: 'completado' } : c));
     setRecordatorios((prev) => prev.map((r) => r.cita_id === id ? { ...r, completado: true } : r));
-  }, [citas, recordatorios]);
+  }, [citas, recordatorios, token, conectado, confirmarRecordatorio]);
+  const actualizarCita = React.useCallback(async (id: Identificador, datos: Partial<Pick<Cita, 'titulo' | 'fecha_hora' | 'estado'>>) => {
+    const cita = citas.find((c) => c.id === id);
+    if (!cita || cita.estado === 'cancelado' || cita.estado === 'completado') throw new Error('La cita ya no se puede editar.');
+    const titulo = datos.titulo?.trim();
+    if (titulo !== undefined && (!titulo || titulo.length > 200)) throw new Error('Escribe un motivo de hasta 200 caracteres.');
+    if (datos.fecha_hora !== undefined && (!Number.isFinite(Date.parse(datos.fecha_hora)) || Date.parse(datos.fecha_hora) <= Date.now())) {
+      throw new Error('Selecciona una fecha y hora futuras.');
+    }
+    const cambios = { ...datos, ...(titulo === undefined ? {} : { titulo }) };
+    const sesion = versionSesion.current;
+    if (token && conectado && esIdentificadorRemoto(id)) {
+      const confirmada = await apiActualizarCita(token, id, cambios);
+      if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
+      setHayCambiosLocales(true);
+      cambiosLocales.current.citas.add(String(id));
+      setCitas((prev) => prev.map((c) => c.id === id ? { ...c, ...confirmada.cita } : c));
+      if (confirmada.recordatorio) {
+        cambiosLocales.current.recordatorios.add(String(confirmada.recordatorio.id));
+        setRecordatorios((prev) => prev.map((r) => r.id === confirmada.recordatorio!.id
+          ? { ...r, ...confirmada.recordatorio } : r));
+        await confirmarRecordatorio(confirmada.recordatorio);
+      }
+      return;
+    }
+    setHayCambiosLocales(true);
+    cambiosLocales.current.citas.add(String(id));
+    const aviso = recordatorios.find((r) => r.cita_id === id);
+    if (aviso) {
+      cambiosLocales.current.recordatorios.add(String(aviso.id));
+      recordatoriosLocales.current.add(aviso.id);
+    }
+    setCitas((prev) => prev.map((c) => c.id === id ? { ...c, ...cambios } : c));
+    setRecordatorios((prev) => prev.map((r) => r.cita_id === id ? {
+      ...r,
+      ...(titulo === undefined ? {} : { descripcion: titulo }),
+      ...(cambios.fecha_hora === undefined ? {} : { vence_en: cambios.fecha_hora }),
+      ...(cambios.estado === 'cancelado' ? { completado: true } : {}),
+    } : r));
+  }, [citas, recordatorios, token, conectado, confirmarRecordatorio]);
+  const cancelarCita = React.useCallback(async (id: Identificador) => {
+    await actualizarCita(id, { estado: 'cancelado' });
+  }, [actualizarCita]);
   const siguienteCarnet = React.useRef(1);
-  const guardarCarnet = React.useCallback((mascotaId: Identificador, datos: Omit<RegistroCarnet, 'id'>, id?: number) => {
+  const guardarCarnet = React.useCallback(async (mascotaId: Identificador, datos: Omit<RegistroCarnet, 'id'>, id?: number) => {
     const error = validarCarnet(datos);
     if (error) throw new Error(error);
     const mascota = mascotas.find((m) => m.id === mascotaId);
@@ -209,32 +311,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (siguiente && (!datos.fecha_aplicacion || interpretarFechaVisita(datos.fecha_aplicacion, '00:00')! >= interpretarFechaVisita(siguiente.fecha_aplicacion!, '00:00')!)) {
       throw new Error('Conserva una fecha anterior a la siguiente aplicación registrada.');
     }
+    const registro = { ...datos, nombre: datos.nombre.trim(), id: id ?? siguienteCarnet.current++ };
+    const lista = id === undefined ? [...(mascota.carnet ?? []), registro] : (mascota.carnet ?? []).map((r) => r.id === id ? registro : r);
+    const sesion = versionSesion.current;
+    if (token && conectado && esIdentificadorRemoto(mascotaId)) {
+      const guardada = await apiActualizarSalud(token, mascotaId, { carnet: lista });
+      if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
+      const comprobantes = new Map((mascota.carnet ?? []).map((r) => [r.id, r.comprobante]));
+      const carnet = (guardada.carnet ?? []).map((r) => ({ ...r, comprobante: comprobantes.get(r.id) ?? null }));
+      setMascotas((prev) => prev.map((m) => m.id === mascotaId ? { ...m, ...guardada, carnet } : m));
+      return;
+    }
     setHayCambiosLocales(true);
     cambiosLocales.current.mascotas.add(String(mascotaId));
-    const registro = { ...datos, nombre: datos.nombre.trim(), id: id ?? siguienteCarnet.current++ };
     setMascotas((prev) => prev.map((m) => m.id === mascotaId ? { ...m, carnet: id === undefined
       ? [...(m.carnet ?? []), registro] : (m.carnet ?? []).map((r) => r.id === id ? registro : r) } : m));
-  }, [mascotas]);
-  const registrarPeso = React.useCallback((id: Identificador, peso: number, fecha: string) => {
+  }, [mascotas, token, conectado]);
+  const registrarPeso = React.useCallback(async (id: Identificador, peso: number, fecha: string) => {
     if (!mascotas.some((m) => m.id === id)) throw new Error('Mascota no encontrada.');
     const registro = crearRegistroPeso(peso, fecha);
+    const sesion = versionSesion.current;
+    const guardada = token && conectado ? await apiRegistrarPeso(token, id, registro) : null;
+    if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
     setHayCambiosLocales(true);
     cambiosLocales.current.mascotas.add(String(id));
-    setMascotas((prev) => prev.map((m) => m.id === id ? aplicarRegistroPeso(m, registro) : m));
-  }, [mascotas]);
-  const actualizarFichaSalud = React.useCallback((id: Identificador, datos: DatosFichaSalud) => {
+    setMascotas((prev) => prev.map((m) => m.id === id
+      ? guardada ? { ...m, peso: guardada.peso, registros_peso: guardada.registros_peso } : aplicarRegistroPeso(m, registro) : m));
+  }, [mascotas, token, conectado]);
+  const actualizarFichaSalud = React.useCallback(async (id: Identificador, datos: DatosFichaSalud) => {
     const error = validarFichaSalud(datos);
     if (error) throw new Error(error);
-    if (!mascotas.some((m) => m.id === id)) throw new Error('Mascota no encontrada.');
+    const actual = mascotas.find((m) => m.id === id);
+    if (!actual) throw new Error('Mascota no encontrada.');
+    const sesion = versionSesion.current;
+    const cambios = { ...datos, edad: datos.edad.trim(), alergias: datos.alergias.trim(), condiciones: datos.condiciones.trim() };
+    const payload: Partial<typeof cambios> = { ...cambios };
+    if (datos.peso === (actual.peso ?? null)) delete payload.peso;
+    const guardada = token && conectado ? await apiActualizarMascota(token, id, payload) : null;
+    if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
     setHayCambiosLocales(true);
     cambiosLocales.current.mascotas.add(String(id));
-    setMascotas((prev) => prev.map((m) => m.id === id ? { ...m, ...datos,
-      edad: datos.edad.trim(), alergias: datos.alergias.trim(), condiciones: datos.condiciones.trim(),
-    } : m));
-  }, [mascotas]);
+    setMascotas((prev) => prev.map((m) => {
+      if (m.id !== id) return m;
+      if (guardada) return { ...m, ...guardada };
+      const nueva = { ...m, ...cambios };
+      return datos.peso !== null && datos.peso !== actual.peso
+        ? aplicarRegistroPeso(nueva, crearRegistroPeso(datos.peso, fechaPesoHoy())) : nueva;
+    }));
+  }, [mascotas, token, conectado]);
   const recordatoriosLocales = React.useRef(new Set<Identificador>());
   const guardandoRecordatorios = React.useRef(new Set<Identificador>());
-  const versionSesion = React.useRef(0);
   const autenticacionActual = React.useRef<AbortController | null>(null);
 
   React.useEffect(() => () => {
@@ -242,33 +368,79 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     autenticacionActual.current?.abort();
   }, []);
 
-  const guardarRecordatorio = React.useCallback((datos: Omit<Recordatorio, 'id' | 'completado'>, id?: Identificador) => {
-    if (!datos.titulo.trim() || datos.titulo.trim().length > 120) throw new Error('Escribe un título de hasta 120 caracteres.');
+  const guardarRecordatorio = React.useCallback(async (datos: Omit<Recordatorio, 'id' | 'completado'>, id?: Identificador) => {
+    if (!datos.titulo.trim() || datos.titulo.trim().length > 200) throw new Error('Escribe un título de hasta 200 caracteres.');
+    if ((datos.descripcion?.trim().length ?? 0) > 300) throw new Error('La descripción admite hasta 300 caracteres.');
     const fecha = fechaRecordatorio(datos.vence_en);
     if (!fecha || fecha.getTime() <= Date.now()) throw new Error('Elige una fecha y hora futuras.');
     const mascota = mascotas.find((m) => m.id === datos.mascota_id);
     if (datos.mascota_id !== null && !mascota) throw new Error('Selecciona una mascota registrada.');
+    const cambios = {
+      titulo: datos.titulo.trim(), descripcion: datos.descripcion?.trim() || null,
+      mascota_id: datos.mascota_id, tipo: datos.tipo, vence_en: fecha.toISOString(),
+      repeticion: datos.repeticion ?? 'ninguna', dia_repeticion: fecha.getDate(),
+    };
+    const sesion = versionSesion.current;
+    if (token && conectado) {
+      const confirmada = id === undefined
+        ? await apiCrearRecordatorio(token, cambios)
+        : await apiActualizarRecordatorio(token, id, cambios);
+      if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
+      setHayCambiosLocales(true);
+      cambiosLocales.current.recordatorios.add(String(confirmada.id));
+      if (mascota) cambiosLocales.current.mascotas.add(String(mascota.id));
+      const conNombre = { ...confirmada, mascota_nombre: mascota?.nombre };
+      setRecordatorios((prev) => id === undefined
+        ? [...prev, conNombre] : prev.map((r) => r.id === id ? { ...r, ...conNombre } : r));
+      return;
+    }
     const clave = id ?? proximaVisitaId.current--;
-    const cambios = { ...datos, titulo: datos.titulo.trim(), mascota_nombre: mascota?.nombre, vence_en: fecha.toISOString(), dia_repeticion: fecha.getDate() };
     recordatoriosLocales.current.add(clave);
     setHayCambiosLocales(true);
     cambiosLocales.current.recordatorios.add(String(clave));
     if (mascota) cambiosLocales.current.mascotas.add(String(mascota.id));
     setRecordatorios((prev) => id === undefined
-      ? [...prev, { ...cambios, id: clave, completado: false }]
-      : prev.map((r) => r.id === id ? { ...r, ...cambios } : r));
-  }, [mascotas]);
+      ? [...prev, { ...datos, ...cambios, mascota_nombre: mascota?.nombre, id: clave, completado: false }]
+      : prev.map((r) => r.id === id ? { ...r, ...cambios, mascota_nombre: mascota?.nombre } : r));
+  }, [mascotas, token, conectado]);
 
-  const posponerRecordatorio = React.useCallback((id: Identificador, fecha: string) => {
+  const posponerRecordatorio = React.useCallback(async (id: Identificador, fecha: string) => {
     const nuevaFecha = fechaRecordatorio(fecha);
     if (!nuevaFecha || nuevaFecha.getTime() <= Date.now()) throw new Error('Elige una fecha y hora futuras.');
+    const recordatorio = recordatorios.find((r) => r.id === id);
+    if (!recordatorio || recordatorio.completado) throw new Error('Recordatorio no encontrado o ya completado.');
+    const sesion = versionSesion.current;
+    if (token && conectado && esIdentificadorRemoto(id) && !recordatoriosLocales.current.has(id)) {
+      const confirmado = await apiActualizarRecordatorio(token, id, { vence_en: nuevaFecha.toISOString() });
+      if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
+      setHayCambiosLocales(true);
+      cambiosLocales.current.recordatorios.add(String(id));
+      setRecordatorios((prev) => prev.map((r) => r.id === id ? { ...r, ...confirmado } : r));
+      return;
+    }
     recordatoriosLocales.current.add(id);
     setHayCambiosLocales(true);
     cambiosLocales.current.recordatorios.add(String(id));
+    if (recordatorio.mascota_id != null) cambiosLocales.current.mascotas.add(String(recordatorio.mascota_id));
+    setRecordatorios((prev) => prev.map((r) => r.id === id ? { ...r, vence_en: nuevaFecha.toISOString(), dia_repeticion: nuevaFecha.getDate() } : r));
+  }, [recordatorios, token, conectado]);
+
+  const eliminarRecordatorio = React.useCallback(async (id: Identificador) => {
     const recordatorio = recordatorios.find((r) => r.id === id);
-    if (recordatorio?.mascota_id != null) cambiosLocales.current.mascotas.add(String(recordatorio.mascota_id));
-    setRecordatorios((prev) => prev.map((r) => r.id === id && !r.completado ? { ...r, vence_en: nuevaFecha.toISOString(), dia_repeticion: nuevaFecha.getDate() } : r));
-  }, [recordatorios]);
+    if (!recordatorio) throw new Error('Recordatorio no encontrado.');
+    if (recordatorio.cita_id != null) throw new Error('El recordatorio asociado a una cita se elimina al eliminar la cita.');
+    const sesion = versionSesion.current;
+    if (token && conectado && esIdentificadorRemoto(id) && !recordatoriosLocales.current.has(id)) {
+      await apiEliminarRecordatorio(token, id);
+      if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
+    } else {
+      recordatoriosLocales.current.add(id);
+    }
+    setHayCambiosLocales(true);
+    cambiosLocales.current.recordatorios.add(String(id));
+    if (recordatorio.mascota_id != null) cambiosLocales.current.mascotas.add(String(recordatorio.mascota_id));
+    setRecordatorios((prev) => prev.filter((r) => r.id !== id));
+  }, [recordatorios, token, conectado]);
 
   // Las visitas creadas: persisten en BD si la API está activa.
   const agregarCita = React.useCallback(async (datos: { mascota_id: Identificador; motivo: string; fecha_hora: string }) => {
@@ -276,20 +448,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!mascota) throw new Error('Selecciona una mascota registrada.');
     const fecha = new Date(datos.fecha_hora);
     const motivo = datos.motivo.trim();
-    if (!motivo || motivo.length > 1000) throw new Error('Escribe un motivo de hasta 1000 caracteres.');
+    if (!motivo || motivo.length > 200) throw new Error('Escribe un motivo de hasta 200 caracteres.');
     if (!Number.isFinite(fecha.getTime()) || fecha.getTime() <= Date.now()) {
       throw new Error('Selecciona una fecha y hora futuras.');
     }
 
-    // Actualiza estado de mascota (local, como ya hacía la app)
-    setMascotas((prev) => prev.map((m) => m.id === mascota.id ? {
-      ...m, estado: 'malestar', estado_salud: 'malestar',
-      cuidados_registrados: m.estado === 'en_tratamiento' || m.estado === 'vacuna_pendiente'
-        ? [...new Set([...(m.cuidados_registrados ?? []), m.estado])] : m.cuidados_registrados,
-    } : m));
-
     if (token && conectado) {
-      const creada = await apiCrearCita(token, {
+      const programada = await apiCrearCita(token, {
         titulo: motivo,
         mascota_id: mascota.id,
         fecha_hora: fecha.toISOString(),
@@ -299,14 +464,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       setHayCambiosLocales(true);
       cambiosLocales.current.mascotas.add(String(mascota.id));
-      cambiosLocales.current.citas.add(String(creada.id));
-      setCitas((prev) => [...prev, creada]);
+      cambiosLocales.current.citas.add(String(programada.cita.id));
+      cambiosLocales.current.recordatorios.add(String(programada.recordatorio.id));
+      setMascotas((prev) => prev.map((m) => m.id === mascota.id ? {
+        ...m, ...programada.mascota, estado_salud: 'malestar',
+        cuidados_registrados: m.estado === 'en_tratamiento' || m.estado === 'vacuna_pendiente'
+          ? [...new Set([...(m.cuidados_registrados ?? []), m.estado])] : m.cuidados_registrados,
+      } : m));
+      setCitas((prev) => [...prev, { ...programada.cita, mascota_nombre: mascota.nombre }]);
+      setRecordatorios((prev) => [...prev, { ...programada.recordatorio, mascota_nombre: mascota.nombre }]);
       return;
     }
 
     const id = proximaVisitaId.current--;
     setHayCambiosLocales(true);
     cambiosLocales.current.mascotas.add(String(mascota.id));
+    setMascotas((prev) => prev.map((m) => m.id === mascota.id ? {
+      ...m, estado: 'malestar', estado_salud: 'malestar',
+      cuidados_registrados: m.estado === 'en_tratamiento' || m.estado === 'vacuna_pendiente'
+        ? [...new Set([...(m.cuidados_registrados ?? []), m.estado])] : m.cuidados_registrados,
+    } : m));
     cambiosLocales.current.citas.add(String(id));
     cambiosLocales.current.recordatorios.add(String(id));
     recordatoriosLocales.current.add(id);
@@ -323,28 +500,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }]);
   }, [mascotas, token, conectado]);
 
-  const actualizarPesoMascota = React.useCallback((id: Identificador, peso: number | null) => {
-    if (peso !== null && (!Number.isFinite(peso) || peso <= 0)) {
-      throw new Error('El peso debe ser mayor que cero.');
-    }
-    const registro = peso !== null ? crearRegistroPeso(peso, fechaPesoHoy()) : null;
-    setHayCambiosLocales(true);
-    cambiosLocales.current.mascotas.add(String(id));
-    setMascotas((prev) => prev.map((m) => m.id === id ? registro ? aplicarRegistroPeso(m, registro) : { ...m, peso: m.registros_peso?.length ? m.peso : null } : m));
-  }, []);
+  const actualizarPesoMascota = React.useCallback(async (id: Identificador, peso: number | null) => {
+    if (peso === null) throw new Error('Ingresa el peso en kg.');
+    await registrarPeso(id, peso, fechaPesoHoy());
+  }, [registrarPeso]);
 
-  const actualizarPerfil = React.useCallback((datos: Pick<Usuario, 'nombre' | 'correo'>) => {
+  const actualizarPerfil = React.useCallback(async (datos: Pick<Usuario, 'nombre' | 'correo'>) => {
+    const nombre = datos.nombre.normalize('NFC').trim();
+    const correo = datos.correo.trim().toLowerCase();
+    const sesion = versionSesion.current;
+    if (token && conectado) {
+      const respuesta = await apiActualizarPerfil(token, { nombre, correo });
+      if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
+      setUsuario(respuesta.usuario);
+      setToken(respuesta.token);
+      return;
+    }
     setHayCambiosLocales(true);
     setUsuario((actual) => actual ? {
       ...actual,
-      nombre: datos.nombre.normalize('NFC').trim(),
-      correo: datos.correo.trim().toLowerCase(),
+      nombre, correo,
     } : actual);
-  }, []);
+  }, [token, conectado]);
 
   const agregarMascota = React.useCallback(async (datos: Omit<Mascota, 'id'>): Promise<Mascota> => {
     if (token && conectado) {
       const creada = await apiCrearMascota(token, {
+        peso: datos.peso ?? null,
+        nacimiento: datos.nacimiento ?? null,
+        sexo: datos.sexo ?? 'desconocido',
+        alergias: datos.alergias ?? '',
+        condiciones: datos.condiciones ?? '',
         nombre: datos.nombre.trim(),
         raza: datos.raza.trim(),
         especie: datos.especie.trim(),
@@ -439,7 +625,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (recordatorio?.mascota_id != null) cambiosLocales.current.mascotas.add(String(recordatorio.mascota_id));
         }
         const ahora = Date.now();
-        setRecordatorios((prev) => prev.map((r) => r.id === id ? completarRecordatorio(r, completado, ahora) : r));
+        setRecordatorios((prev) => prev.map((r) => r.id === id
+          ? confirmado ? { ...r, ...confirmado } : completarRecordatorio(r, completado, ahora) : r));
         if (confirmado) await confirmarRecordatorio(confirmado);
       } catch {
         throw new Error('No se pudo guardar el recordatorio. Conservamos su estado anterior. Vuelve a intentarlo.');
@@ -473,6 +660,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ==========================================================================
   const value: AuthContextValue = {
     completarCita,
+    actualizarCita,
+    cancelarCita,
     agregarObservacion,
     adjuntarHistorial,
     guardarCarnet,
@@ -496,6 +685,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     tacharRecordatorio,
     guardarRecordatorio,
     posponerRecordatorio,
+    eliminarRecordatorio,
     agregarMascota,
     agregarCita,
     actualizarPesoMascota,

@@ -86,6 +86,7 @@ export interface Mascota {
   registros_peso?: RegistroPeso[];
   carnet?: RegistroCarnet[];
   observaciones?: ObservacionSalud[];
+  tratamientos_salud?: Tratamiento[];
   adjuntos_historial?: Record<string, AdjuntoSalud[]>;
   nacimiento?: string | null;
   sexo?: 'macho' | 'hembra' | 'desconocido';
@@ -124,7 +125,7 @@ export interface Recordatorio {
   repeticion?: 'ninguna' | 'diaria' | 'semanal' | 'mensual';
   ultima_realizacion?: string;
   dia_repeticion?: number;
-  cita_id?: Identificador;
+  cita_id?: Identificador | null;
   id: Identificador;
   titulo: string;
   descripcion: string | null;

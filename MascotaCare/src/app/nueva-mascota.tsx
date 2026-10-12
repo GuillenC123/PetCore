@@ -8,14 +8,14 @@ import { AdaptiveColumns, layoutStyles } from '@/components/AdaptiveLayout';
 //
 // Campos validados:
 //   * Nombre  (obligatorio, mínimo 2 caracteres).
-//   * Especie (Perro / Gato) seleccionada con chips.
+//   * Datos básicos compartidos con la ficha de salud.
 //   * Raza    (obligatorio).
 //   * Edad    (obligatorio, p. ej. "3 años").
 // ============================================================================
 
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -30,27 +30,24 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import FormInput from '@/components/FormInput';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
+import { useAviso } from '@/context/AvisosContext';
 import type { EstadoMascota } from '@/types';
-import { validarPeso, validarTexto } from '@/utils/validaciones';
-
-// Especies disponibles para el selector rápido.
-const ESPECIES = ['Perro', 'Gato', 'Otro'] as const;
-
-// Estados de salud permitidos (por defecto "saludable" al registrarse).
-type Especie = (typeof ESPECIES)[number];
+import PetDataFields, { datosIniciales, prepararDatos } from '@/components/PetDataFields';
+import { validarTexto } from '@/utils/validaciones';
 
 export default function NuevaMascotaScreen() {
   // Estado local de cada campo del formulario.
   const [nombre, setNombre] = useState('');
-  const [especie, setEspecie] = useState<Especie>('Perro');
+  const [datos, setDatos] = useState(datosIniciales);
   const [raza, setRaza] = useState('');
-  const [edad, setEdad] = useState('');
-  const [peso, setPeso] = useState('');
 
   // Errores por campo (se limpian al editar; se rellenan al validar).
   const [errores, setErrores] = useState<Record<string, string>>({});
 
-  const { agregarMascota } = useAuth();
+  const { agregarMascota, modoDemo } = useAuth();
+  const mostrarAviso = useAviso();
+  const bloqueo = useRef(false);
+  const [guardando, setGuardando] = useState(false);
 
   // -------------------------------------------------------------------------
   // VALIDACIÓN: comprueba cada campo y devuelve true si todo es correcto.
@@ -61,10 +58,8 @@ export default function NuevaMascotaScreen() {
     if (errorNombre) err.nombre = errorNombre;
     const errorRaza = validarTexto(raza, 120);
     if (errorRaza) err.raza = errorRaza;
-    const errorEdad = validarTexto(edad, 60);
-    if (errorEdad) err.edad = errorEdad;
-    const errorPeso = validarPeso(peso);
-    if (errorPeso) err.peso = errorPeso;
+    try { prepararDatos(datos); }
+    catch (error) { err.general = error instanceof Error ? error.message : 'Revisa los datos de la mascota.'; }
 
     setErrores(err);
     return Object.keys(err).length === 0;
@@ -74,21 +69,25 @@ export default function NuevaMascotaScreen() {
   // GUARDAR: si pasa la validación, crea la mascota y vuelve a la lista.
   // -------------------------------------------------------------------------
   const guardar = async () => {
-    if (!validar()) return;
+    if (bloqueo.current || !validar()) return;
+    bloqueo.current = true;
+    setGuardando(true);
 
     try {
       await agregarMascota({
         nombre: nombre.trim(),
-        especie,
+        ...prepararDatos(datos),
         raza: raza.trim(),
-        edad: edad.trim(),
-        peso: peso.trim() ? Number(peso.trim().replace(',', '.')) : null,
         estado: 'saludable' as EstadoMascota,
         imagen: null,
       });
+      mostrarAviso(modoDemo ? 'Mascota registrada para esta sesión.' : 'Mascota registrada.');
       router.back();
     } catch (e) {
       setErrores({ general: e instanceof Error ? e.message : 'No se pudo guardar la mascota.' });
+    } finally {
+      bloqueo.current = false;
+      setGuardando(false);
     }
   };
 
@@ -130,27 +129,6 @@ export default function NuevaMascotaScreen() {
               error={errores.nombre}
             />
 
-            {/* Selector de especie a través de chips táctiles. */}
-            <View style={styles.especieBlock}>
-              <Text style={styles.label}>Especie</Text>
-              <View style={styles.chipsRow}>
-                {ESPECIES.map((esp) => {
-                  const activo = especie === esp;
-                  return (
-                    <Pressable
-                      accessibilityRole="radio" accessibilityState={{ checked: activo }}
-                      key={esp}
-                      onPress={() => setEspecie(esp)}
-                      style={[styles.chip, activo && styles.chipActivo]}>
-                      <Text style={[styles.chipText, activo && styles.chipTextActivo]}>
-                        {esp}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-
             <FormInput
               icon="information-circle-outline"
               placeholder="Raza (ej. Golden Retriever)"
@@ -161,34 +139,17 @@ export default function NuevaMascotaScreen() {
               error={errores.raza}
             />
 
-            <FormInput
-              icon="fitness-outline"
-              placeholder="Edad (ej. 3 años)"
-              label="Edad aproximada"
-              value={edad}
-              onChangeText={setEdad}
-              error={errores.edad}
-            />
-            <View style={styles.especieBlock}>
-            <Text style={styles.label}>Peso en kg (opcional)</Text>
-            <FormInput
-              icon="scale-outline"
-              accessibilityLabel="Peso de la mascota en kilogramos"
-              placeholder="Ej. 4,5"
-              keyboardType="decimal-pad"
-              value={peso}
-              onChangeText={(valor) => { setPeso(valor); setErrores((prev) => ({ ...prev, peso: '' })); }}
-              error={errores.peso}
-            />
-            </View>
           </AdaptiveColumns>
+          <PetDataFields value={datos} onChange={setDatos} disabled={guardando} />
 
           {/* ---- Botón guardar ---- */}
           <Pressable
             onPress={guardar}
+            disabled={guardando}
+            accessibilityState={{ disabled: guardando, busy: guardando }}
             accessibilityRole="button"
             style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>
-            <Text style={styles.buttonText}>Guardar Mascota</Text>
+            <Text style={styles.buttonText}>{guardando ? 'Guardando…' : 'Guardar Mascota'}</Text>
           </Pressable>
           {!!errores.general && <Text style={styles.error} accessibilityRole="alert">{errores.general}</Text>}
         </ScrollView>
@@ -235,42 +196,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: AppColors.textSecondary,
     lineHeight: 20,
-  },
-  form: {
-    gap: 16,
-  },
-  especieBlock: {
-    gap: 6,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: AppColors.text,
-  },
-  chipsRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  chip: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 14,
-    backgroundColor: AppColors.surface,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    alignItems: 'center',
-  },
-  chipActivo: {
-    backgroundColor: AppColors.infoSoft,
-    borderColor: AppColors.primaryDark,
-  },
-  chipText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: AppColors.textSecondary,
-  },
-  chipTextActivo: {
-    color: AppColors.primaryDark,
   },
   button: {
     backgroundColor: AppColors.primaryDark,

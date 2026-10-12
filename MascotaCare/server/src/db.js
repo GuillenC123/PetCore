@@ -7,17 +7,12 @@
 // ============================================================================
 
 const { Pool } = require('pg');
-const dotenv = require('dotenv');
+const { obtenerConfiguracion } = require('./config');
 
-// Carga las variables definidas en el archivo "server/.env".
-dotenv.config();
-
-// Configura el pool de conexiones a partir de la variable DATABASE_URL.
+// Configura el pool exclusivamente a partir de la variable DATABASE_URL.
+const { databaseUrl } = obtenerConfiguracion();
 const pool = new Pool({
-  connectionString:
-    process.env.DATABASE_URL ||
-    // Valor por defecto local (para que el servidor funcione sin .env).
-    'postgres://postgres:danieladm123@localhost:5432/MascotaCare',
+  connectionString: databaseUrl,
 });
 
 // Exporta el pool para ser usado por los módulos de rutas.

@@ -29,17 +29,17 @@ const secciones: {
   {
     titulo: 'Tratamientos y medicamentos',
     icono: 'medkit-outline',
-    descripcion: 'En Ficha de salud, selecciona una mascota, abre Tratamientos y pulsa Añadir tratamiento. Transcribe las indicaciones del veterinario, la fecha de inicio, duración y horarios diarios. Consulta las tomas por día y marca cada una como administrada u omitida cuando llegue su horario. Puedes deshacer un registro incorrecto. Los datos se conservan durante la sesión.',
+    descripcion: 'En Ficha de salud, selecciona una mascota, abre Tratamientos y pulsa Añadir tratamiento. Transcribe las indicaciones del veterinario, la fecha de inicio, duración y horarios diarios. Consulta las tomas por día y marca cada una como administrada u omitida cuando llegue su horario. Puedes deshacer un registro incorrecto. Con la API conectada, los tratamientos y tomas se guardan en tu cuenta.',
   },
   {
     titulo: 'Seguimiento de peso',
     icono: 'scale-outline',
-    descripcion: 'En Ficha de salud, selecciona una mascota, abre Peso y registra su peso en kg y la fecha de medición. Consulta la gráfica y el historial. Puedes corregir una medición guardando de nuevo su fecha; se mantiene un registro por día. La medición más reciente determina el peso actual. Los cambios se conservan durante la sesión.',
+    descripcion: 'En Ficha de salud, selecciona una mascota, abre Peso y registra su peso en kg y la fecha de medición. Consulta la gráfica y el historial. Puedes corregir una medición guardando de nuevo su fecha; se mantiene un registro por día. La medición más reciente determina el peso actual. Con la API conectada, los cambios se guardan en tu cuenta.',
   },
   {
     titulo: 'Carnet de vacunas y desparasitación',
     icono: 'shield-checkmark-outline',
-    descripcion: 'En Ficha de salud, abre Vacunas y desparasitación y añade una aplicación o una próxima fecha indicada por el veterinario y adjunta una foto del comprobante. El historial conserva las aplicaciones realizadas; las próximas fechas aparecen como próximas o vencidas. Pulsa Registrar aplicación en un pendiente para registrar el siguiente cuidado. Los datos y fotos se conservan durante la sesión.',
+    descripcion: 'En Ficha de salud, abre Vacunas y desparasitación y añade una aplicación o una próxima fecha indicada por el veterinario y adjunta una foto del comprobante. El historial conserva las aplicaciones realizadas; las próximas fechas aparecen como próximas o vencidas. Pulsa Registrar aplicación en un pendiente para registrar el siguiente cuidado. Con la API conectada, los datos del carnet se guardan en tu cuenta; las fotos permanecen solo en este dispositivo.',
   },
   {
     titulo: 'Añadir y consultar mascotas',
@@ -49,12 +49,12 @@ const secciones: {
   {
     titulo: 'Agenda de cuidados',
     icono: 'calendar-outline',
-    descripcion: 'Agenda reúne visitas, tomas pendientes y recordatorios. Filtra por mascota y por Hoy, Esta semana (lunes a domingo), Vencidos o Todos. Marca visitas realizadas y tomas administradas u omitidas desde sus tarjetas. Usa Añadir visita veterinaria para agendar.',
+    descripcion: 'Agenda reúne visitas, tomas pendientes y recordatorios. Filtra por mascota y por Hoy, Esta semana (lunes a domingo), Vencidos o Todos. Marca visitas realizadas y tomas administradas u omitidas desde sus tarjetas. Puedes editar o cancelar una visita futura; al hacerlo, su aviso también se actualiza o deja de estar pendiente. Usa Añadir visita veterinaria para agendar.',
   },
   {
     titulo: 'Historial de salud',
     icono: 'time-outline',
-    descripcion: 'En Ficha de salud, abre Historial de salud para consultar la línea de tiempo de la mascota. Incluye visitas marcadas como realizadas, vacunas, desparasitaciones y tratamientos que ya comenzaron. Registra consultas anteriores u observaciones y adjunta PDF o fotografías a cada evento. Los archivos se conservan durante la sesión.',
+    descripcion: 'En Ficha de salud, abre Historial de salud para consultar la línea de tiempo de la mascota. Incluye visitas marcadas como realizadas, vacunas, desparasitaciones y tratamientos que ya comenzaron. Registra consultas anteriores u observaciones y adjunta PDF o fotografías a cada evento. Con la API conectada, las consultas y observaciones se guardan en tu cuenta; los archivos adjuntos permanecen durante la sesión.',
   },
   {
     titulo: 'Notificaciones y recordatorios',
@@ -64,12 +64,12 @@ const secciones: {
   {
     titulo: 'Guardado y reintento',
     icono: 'refresh-outline',
-    descripcion: 'Al completar un recordatorio conectado al servidor, espera a que termine Guardando. Si falla, se conserva su estado anterior y aparece Reintentar. Pulsa ese botón para repetir el guardado. Durante el envío se bloquean las acciones de guardado para evitar pulsaciones duplicadas. Encontrarás estos mensajes en Recordatorios, Agenda y los cuidados de Inicio.',
+    descripcion: 'Al crear, editar, completar, posponer o eliminar un recordatorio conectado al servidor, espera a que termine Guardando. Si falla, se conserva el estado anterior y aparece Reintentar. Pulsa ese botón para repetir el guardado. Durante el envío se bloquean las acciones de guardado para evitar pulsaciones duplicadas. Encontrarás estos mensajes en Recordatorios, Agenda y los cuidados de Inicio.',
   },
   {
     titulo: 'Editar tu perfil',
     icono: 'person-outline',
-    descripcion: 'En Perfil → Editar Perfil puedes cambiar tu nombre y correo. El nombre admite letras, espacios y tildes, entre 2 y 120 caracteres. El correo debe tener un formato como nombre@dominio.com. Pulsa “Guardar cambios” y verás la confirmación. “Cancelar” descarta los cambios que no hayas guardado.',
+    descripcion: 'En Perfil → Editar Perfil puedes cambiar tu nombre y correo. El nombre admite letras, espacios y tildes, entre 2 y 120 caracteres. El correo debe tener un formato como nombre@dominio.com. Pulsa “Guardar cambios” y verás la confirmación; con la API conectada el cambio se guarda en tu cuenta. “Cancelar” descarta los cambios que no hayas guardado.',
   },
   {
     titulo: 'Mensajes de los formularios',
@@ -84,7 +84,7 @@ const secciones: {
   {
     titulo: 'Tu sesión',
     icono: 'log-out-outline',
-    descripcion: 'Para salir, entra en Perfil → Cerrar sesión. Los nuevos datos de mascotas, fichas de salud, visitas, tratamientos, mediciones, carnet, observaciones y adjuntos, así como los cambios locales de perfil y recordatorios, se conservan durante la sesión. Todavía no cuentan con guardado permanente: al reiniciar la app o volver a iniciar sesión pueden perderse. Los recordatorios existentes conectados al servidor sí intentan guardar allí su estado de completado.',
+    descripcion: 'Para salir, entra en Perfil → Cerrar sesión. Con la API conectada, mascotas, ficha de salud, visitas, tratamientos, mediciones, carnet, observaciones, recordatorios y perfil se guardan en tu cuenta. Los adjuntos de salud y el modo demostración se conservan solo durante la sesión.',
   },
 ];
 

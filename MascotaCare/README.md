@@ -6,7 +6,7 @@ Aplicación para que los dueños organicen la salud y los cuidados de sus mascot
 
 - **Inicio:** resumen de mascotas, citas y recordatorios pendientes.
 - **Mascotas y ficha de salud:** registro, detalle, nacimiento o edad aproximada, sexo, alergias y condiciones.
-- **Agenda:** visitas, tomas de medicamentos y recordatorios, con filtros por mascota y fecha. Crear visitas desde el frontend ya funciona durante la sesión.
+- **Agenda:** visitas, tomas de medicamentos y recordatorios, con filtros por mascota y fecha. Con la API conectada, crear, editar, cancelar y completar visitas se guarda en la cuenta.
 - **Recordatorios:** crear, editar, completar, posponer y repetir tareas diarias, semanales o mensuales, desde la campana o Notificaciones.
 - **Peso:** mediciones, correcciones, historial y gráfica; una medición por fecha.
 - **Carnet:** vacunas, desparasitación, próximas aplicaciones y fotografías de comprobantes.
@@ -80,14 +80,15 @@ MascotaCare/
 | --- | --- |
 | Registro de cuenta | PostgreSQL mediante API. |
 | Consulta de mascotas, citas y recordatorios | Copia local seguida de API, o mocks y copia independiente en demostración. |
-| Completar un recordatorio existente de API | Actualiza el servidor y después su copia local; si falla la API conserva su estado anterior. Un fallo de copia permite reintentar el guardado. |
-| Crear mascotas o visitas; editar perfil | Memoria de la sesión. |
-| Ficha de salud, peso, carnet, tratamientos, observaciones y adjuntos | Memoria de la sesión. |
-| Crear, editar o posponer recordatorios | Memoria de la sesión. |
+| Crear, editar, completar, posponer o eliminar recordatorios | Actualiza el servidor y después su copia local; si falla la API conserva su estado anterior. Los recordatorios asociados a una cita no se pueden eliminar. |
+| Crear mascotas, actualizar su ficha básica o peso, crear, editar, cancelar y completar visitas | PostgreSQL mediante API, o memoria de la sesión en demostración. |
+| Carnet, tratamientos, tomas y observaciones clínicas | PostgreSQL mediante API, o memoria de la sesión en demostración. |
+| Editar perfil | PostgreSQL mediante API, o memoria de la sesión en demostración. |
+| Adjuntos de salud | Memoria de la sesión. |
 
-La sesión tampoco se recupera automáticamente. Los cambios locales se protegen al actualizar las listas durante la sesión y se pierden al reiniciar o salir. La copia de respuestas de API permanece por usuario y se reutiliza después de autenticarse nuevamente. Aunque la API tiene creación y edición de mascotas y citas, el frontend aún no las utiliza para esas acciones.
+La sesión tampoco se recupera automáticamente. Los cambios locales se protegen al actualizar las listas durante la sesión y se pierden al reiniciar o salir. La copia de respuestas de API permanece por usuario y se reutiliza después de autenticarse nuevamente. La app usa la API para crear mascotas y visitas, actualizar ficha, peso, perfil y salud clínica, y editar, cancelar o completar visitas.
 
-PostgreSQL contiene `Usuario`, `Mascota`, `CitaMedica` y `Recordatorio`. El seguimiento de salud avanzado no tiene persistencia equivalente. El servidor no admite `malestar` y guarda vencimientos como fechas sin hora ni repetición.
+PostgreSQL contiene `Usuario`, `Mascota`, `CitaMedica` y `Recordatorio`. Los datos clínicos estructurados (carnet, tratamientos, tomas y observaciones) se guardan con la mascota. Los adjuntos mantienen su URI local hasta incorporar almacenamiento de archivos. El servidor admite `malestar`; los recordatorios guardan fecha y hora, repetición y el último momento de realización.
 
 ## Ejecutar el proyecto
 
@@ -144,7 +145,8 @@ Configura `.env`:
 
 - `PORT`: puerto HTTP, por defecto `4000`.
 - `DATABASE_URL`: conexión a tu PostgreSQL con usuario, contraseña, host, puerto y base de datos.
-- `JWT_SECRET`: valor propio para firmar tokens.
+- `JWT_SECRET`: valor propio para firmar tokens, de al menos 32 caracteres y distinto en cada entorno. Puedes generarlo con `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
+- `CORS_ORIGINS`: orígenes web autorizados separados por comas; para Expo web local usa `http://localhost:8081`. Las apps nativas no envían este origen.
 - `JWT_EXPIRES_IN`: duración del token; el ejemplo utiliza `7d`.
 
 Desde `MascotaCare/server/`, inicia la API para que dotenv lea ese `.env`:
@@ -245,7 +247,7 @@ El hook `src/hooks/use-carga-datos.ts` utiliza `src/services/storage.ts`. Mantie
 - El destino contiene `usuarioId` y `origen` (`api` o `demo`). Un destino inválido rechaza sin acceder al almacenamiento.
 - La clave es `petcore:cache:v1:<origen>:usuario:<id>`. IDs seguros numéricos y sus equivalentes en texto comparten la misma clave; BIGINT grandes conservan su precisión.
 - La instantánea contiene versión, propietario, origen, fecha de actualización y las tres listas. Se valida antes de guardar y después de leer.
-- Se guardan los campos de las respuestas actuales de mascotas y citas, y los campos de recordatorios, incluidas las opciones de repetición cuando existen. No incluye sesión, tokens, contraseñas ni los registros locales avanzados de salud.
+- Se guardan los campos de las respuestas actuales de mascotas y citas, y los campos de recordatorios, incluidas las opciones de repetición cuando existen. No incluye sesión, tokens, contraseñas, adjuntos locales ni las colecciones clínicas, que se recuperan desde la API al actualizar los datos.
 - Las operaciones de una clave se ejecutan en orden; usuarios u orígenes distintos pueden operar simultáneamente. Una escritura captura sus datos al solicitarla.
 - Una lectura corrupta o incompatible no borra automáticamente el contenido. El hook informa fallos de recuperación o guardado en `estadoDatos.errorCache` sin descartar los datos disponibles.
 
@@ -286,3 +288,21 @@ La rama de evidencias añadirá archivos en `docs/evidencias/` en la raíz y los
 7. Actualización de los datos guardados tras otra consulta de API.
 
 Cada evidencia debe indicar plataforma, pasos, resultado y si utiliza API, caché o demo. Consulta el [plan por ramas](../docs/PLAN-DESARROLLO.md).
+
+
+### Datos de mascota y ficha de salud
+
+Añadir mascota y editar Datos de salud usan `src/components/PetDataFields.tsx`:
+tipo de animal (Perro, Gato u Otro), edad aproximada o nacimiento, sexo y peso.
+Alergias y condiciones son opcionales y pueden completarse después en la ficha.
+El peso es opcional; si se introduce, crea la medición del día. El seguimiento
+permite registrar otra fecha o corregirla, conservando como peso actual la
+medición más reciente. Estos datos se guardan en PostgreSQL en una sesión real;
+el modo demostración los conserva solo durante la sesión.
+
+Para una base de datos existente, desde `server` ejecutar `npm run db:migrate`
+y reiniciar la API. La migración añade columnas sin borrar mascotas.
+Las instalaciones nuevas ya incluyen las columnas en `server/db/schema.sql`.
+`npm run test:salud` desde `server`, con la API local levantada, comprueba el alta,
+la edición y recarga de la ficha y el historial de peso. Crea una cuenta temporal
+y elimina sus datos al terminar. `npm test` ejecuta las pruebas HTTP sin PostgreSQL.

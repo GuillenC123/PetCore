@@ -26,13 +26,16 @@
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'estado_mascota') THEN
-        CREATE TYPE estado_mascota AS ENUM ('saludable', 'vacuna_pendiente', 'en_tratamiento');
+        CREATE TYPE estado_mascota AS ENUM ('saludable', 'malestar', 'vacuna_pendiente', 'en_tratamiento');
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'estado_cita') THEN
         CREATE TYPE estado_cita AS ENUM ('confirmado', 'pendiente', 'programado', 'cancelado', 'completado');
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'tipo_recordatorio') THEN
         CREATE TYPE tipo_recordatorio AS ENUM ('vacuna', 'alimento', 'cita', 'dosis', 'general');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'repeticion_recordatorio') THEN
+        CREATE TYPE repeticion_recordatorio AS ENUM ('ninguna', 'diaria', 'semanal', 'mensual');
     END IF;
 END $$;
 
@@ -79,6 +82,16 @@ CREATE TABLE IF NOT EXISTS Mascota (
 );
 
 -- Índice para acelerar la consulta "mascotas de un usuario".
+-- Ampliación aditiva que conserva las mascotas existentes.
+ALTER TABLE Mascota
+ ADD COLUMN IF NOT EXISTS peso DOUBLE PRECISION CHECK (peso > 0 AND peso < 'Infinity'::float8),
+ ADD COLUMN IF NOT EXISTS registros_peso JSONB NOT NULL DEFAULT '[]'::jsonb,
+ ADD COLUMN IF NOT EXISTS nacimiento VARCHAR(10),
+ ADD COLUMN IF NOT EXISTS sexo VARCHAR(12) NOT NULL DEFAULT 'desconocido' CHECK (sexo IN ('macho', 'hembra', 'desconocido')),
+ ADD COLUMN IF NOT EXISTS alergias VARCHAR(1000) NOT NULL DEFAULT '',
+ ADD COLUMN IF NOT EXISTS condiciones VARCHAR(1000) NOT NULL DEFAULT '',
+ ADD COLUMN IF NOT EXISTS datos_salud JSONB NOT NULL DEFAULT '{"carnet": [], "observaciones": [], "tratamientos": []}'::jsonb;
+
 CREATE INDEX IF NOT EXISTS idx_mascota_usuario ON Mascota (usuario_id);
 
 -- ============================================================================
@@ -125,17 +138,23 @@ CREATE TABLE IF NOT EXISTS Recordatorio (
     id                BIGSERIAL PRIMARY KEY,
     usuario_id        BIGINT       NOT NULL,
     mascota_id        BIGINT,
+    cita_id           BIGINT       UNIQUE,
     titulo            VARCHAR(200) NOT NULL,
     descripcion       VARCHAR(300),
     tipo              tipo_recordatorio NOT NULL DEFAULT 'general',
-    vence_en          DATE,
+    vence_en          TIMESTAMPTZ,
+    repeticion        repeticion_recordatorio NOT NULL DEFAULT 'ninguna',
+    ultima_realizacion TIMESTAMPTZ,
+    dia_repeticion    SMALLINT CHECK (dia_repeticion BETWEEN 1 AND 31),
     completado        BOOLEAN      NOT NULL DEFAULT FALSE,
     creado_en         TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
 
     CONSTRAINT fk_recordatorio_usuario
         FOREIGN KEY (usuario_id) REFERENCES Usuario (id) ON DELETE CASCADE,
     CONSTRAINT fk_recordatorio_mascota
-        FOREIGN KEY (mascota_id) REFERENCES Mascota (id) ON DELETE CASCADE
+        FOREIGN KEY (mascota_id) REFERENCES Mascota (id) ON DELETE CASCADE,
+    CONSTRAINT fk_recordatorio_cita
+        FOREIGN KEY (cita_id) REFERENCES CitaMedica (id) ON DELETE CASCADE
 );
 
 -- Índice para listar recordatorios pendientes de un usuario.

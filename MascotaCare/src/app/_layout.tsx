@@ -19,6 +19,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { AvisosProvider } from '@/context/AvisosContext';
 import DataLoadState from '@/components/DataLoadState';
 
 /**
@@ -26,7 +27,7 @@ import DataLoadState from '@/components/DataLoadState';
  * Necesita estar dentro del AuthProvider para leer useAuth().
  */
 function RootNavigator() {
-  const { usuario, estadoDatos, modoDemo, cargarDatos, logout, reintentarGuardado, hayCambiosLocales } = useAuth();
+  const { usuario, token, estadoDatos, modoDemo, cargarDatos, logout, reintentarGuardado, hayCambiosLocales } = useAuth();
   const autenticado = usuario !== null;
 
   const navigation = (
@@ -59,10 +60,12 @@ function RootNavigator() {
   );
 
   return (
-    <DataLoadState activo={autenticado} estado={estadoDatos} modoDemo={modoDemo} reintentar={cargarDatos} salir={logout}
-      reintentarGuardado={reintentarGuardado} hayCambiosLocales={hayCambiosLocales}>
-      {navigation}
-    </DataLoadState>
+    <AvisosProvider key={token ?? 'sin-sesion'}>
+      <DataLoadState activo={autenticado} estado={estadoDatos} modoDemo={modoDemo} reintentar={cargarDatos} salir={logout}
+        reintentarGuardado={reintentarGuardado} hayCambiosLocales={hayCambiosLocales}>
+        {navigation}
+      </DataLoadState>
+    </AvisosProvider>
   );
 }
 

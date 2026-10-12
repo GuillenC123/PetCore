@@ -57,7 +57,7 @@ export default function HealthTimeline({ mascota }: { mascota: Mascota }) {
       <Boton label="Adjuntar PDF o fotografía" disabled={ocupado} onPress={() => adjuntar(e.clave)} />
     </View>)}
     {historial.length > limite && <Boton label="Ver eventos anteriores" onPress={() => setLimite(limite + 15)} />}
-    <Text style={styles.text}>Los registros y archivos se conservan durante esta sesión.</Text>
+    <Text style={styles.text}>Los registros se guardan en tu cuenta al conectarte; los archivos se conservan durante esta sesión.</Text>
     <Modal visible={foto !== null} onRequestClose={() => setFoto(null)}>
       <SafeAreaView style={styles.modal}>
         <Boton label="Cerrar fotografía" onPress={() => setFoto(null)} />
@@ -74,11 +74,11 @@ function Formulario({ mascotaId, cerrar }: { mascotaId: Identificador; cerrar: (
   const [descripcion, setDescripcion] = useState('');
   const [fecha, setFecha] = useState(fechaPesoHoy);
   const [error, setError] = useState('');
-  const guardar = () => {
+  const guardar = async () => {
     try {
       const dia = interpretarFechaVisita(fecha, '00:00');
       if (!dia) throw new Error('Introduce una fecha válida (DD/MM/AAAA).');
-      agregarObservacion(mascotaId, { tipo, titulo, descripcion, fecha: dia.toISOString() }); cerrar(true);
+      await agregarObservacion(mascotaId, { tipo, titulo, descripcion, fecha: dia.toISOString() }); cerrar(true);
     } catch (err) { setError(err instanceof Error ? err.message : 'No se pudo guardar.'); }
   };
   return <View style={styles.form}>

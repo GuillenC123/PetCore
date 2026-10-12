@@ -25,7 +25,7 @@ export default function VaccineRecord({ mascota }: { mascota: Mascota }) {
     interpretarFechaVisita(b.fecha_aplicacion!, '00:00')!.getTime() - interpretarFechaVisita(a.fecha_aplicacion!, '00:00')!.getTime());
   return <View style={styles.section}>
     <Text style={styles.title}>Carnet de vacunas y desparasitación</Text>
-    {editor ? <Formulario mascotaId={mascota.id} edicion={editor} cerrar={(guardado) => { setEditor(null); setMensaje(guardado ? 'Carnet guardado para esta sesión.' : ''); }} /> : <>
+    {editor ? <Formulario mascotaId={mascota.id} edicion={editor} cerrar={(guardado) => { setEditor(null); setMensaje(guardado ? 'Carnet guardado.' : ''); }} /> : <>
       <Boton label="Añadir registro" onPress={() => { setMensaje(''); setEditor({}); }} />
       {!!mensaje && <Text accessibilityRole="alert" style={styles.text}>{mensaje}</Text>}
       <Text style={styles.label}>Próximas aplicaciones</Text>
@@ -83,9 +83,9 @@ function Formulario({ mascotaId, edicion, cerrar }: { mascotaId: Identificador; 
     } catch { setError('No se pudo abrir la foto. Revisa el acceso a tus fotos e inténtalo de nuevo.'); }
     finally { setSeleccionando(false); }
   };
-  const guardar = () => {
+  const guardar = async () => {
     try {
-      guardarCarnet(mascotaId, { tipo, nombre, fecha_aplicacion: aplicado ? fecha.trim() : null,
+      await guardarCarnet(mascotaId, { tipo, nombre, fecha_aplicacion: aplicado ? fecha.trim() : null,
         proxima_fecha: proxima.trim() || null, comprobante: foto,
         anterior_id: datos?.anterior_id ?? edicion.anterior?.id }, datos?.id);
       cerrar(true);
@@ -115,7 +115,7 @@ function Formulario({ mascotaId, edicion, cerrar }: { mascotaId: Identificador; 
       <Image source={{ uri: foto }} style={styles.preview} resizeMode="contain" accessibilityLabel="Comprobante seleccionado" />
       <Boton label="Quitar foto" onPress={() => setFoto(null)} disabled={seleccionando} />
     </>}
-    <Text style={styles.text}>Los datos y la foto se conservan durante esta sesión.</Text>
+    <Text style={styles.text}>Los datos se guardan en tu cuenta al conectarte; la foto se conserva solo durante esta sesión.</Text>
     {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
     <Boton label="Guardar registro" onPress={guardar} disabled={seleccionando} />
     <Boton label="Cancelar" onPress={() => cerrar(false)} disabled={seleccionando} />

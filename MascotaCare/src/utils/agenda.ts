@@ -18,7 +18,7 @@ export function crearAgenda(citas: Cita[], tratamientos: Tratamiento[], recordat
     const fecha = fechaRecordatorio(r.vence_en);
     if (!fecha) return;
     // La visita y su aviso original se muestran una sola vez. Un aviso pospuesto conserva su fecha propia.
-    if (r.cita_id !== undefined && citas.some((c) => c.id === r.cita_id && new Date(c.fecha_hora).getTime() === fecha.getTime())) return;
+    if (r.cita_id != null && citas.some((c) => c.id === r.cita_id && new Date(c.fecha_hora).getTime() === fecha.getTime())) return;
     eventos.push({ clave: `recordatorio-${r.id}`, tipo: 'recordatorio', id: r.id, mascota_id: r.mascota_id,
       titulo: r.titulo, detalle: r.descripcion ?? '', fecha: fecha.toISOString() });
   });

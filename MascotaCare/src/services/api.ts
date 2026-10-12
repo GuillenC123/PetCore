@@ -2,7 +2,7 @@
 import { Platform } from 'react-native';
 
 import { normalizarIdentificador } from '@/utils/identificadores';
-import type { ApiError, AuthResponse, Cita, DatosApp, EstadoCita, EstadoMascota, Identificador, Mascota, Recordatorio, Usuario } from '@/types';
+import type { ApiError, AuthResponse, Cita, DatosApp, EstadoCita, EstadoMascota, Identificador, Mascota, ObservacionSalud, Recordatorio, RegistroCarnet, Tratamiento, Usuario } from '@/types';
 
 const HOST = Platform.select({ android: '10.0.2.2', default: 'localhost' });
 export const API_URL = (process.env.EXPO_PUBLIC_API_URL?.trim() || `http://${HOST}:4000/api`).replace(/\/+$/, '');
@@ -77,13 +77,28 @@ function adaptar<T>(transformar: () => T): T {
   }
 }
 
-function mascotaApi(dato: Mascota): Mascota {
+type MascotaRespuesta = Mascota & { datos_salud?: { carnet?: RegistroCarnet[]; observaciones?: ObservacionSalud[]; tratamientos?: Tratamiento[] } };
+
+function mascotaApi(dato: MascotaRespuesta): Mascota {
   if (typeof dato.nombre !== 'string' || typeof dato.raza !== 'string' ||
       typeof dato.especie !== 'string' || typeof dato.edad !== 'string' ||
       !['saludable', 'malestar', 'vacuna_pendiente', 'en_tratamiento'].includes(dato.estado)) {
     throw new Error('Mascota inválida.');
   }
-  return { ...dato, id: normalizarIdentificador(dato.id) };
+  const salud = dato.datos_salud;
+  if (salud !== undefined && (salud === null || typeof salud !== 'object' || Array.isArray(salud) ||
+      (salud.carnet !== undefined && !Array.isArray(salud.carnet)) ||
+      (salud.observaciones !== undefined && !Array.isArray(salud.observaciones)) ||
+      (salud.tratamientos !== undefined && !Array.isArray(salud.tratamientos)))) {
+    throw new Error('Datos de salud inválidos.');
+  }
+  const { datos_salud, ...mascota } = dato;
+  return {
+    ...mascota, id: normalizarIdentificador(dato.id),
+    carnet: salud?.carnet ?? dato.carnet,
+    observaciones: salud?.observaciones ?? dato.observaciones,
+    tratamientos_salud: salud?.tratamientos ?? dato.tratamientos_salud,
+  };
 }
 
 function citaApi(dato: Cita): Cita {
@@ -96,13 +111,15 @@ function citaApi(dato: Cita): Cita {
 
 function recordatorioApi(dato: Recordatorio): Recordatorio {
   if (typeof dato.titulo !== 'string' || typeof dato.completado !== 'boolean' ||
-      !['vacuna', 'alimento', 'cita', 'dosis', 'general'].includes(dato.tipo)) {
+      !['vacuna', 'alimento', 'cita', 'dosis', 'general'].includes(dato.tipo) ||
+      (dato.repeticion !== undefined && !['ninguna', 'diaria', 'semanal', 'mensual'].includes(dato.repeticion))) {
     throw new Error('Recordatorio inválido.');
   }
   return {
     ...dato,
     id: normalizarIdentificador(dato.id),
     mascota_id: dato.mascota_id === null ? null : normalizarIdentificador(dato.mascota_id),
+    cita_id: dato.cita_id == null ? undefined : normalizarIdentificador(dato.cita_id),
   };
 }
 
@@ -137,6 +154,13 @@ export async function apiRegistro(nombre: string, correo: string, password: stri
   return sesionApi(datos);
 }
 
+export async function apiActualizarPerfil(token: string, datos: Pick<Usuario, 'nombre' | 'correo'>): Promise<AuthResponse> {
+  const respuesta = await request<AuthResponse>('/auth/perfil', {
+    method: 'PUT', headers: autorizar(token), body: JSON.stringify(datos),
+  });
+  return sesionApi(respuesta);
+}
+
 function autorizar(token: string): RequestInit['headers'] {
   return { Authorization: `Bearer ${token}` };
 }
@@ -168,8 +192,35 @@ export async function apiTacharRecordatorio(token: string, id: Identificador, co
   return adaptar(() => recordatorioApi(datos));
 }
 
-/** Cuerpo que acepta POST /api/mascotas (sin campos locales de salud). */
+export type RecordatorioEditable = Pick<Recordatorio,
+  'titulo' | 'descripcion' | 'mascota_id' | 'tipo' | 'vence_en' | 'repeticion' | 'dia_repeticion'>;
+
+export async function apiCrearRecordatorio(token: string, datos: RecordatorioEditable): Promise<Recordatorio> {
+  const respuesta = await request<Recordatorio>('/recordatorios', {
+    method: 'POST', headers: autorizar(token), body: JSON.stringify(datos),
+  });
+  return adaptar(() => recordatorioApi(respuesta));
+}
+
+export async function apiActualizarRecordatorio(token: string, id: Identificador,
+  datos: Partial<RecordatorioEditable & Pick<Recordatorio, 'completado'>>): Promise<Recordatorio> {
+  const respuesta = await request<Recordatorio>(`/recordatorios/${encodeURIComponent(id)}`, {
+    method: 'PUT', headers: autorizar(token), body: JSON.stringify(datos),
+  });
+  return adaptar(() => recordatorioApi(respuesta));
+}
+
+export async function apiEliminarRecordatorio(token: string, id: Identificador): Promise<void> {
+  await request<void>(`/recordatorios/${encodeURIComponent(id)}`, { method: 'DELETE', headers: autorizar(token) });
+}
+
+/** Datos básicos y ficha de salud persistidos en la API. */
 export interface MascotaNueva {
+  peso?: number | null;
+  nacimiento?: string | null;
+  sexo?: Mascota['sexo'];
+  alergias?: string;
+  condiciones?: string;
   nombre: string;
   raza: string;
   especie: string;
@@ -186,6 +237,35 @@ export async function apiCrearMascota(token: string, datos: MascotaNueva, signal
   return adaptar(() => mascotaApi(respuesta));
 }
 
+export async function apiActualizarMascota(token: string, id: Identificador, datos: Partial<MascotaNueva>): Promise<Mascota> {
+  const respuesta = await request<Mascota>(`/mascotas/${encodeURIComponent(id)}`, {
+    method: 'PUT', headers: autorizar(token), body: JSON.stringify(datos),
+  });
+  return adaptar(() => mascotaApi(respuesta));
+}
+
+export async function apiRegistrarPeso(token: string, id: Identificador, registro: { peso: number; fecha: string }): Promise<Mascota> {
+  const respuesta = await request<Mascota>(`/mascotas/${encodeURIComponent(id)}/pesos`, {
+    method: 'POST', headers: autorizar(token), body: JSON.stringify(registro),
+  });
+  return adaptar(() => mascotaApi(respuesta));
+}
+
+export type DatosSaludRemotos = Partial<Pick<Mascota, 'carnet' | 'observaciones' | 'tratamientos_salud'>>;
+
+/** Persiste colecciones clínicas estructuradas; los archivos locales no viajan a la API. */
+export async function apiActualizarSalud(token: string, id: Identificador, datos: DatosSaludRemotos): Promise<Mascota> {
+  const cuerpo = {
+    ...(datos.carnet === undefined ? {} : { carnet: datos.carnet }),
+    ...(datos.observaciones === undefined ? {} : { observaciones: datos.observaciones }),
+    ...(datos.tratamientos_salud === undefined ? {} : { tratamientos: datos.tratamientos_salud }),
+  };
+  const respuesta = await request<MascotaRespuesta>(`/mascotas/${encodeURIComponent(id)}/salud`, {
+    method: 'PUT', headers: autorizar(token), body: JSON.stringify(cuerpo),
+  });
+  return adaptar(() => mascotaApi(respuesta));
+}
+
 /** Cuerpo que acepta POST /api/citas. */
 export interface CitaNueva {
   titulo: string;
@@ -196,12 +276,56 @@ export interface CitaNueva {
   estado?: EstadoCita;
 }
 
-/** Crea una cita en la BD y devuelve la fila con su id definitivo. */
-export async function apiCrearCita(token: string, datos: CitaNueva, signal?: AbortSignal): Promise<Cita> {
-  const respuesta = await request<Cita>('/citas', {
+export interface CitaProgramada {
+  cita: Cita;
+  recordatorio: Recordatorio;
+  mascota: Mascota;
+}
+
+export interface CitaCompletada {
+  cita: Cita;
+  recordatorio: Recordatorio | null;
+}
+
+export interface CitaActualizada {
+  cita: Cita;
+  recordatorio: Recordatorio | null;
+}
+
+/** Crea atómicamente cita, recordatorio y estado de la mascota. */
+export async function apiCrearCita(token: string, datos: CitaNueva, signal?: AbortSignal): Promise<CitaProgramada> {
+  const respuesta = await request<CitaProgramada>('/citas', {
     method: 'POST', headers: autorizar(token), signal, body: JSON.stringify(datos),
   });
-  return adaptar(() => citaApi(respuesta));
+  return adaptar(() => ({
+    cita: citaApi(respuesta.cita),
+    recordatorio: recordatorioApi(respuesta.recordatorio),
+    mascota: mascotaApi(respuesta.mascota),
+  }));
+}
+
+/** Completa la visita y su recordatorio asociado en una única transacción. */
+export async function apiCompletarCita(token: string, id: Identificador): Promise<CitaCompletada> {
+  const respuesta = await request<CitaCompletada>(`/citas/${encodeURIComponent(id)}/completar`, {
+    method: 'POST', headers: autorizar(token), body: JSON.stringify({}),
+  });
+  return adaptar(() => ({
+    cita: citaApi(respuesta.cita),
+    recordatorio: respuesta.recordatorio === null ? null : recordatorioApi(respuesta.recordatorio),
+  }));
+}
+
+/** Edita o cancela una cita y mantiene sincronizado su recordatorio asociado. */
+export async function apiActualizarCita(token: string, id: Identificador,
+  datos: Partial<Pick<Cita, 'titulo' | 'fecha_hora' | 'doctor' | 'clinica' | 'estado'>>): Promise<CitaActualizada> {
+  const respuesta = await request<Cita & { recordatorio?: Recordatorio | null }>(`/citas/${encodeURIComponent(id)}`, {
+    method: 'PUT', headers: autorizar(token), body: JSON.stringify(datos),
+  });
+  const { recordatorio, ...cita } = respuesta;
+  return adaptar(() => ({
+    cita: citaApi(cita),
+    recordatorio: recordatorio == null ? null : recordatorioApi(recordatorio),
+  }));
 }
 
 export type { Usuario, Mascota, Cita, Recordatorio };

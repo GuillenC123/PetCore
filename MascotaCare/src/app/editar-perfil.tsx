@@ -17,25 +17,32 @@ export default function EditarPerfilScreen() {
   const [correo, setCorreo] = useState(usuario?.correo ?? '');
   const [errores, setErrores] = useState<{ nombre?: string; correo?: string }>({});
   const [guardado, setGuardado] = useState(false);
+  const [guardando, setGuardando] = useState(false);
 
   const volver = () => {
     if (router.canGoBack()) router.back();
     else router.replace('/perfil');
   };
 
-  const guardar = () => {
+  const guardar = async () => {
     const nuevosErrores = {
       nombre: validarNombrePerfil(nombre),
       correo: validarCorreo(correo),
     };
     setErrores(nuevosErrores);
     setGuardado(false);
-    if (nuevosErrores.nombre || nuevosErrores.correo || !usuario) return;
-
-    actualizarPerfil({ nombre, correo });
-    setNombre(nombre.normalize('NFC').trim());
-    setCorreo(correo.trim().toLowerCase());
-    setGuardado(true);
+    if (nuevosErrores.nombre || nuevosErrores.correo || !usuario || guardando) return;
+    setGuardando(true);
+    try {
+      await actualizarPerfil({ nombre, correo });
+      setNombre(nombre.normalize('NFC').trim());
+      setCorreo(correo.trim().toLowerCase());
+      setGuardado(true);
+    } catch (error) {
+      setErrores({ correo: error instanceof Error ? error.message : 'No se pudo actualizar el perfil.' });
+    } finally {
+      setGuardando(false);
+    }
   };
 
   return (
@@ -76,9 +83,9 @@ export default function EditarPerfilScreen() {
               Perfil actualizado correctamente
             </Text>
           ) : null}
-          <Pressable onPress={guardar} accessibilityRole="button"
-            style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-            <Text style={styles.buttonText}>Guardar cambios</Text>
+          <Pressable onPress={guardar} disabled={guardando} accessibilityRole="button"
+            style={({ pressed }) => [styles.button, guardando && styles.disabled, pressed && styles.pressed]}>
+            <Text style={styles.buttonText}>{guardando ? 'Guardando…' : 'Guardar cambios'}</Text>
           </Pressable>
           <Pressable onPress={volver} accessibilityRole="button"
             style={({ pressed }) => [styles.cancel, pressed && styles.pressed]}>
@@ -106,4 +113,5 @@ const styles = StyleSheet.create({
   cancelText: { color: AppColors.primaryDark, fontSize: 16, fontWeight: '700' },
   success: { color: AppColors.success, fontSize: 14, fontWeight: '600' },
   pressed: { opacity: 0.7 },
+  disabled: { opacity: 0.55 },
 });
