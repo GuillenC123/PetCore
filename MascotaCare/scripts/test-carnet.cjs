@@ -24,6 +24,7 @@ assert.equal(util.estadoProximo('29/02/2028', ahora), 'Vencido');
 const historial = [{ ...datos, id: 1 }, { ...datos, id: 2, anterior_id: 1, fecha_aplicacion: '01/03/2028', proxima_fecha: '01/04/2028' }];
 assert.deepEqual(util.pendientesCarnet(historial).map(r => r.id), [2]);
 assert.equal(historial.filter(r => r.fecha_aplicacion).length, 2);
+async function main() {
 const estados = [null, null, false, [{ id: 1 }, { id: 2 }], [], [], []];
 let indice = 0;
 const refs = [];
@@ -38,15 +39,18 @@ react.useEffect = () => {};
 const { AuthProvider } = cargar('src/context/AuthContext.tsx', nombre => nombre === '@/hooks/use-carga-datos' ? require('./helpers/carga-datos.cjs') : nombre === 'react' ? react : nombre === '@/utils/carnet' ? util : nombre === '@/utils/citas' ? cargar('src/utils/citas.ts') : {});
 function contexto() { indice = 0; refIndice = 0; return AuthProvider({ children: null }).value; }
 const pasado = { ...datos, fecha_aplicacion: '01/01/2020', proxima_fecha: '01/02/2020' };
-assert.throws(() => contexto().guardarCarnet(99, pasado));
-contexto().guardarCarnet(1, pasado);
+await assert.rejects(contexto().guardarCarnet(99, pasado));
+await contexto().guardarCarnet(1, pasado);
 const id = estados[3][0].carnet[0].id;
 assert.equal(estados[3][1].carnet, undefined);
 assert.equal(estados[3][0].carnet[0].comprobante, datos.comprobante);
-contexto().guardarCarnet(1, { ...pasado, fecha_aplicacion: '01/02/2020', proxima_fecha: null, anterior_id: id });
+await contexto().guardarCarnet(1, { ...pasado, fecha_aplicacion: '01/02/2020', proxima_fecha: null, anterior_id: id });
 assert.equal(estados[3][0].carnet.length, 2);
 assert.equal(util.pendientesCarnet(estados[3][0].carnet).length, 0);
-assert.throws(() => contexto().guardarCarnet(1, { ...pasado, fecha_aplicacion: '01/03/2020', proxima_fecha: null, anterior_id: id }));
-contexto().guardarCarnet(1, { ...pasado, comprobante: null }, id);
+await assert.rejects(contexto().guardarCarnet(1, { ...pasado, fecha_aplicacion: '01/03/2020', proxima_fecha: null, anterior_id: id }));
+await contexto().guardarCarnet(1, { ...pasado, comprobante: null }, id);
 assert.equal(estados[3][0].carnet[0].comprobante, null);
 console.log('OK: fechas, estados, historial, siguiente aplicacion, foto y aislamiento por mascota.');
+}
+
+main().catch((error) => { console.error(error); process.exitCode = 1; });

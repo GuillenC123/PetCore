@@ -189,15 +189,38 @@ async function contextoYMutaciones() {
   let redPendiente = null;
   let fallarPut = false;
   let gets = 0, puts = 0;
-  global.fetch = async (url, opciones) => {
+  global.fetch = async (url, opciones = {}) => {
+    const metodo = opciones.method ?? 'GET';
     if (url.endsWith('/auth/login')) return respuesta({ usuario: { id: 1, nombre: 'Ana', correo: 'ana@example.com' }, token: 'REAL' });
-    if (opciones.method === 'PUT') {
+    if (url.endsWith('/auth/perfil') && metodo === 'PUT') {
+      return respuesta({ usuario: { id: 1, ...JSON.parse(opciones.body) }, token: 'REAL-RENOVADO' });
+    }
+    if (url.includes('/recordatorios/') && metodo === 'PUT') {
       puts++;
       if (fallarPut) return respuesta({ error: 'No disponible' }, 503);
-      return respuesta({ ...datos().recordatorios[0], completado: JSON.parse(opciones.body).completado });
+      return respuesta({ ...datos().recordatorios[0], ...JSON.parse(opciones.body) });
+    }
+    if (url.endsWith('/pesos') && metodo === 'POST') {
+      const { peso } = JSON.parse(opciones.body);
+      return respuesta({ ...datos().mascotas[0], peso });
+    }
+    if (url.endsWith('/mascotas') && metodo === 'POST') {
+      return respuesta({ ...JSON.parse(opciones.body), id: 4 });
+    }
+    if (url.endsWith('/citas/2/completar') && metodo === 'POST') {
+      return respuesta({ cita: { ...datos().citas[0], estado: 'completado' }, recordatorio: null });
+    }
+    if (url.endsWith('/citas') && metodo === 'POST') {
+      const cita = JSON.parse(opciones.body);
+      return respuesta({
+        cita: { ...cita, id: 5 },
+        recordatorio: { id: 6, mascota_id: cita.mascota_id, titulo: 'Visita veterinaria', descripcion: cita.titulo,
+          tipo: 'cita', vence_en: cita.fecha_hora, completado: false, cita_id: 5 },
+        mascota: { ...datos().mascotas[0], estado: 'malestar' },
+      });
     }
     gets++;
-    if (redPendiente) return redPendiente(url);
+    if (metodo === 'GET' && redPendiente) return redPendiente(url);
     return consulta(remoto)(url);
   };
   await contexto().login('ana@example.com', '123456');
@@ -240,12 +263,12 @@ async function contextoYMutaciones() {
   redPendiente = async (url) => { await liberarLocales.promise; return consulta(datos('Nombre remoto'))(url); };
   const refresco = contexto().cargarDatos();
   await flush();
-  contexto().actualizarPesoMascota(1, 8);
-  const nueva = contexto().agregarMascota({ ...datos().mascotas[0], nombre: 'Local' });
-  contexto().agregarCita({ mascota_id: 1, motivo: 'Consulta local', fecha_hora: '2029-01-01T12:00:00Z' });
-  contexto().posponerRecordatorio(3, '2029-01-01T12:00:00Z');
-  contexto().completarCita(2);
-  contexto().actualizarPerfil({ nombre: 'Perfil local', correo: 'local@example.com' });
+  await contexto().actualizarPesoMascota(1, 8);
+  const nueva = await contexto().agregarMascota({ ...datos().mascotas[0], nombre: 'Local' });
+  await contexto().agregarCita({ mascota_id: 1, motivo: 'Consulta local', fecha_hora: '2029-01-01T12:00:00Z' });
+  await contexto().posponerRecordatorio(3, '2029-01-01T12:00:00Z');
+  await contexto().completarCita(2);
+  await contexto().actualizarPerfil({ nombre: 'Perfil local', correo: 'local@example.com' });
   liberarLocales.resolve();
   await refresco;
   assert.equal(contexto().hayCambiosLocales, true);

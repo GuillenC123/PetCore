@@ -36,6 +36,7 @@ assert.equal(deshecho.tomas[0].estado, 'pendiente');
 assert.equal(deshecho.tomas[0].registrada_en, undefined);
 
 // Verifica asociación a mascota, actualización y limpieza de sesión.
+async function main() {
 const estados = [null, null, false, [{ id: 1 }, { id: 2 }], [], [], []];
 let indice = 0;
 const react = {
@@ -47,15 +48,18 @@ const react = {
 react.useEffect = () => {};
 const { AuthProvider } = cargar('src/context/AuthContext.tsx', nombre => nombre === '@/hooks/use-carga-datos' ? require('./helpers/carga-datos.cjs') : nombre === 'react' ? react : nombre === '@/utils/tratamientos' ? util : {});
 let contexto = AuthProvider({ children: null }).value;
-assert.throws(() => contexto.agregarTratamiento({ ...datos, mascota_id: 99 }));
-contexto.agregarTratamiento({ ...datos, inicio: '01/01/2020' });
+await assert.rejects(contexto.agregarTratamiento({ ...datos, mascota_id: 99 }));
+await contexto.agregarTratamiento({ ...datos, inicio: '01/01/2020' });
 assert.equal(estados[6].length, 1);
 assert.equal(estados[6][0].mascota_id, 1);
 indice = 0;
 contexto = AuthProvider({ children: null }).value;
-contexto.marcarToma(estados[6][0].id, estados[6][0].tomas[0].fecha_hora, 'administrada');
+await contexto.marcarToma(estados[6][0].id, estados[6][0].tomas[0].fecha_hora, 'administrada');
 assert.equal(estados[6][0].tomas[0].estado, 'administrada');
 assert.equal(estados[6][0].tomas[1].estado, 'pendiente');
 contexto.logout();
 assert.equal(estados[6].length, 0);
 console.log('OK: horarios, duracion, bisiestos, estados de tomas, aislamiento por mascota y cierre de sesion.');
+}
+
+main().catch((error) => { console.error(error); process.exitCode = 1; });
