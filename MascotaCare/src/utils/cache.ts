@@ -74,8 +74,8 @@ function recordatorioCache(valor: unknown): Recordatorio {
   if (dato.mascota_nombre !== undefined) recordatorio.mascota_nombre = texto(dato.mascota_nombre);
   if (dato.cita_id != null) recordatorio.cita_id = normalizarIdentificador(dato.cita_id);
   if (dato.repeticion !== undefined) recordatorio.repeticion = enumeracion(dato.repeticion, ['ninguna', 'diaria', 'semanal', 'mensual'] as const);
-  if (dato.ultima_realizacion !== undefined) recordatorio.ultima_realizacion = fechaIsoCache(dato.ultima_realizacion);
-  if (dato.dia_repeticion !== undefined) {
+  if (dato.ultima_realizacion != null) recordatorio.ultima_realizacion = fechaIsoCache(dato.ultima_realizacion);
+  if (dato.dia_repeticion != null) {
     if (typeof dato.dia_repeticion !== 'number' || !Number.isInteger(dato.dia_repeticion) || dato.dia_repeticion < 1 || dato.dia_repeticion > 31) {
       throw new Error('Día de repetición inválido.');
     }
