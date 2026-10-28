@@ -1,3 +1,4 @@
+import { abrirAjustesPermisos, PermisoCamaraError } from '@/services/permisos';
 import { useAppColors } from '@/context/AppearanceContext';
 import type { AppPalette } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,15 +23,17 @@ export default function PhotoField({ value, onChange, label, usuario, comprobant
 
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState('');
+  const [ajustes, setAjustes] = useState(false);
   const bloqueo = useRef(false);
   const ejecutar = async (quitar = false, origen: OrigenFoto = 'galeria') => {
     if (disabled || bloqueo.current) return;
     bloqueo.current = true;
-    setOcupado(true); onBusyChange?.(true); setError('');
+    setOcupado(true); onBusyChange?.(true); setError(''); setAjustes(false);
     try {
       const foto = quitar ? null : await seleccionarFoto(origen, !comprobante);
       if (quitar || foto !== null) await onChange(foto);
     } catch (causa) {
+      setAjustes(causa instanceof PermisoCamaraError && causa.bloqueado);
       setError(causa instanceof Error ? causa.message : 'No se pudo abrir la foto. Revisa el acceso a tus fotos e inténtalo de nuevo.');
     } finally {
       bloqueo.current = false;
@@ -56,6 +59,7 @@ export default function PhotoField({ value, onChange, label, usuario, comprobant
     {!!value && <Pressable accessibilityRole="button" disabled={disabled || ocupado} onPress={() => void ejecutar(true)} style={styles.button}>
       <Text style={styles.remove}>Quitar foto</Text>
     </Pressable>}
+    {ajustes && <Pressable accessibilityRole="button" onPress={() => void abrirAjustesPermisos().catch(() => setError('No se pudo abrir Ajustes. Abre los permisos de PetCore desde los ajustes del dispositivo.'))} style={styles.button}><Text style={styles.action}>Abrir Ajustes de cámara</Text></Pressable>}
     {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
   </View>;
 }

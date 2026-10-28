@@ -1,3 +1,4 @@
+import PermissionsPanel from '@/components/PermissionsPanel';
 import AppearanceSelector from '@/components/AppearanceSelector';
 import { useAppColors } from '@/context/AppearanceContext';
 import type { AppPalette } from '@/constants/theme';
@@ -98,6 +99,7 @@ export default function PerfilScreen() {
         {/* Menú de opciones. */}
         <View style={styles.menu}>
           <AppearanceSelector />
+          <PermissionsPanel />
           {opciones.map((op) => (
             <MenuRow
               key={op.tipo}

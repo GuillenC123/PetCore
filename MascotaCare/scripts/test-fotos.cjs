@@ -18,7 +18,7 @@ async function main() {
   const codigo = ts.transpileModule(fs.readFileSync(path.join(__dirname, '../src/services/fotos.ts'), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
-  new Function('require', 'module', 'exports', codigo)((nombre) => nombre === 'react-native' ? {Platform:{OS:'android'}} : nombre === 'expo-image-picker'
+  new Function('require', 'module', 'exports', codigo)((nombre) => nombre === './permisos' ? {solicitarPermiso:async()=> 'permitido',PermisoCamaraError:Error} : nombre === 'react-native' ? {Platform:{OS:'android'}} : nombre === 'expo-image-picker'
     ? { launchImageLibraryAsync: async () => seleccion, launchCameraAsync: async () => seleccion, requestCameraPermissionsAsync: async () => ({granted:true}) }
     : { ImageManipulator: { manipulate: () => contexto }, SaveFormat: { JPEG: 'jpeg' } }, modulo, modulo.exports);
   assert.equal(await modulo.exports.seleccionarFoto(), null);

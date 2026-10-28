@@ -379,3 +379,12 @@ Los comprobantes mantienen su proporción para no recortar el documento.
 En web se conserva la selección de archivos; la cámara se prueba en el teléfono.
 El mensaje nativo de cámara se configura en `app.json`; cambiarlo requiere una
 nueva compilación de la app instalada (Expo Go utiliza sus propios permisos).
+
+### APF3: permisos
+
+Perfil muestra el estado de cámara y notificaciones. Los permisos se solicitan
+solo al pulsar Permitir o Tomar foto. Un rechazo conserva el flujo de galería;
+un bloqueo ofrece abrir Ajustes. Al regresar a la app se consulta el estado otra
+vez. El selector de galería utiliza el acceso limitado del selector del sistema,
+sin solicitar acceso general a toda la biblioteca. La web explica qué funciones
+requieren Android/iOS sin intentar cargar notificaciones nativas.

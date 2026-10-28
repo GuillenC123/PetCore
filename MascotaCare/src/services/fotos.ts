@@ -1,3 +1,4 @@
+import { solicitarPermiso, PermisoCamaraError } from './permisos';
 import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
@@ -8,8 +9,8 @@ export type OrigenFoto = 'galeria' | 'camara';
 export async function seleccionarFoto(origen: OrigenFoto = 'galeria', cuadrada = true): Promise<string | null> {
   if (origen === 'camara') {
     if (Platform.OS === 'web') throw new Error('Para tomar una foto, abre PetCore en tu teléfono. Puedes elegir una imagen de la galería aquí.');
-    const permiso = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permiso.granted) throw new Error('Se necesita acceso a la cámara para tomar una foto. Puedes seleccionar una imagen de la galería.');
+    const permiso = await solicitarPermiso('camara');
+    if (permiso !== 'permitido') throw new PermisoCamaraError(permiso === 'bloqueado');
   }
   const resultado = origen === 'camara'
     ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], allowsEditing: false, quality: 1 })
