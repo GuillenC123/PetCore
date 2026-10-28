@@ -9,7 +9,7 @@ function errorNotificaciones(fase: 'canal' | 'solicitud', causa: unknown): Error
   const codigo = causa && typeof causa === 'object' && 'code' in causa ? String(causa.code) : 'SIN_CODIGO';
   console.warn(`[PetCore][permisos] Falló ${fase}: ${codigo}`, causa instanceof Error ? causa.message : 'Error nativo sin detalle');
   const error = new Error(fase === 'canal'
-    ? 'No se pudo preparar el canal de avisos del teléfono. Revisa los ajustes de notificaciones y vuelve a intentarlo.'
+    ? 'El componente de notificaciones de esta instalación no pudo crear los avisos. La agenda sigue disponible; para comprobar los avisos usaremos el APK propio de PetCore.'
     : 'Android/iOS no pudo solicitar el permiso de notificaciones. Puedes activarlo desde Ajustes del dispositivo.');
   error.name = 'PermisoNotificacionesError';
   return error;

@@ -94,3 +94,32 @@ cancelación, reintentos, concurrencia en logout, cuentas, preferencias y rutas.
 
 Referencias: [Expo ImagePicker SDK 58](https://docs.expo.dev/versions/v58.0.0/sdk/imagepicker/)
 y [Expo Notifications SDK 58](https://docs.expo.dev/versions/v58.0.0/sdk/notifications/).
+
+## Incidencia en Redmi Pad 2 / Expo Go
+
+El 28/10/2026 se reprodujo en el dispositivo una excepción nativa
+`ERR_UNEXPECTED / NullPointerException` tanto al crear como al consultar un canal
+con Expo Go. El permiso de cámara sí funciona. La configuración mínima y la
+configuración completa del canal no resolvieron esta excepción. No se ha
+confirmado la entrega de notificaciones en esa instalación y las pruebas con
+adaptadores no verifican el binario de Expo Go.
+
+Se preparó un perfil de APK independiente para compilar los módulos nativos de
+las dependencias del proyecto y comprobarlo fuera de Expo Go:
+
+```powershell
+cd MascotaCare
+npx eas-cli@latest login
+npx eas-cli@latest build --platform android --profile preview-local
+```
+
+El APK usa `com.petcore.mascotacare`. El perfil `preview-local` apunta a la API
+LAN `http://192.168.1.54:4000/api`; modificarla si cambia la IP del equipo.
+`app.config.ts` habilita HTTP solamente para ese perfil de prueba. La API y
+PostgreSQL deben seguir activos y la tablet debe estar en la misma Wi-Fi.
+El perfil no publica en Google Play. El archivo `.easignore` excluye variables
+locales, servidor, claves y adjuntos del archivo que se enviaría a EAS.
+
+La configuración está preparada; el APK todavía debe generarse, instalarse y
+validarse. Hay una sesión Expo disponible en este equipo. Antes de iniciar EAS se requiere
+autorización para enviar el código del frontend al servicio y vincular el proyecto. No se debe dar el fallo por resuelto hasta comprobar un aviso real.

@@ -1,0 +1,22 @@
+# No enviar configuración privada ni archivos del servidor al servicio de build.
+node_modules/
+**/node_modules/
+.git/
+.expo/
+dist/
+**/.env
+**/.env.*
+.env
+.env.*
+server/
+**/server/
+.codex-attachments/
+**/.codex-attachments/
+*.jks
+*.keystore
+*.p12
+*.p8
+*.mobileprovision
+
+*.pem
+*.key

@@ -1,0 +1,13 @@
+{
+  "cli": { "version": ">= 16.0.0" },
+  "build": {
+    "preview-local": {
+      "distribution": "internal",
+      "android": { "buildType": "apk" },
+      "env": {
+        "APP_VARIANT": "preview-local",
+        "EXPO_PUBLIC_API_URL": "http://192.168.1.54:4000/api"
+      }
+    }
+  }
+}
