@@ -1,3 +1,5 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 // ============================================================================
 // AppHeader.tsx - Cabecera general de las pantallas principales
 // ----------------------------------------------------------------------------
@@ -9,7 +11,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AppColors } from '@/constants/theme';
 
 interface AppHeaderProps {
   /** Callback que se ejecuta al tocar la campana (abre Recordatorios). */
@@ -17,11 +18,14 @@ interface AppHeaderProps {
 }
 
 export default function AppHeader({ onPressBell }: AppHeaderProps) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   return (
     <View style={styles.container}>
       {/* ---- Marca: huella + "PetCore" ---- */}
       <View style={styles.brand}>
-        <Ionicons name="paw" size={22} color={AppColors.primaryDark} />
+        <Ionicons name="paw" size={22} color={AppColors.accent} />
         <Text style={styles.brandText}>PetCore</Text>
       </View>
 
@@ -39,7 +43,7 @@ export default function AppHeader({ onPressBell }: AppHeaderProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -81,4 +85,4 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.7,
   },
-});
+}));

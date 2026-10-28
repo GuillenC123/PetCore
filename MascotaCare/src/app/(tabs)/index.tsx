@@ -1,3 +1,5 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 import { AdaptiveColumns, layoutStyles } from '@/components/AdaptiveLayout';
 // ============================================================================
 // (tabs)/index.tsx - Pantalla de Inicio
@@ -19,11 +21,13 @@ import CareAgenda from '@/components/CareAgenda';
 import { crearAgenda } from '@/utils/agenda';
 import PetCard from '@/components/PetCard';
 import QuickActionCard from '@/components/QuickActionCard';
-import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useAhora } from '@/hooks/use-ahora';
 
 export default function HomeScreen() {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   // Lee del contexto el usuario y los datos de la app.
   const { usuario, mascotas, citas, recordatorios, tratamientos } = useAuth();
   const ahora = useAhora();
@@ -62,7 +66,7 @@ export default function HomeScreen() {
           <QuickActionCard
             icon="calendar-outline"
             label="Agendar Cita"
-            circleColor="#DCFCE7"
+            circleColor={AppColors.successSoft}
             iconColor={AppColors.success}
             onPress={() => router.push('/nueva-cita')}
           />
@@ -102,7 +106,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: AppColors.background,
@@ -150,7 +154,7 @@ const styles = StyleSheet.create({
   link: {
     fontSize: 14,
     fontWeight: '600',
-    color: AppColors.primaryDark,
+    color: AppColors.accent,
   },
   list: {
     gap: 12,
@@ -160,4 +164,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: AppColors.textSecondary,
   },
-});
+}));

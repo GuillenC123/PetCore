@@ -30,10 +30,13 @@ export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
  * Paleta de colores del sistema de diseño de MascotaCare.
  * - primary: azul claro/celeste usado en botones, íconos y enlaces activos.
  * - status: colores semánticos para estados (éxito, alerta, información).
- * - Estos valores son fijos (no dependen del modo claro/oscuro) y se importan
- *   directamente en los componentes para mantener una identidad coherente.
+ * - AppColors define el modo claro; useAppColors selecciona la paleta activa.
  */
 export const AppColors = {
+  accent: "#0369A1", onPrimary: "#FFFFFF", border: "#E2E8F0",
+  surfaceMuted: "#F1F5F9", warning: "#92400E", warningSoft: "#FFFBEB",
+  purple: "#6D28D9", purpleSoft: "#EDE9FE", teal: "#0F766E", tealSoft: "#CCFBF1",
+  orange: "#9A3412", orangeSoft: "#FFEDD5",
   /** Azul primario / celeste de acento. */
   primary: '#0369A1',
   /** Variante más saturada del azul (para contrastes y botones sólidos). */
@@ -63,6 +66,18 @@ export const AppColors = {
   /** Verde oscuro para el borde de recordatorios prioritarios. */
   successDark: '#15803D',
 } as const;
+
+/** Paleta semántica compartida por pantallas y controles. */
+export type AppPalette = { [K in keyof typeof AppColors]: string };
+export const DarkAppColors: AppPalette = {
+  primary: '#0369A1', primaryDark: '#0369A1', accent: '#7DD3FC', onPrimary: '#FFFFFF',
+  surface: '#182334', background: '#0C1421', surfaceMuted: '#223146', border: '#36465C',
+  text: '#F1F5F9', textSecondary: '#BCC8D8', textMuted: '#899BB2',
+  success: '#86EFAC', successSoft: '#153D2C', successDark: '#4ADE80',
+  info: '#7DD3FC', infoSoft: '#14364D', danger: '#FCA5A5', dangerSoft: '#47242F',
+  warning: '#FCD34D', warningSoft: '#41351C', purple: '#C4B5FD', purpleSoft: '#342750',
+  teal: '#5EEAD4', tealSoft: '#153F3D', orange: '#FDBA74', orangeSoft: '#482D20',
+};
 
 export const Fonts = Platform.select({
   ios: {

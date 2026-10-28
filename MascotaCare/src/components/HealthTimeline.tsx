@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
+import { useRef, useState } from 'react';
+import { useFormularioSalud } from '@/context/HealthEditContext';
 import { Image, Linking, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
@@ -12,12 +15,16 @@ import { fechaPesoHoy } from '@/utils/peso';
 import FormInput from './FormInput';
 
 export default function HealthTimeline({ mascota }: { mascota: Mascota }) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   const { citas, tratamientos, adjuntarHistorial } = useAuth();
   const ahora = useAhora();
   const [creando, setCreando] = useState(false);
   const [mensaje, setMensaje] = useState('');
   const [foto, setFoto] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  useFormularioSalud(false, ocupado);
   const [limite, setLimite] = useState(15);
   const historial = crearHistorial(mascota, citas, tratamientos, ahora);
   const adjuntar = async (clave: string) => {
@@ -45,8 +52,8 @@ export default function HealthTimeline({ mascota }: { mascota: Mascota }) {
     {creando ? <Formulario mascotaId={mascota.id} cerrar={(guardado) => { setCreando(false); setMensaje(guardado ? 'Registro guardado. Puedes adjuntar documentos o fotos en su tarjeta.' : ''); }} />
       : <Boton label="Registrar consulta u observación" onPress={() => { setMensaje(''); setCreando(true); }} />}
     {!!mensaje && <Text accessibilityRole="alert" style={styles.text}>{mensaje}</Text>}
-    {!historial.length && <Text style={styles.text}>Todavía no hay eventos de salud registrados.</Text>}
-    {historial.slice(0, limite).map((e) => <View key={e.clave} style={styles.event}>
+    {!creando && !historial.length && <Text style={styles.text}>Todavía no hay eventos de salud registrados.</Text>}
+    {!creando && historial.slice(0, limite).map((e) => <View key={e.clave} style={styles.event}>
       <Text style={styles.date}>● {new Date(e.fecha).toLocaleDateString('es-PE')} · {e.tipo}</Text>
       <Text style={styles.label}>{e.titulo}</Text>
       {!!e.detalle && <Text style={styles.text}>{e.detalle}</Text>}
@@ -56,7 +63,7 @@ export default function HealthTimeline({ mascota }: { mascota: Mascota }) {
       </Pressable>)}
       <Boton label="Adjuntar PDF o fotografía" disabled={ocupado} onPress={() => adjuntar(e.clave)} />
     </View>)}
-    {historial.length > limite && <Boton label="Ver eventos anteriores" onPress={() => setLimite(limite + 15)} />}
+    {!creando && historial.length > limite && <Boton label="Ver eventos anteriores" onPress={() => setLimite(limite + 15)} />}
     <Text style={styles.text}>Los registros se guardan en tu cuenta al conectarte; los archivos se conservan durante esta sesión.</Text>
     <Modal visible={foto !== null} onRequestClose={() => setFoto(null)}>
       <SafeAreaView style={styles.modal}>
@@ -68,40 +75,53 @@ export default function HealthTimeline({ mascota }: { mascota: Mascota }) {
 }
 
 function Formulario({ mascotaId, cerrar }: { mascotaId: Identificador; cerrar: (guardado: boolean) => void }) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   const { agregarObservacion } = useAuth();
   const [tipo, setTipo] = useState<ObservacionSalud['tipo']>('observacion');
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [fecha, setFecha] = useState(fechaPesoHoy);
   const [error, setError] = useState('');
+  const [inicial] = useState(() => JSON.stringify({ tipo, titulo, descripcion, fecha }));
+  const [guardando, setGuardando] = useState(false);
+  const bloqueo = useRef(false);
+  const { descartar } = useFormularioSalud(JSON.stringify({ tipo, titulo, descripcion, fecha }) !== inicial, guardando);
   const guardar = async () => {
+    if (bloqueo.current) return;
+    bloqueo.current = true; setGuardando(true); setError('');
     try {
       const dia = interpretarFechaVisita(fecha, '00:00');
       if (!dia) throw new Error('Introduce una fecha válida (DD/MM/AAAA).');
       await agregarObservacion(mascotaId, { tipo, titulo, descripcion, fecha: dia.toISOString() }); cerrar(true);
     } catch (err) { setError(err instanceof Error ? err.message : 'No se pudo guardar.'); }
+    finally { bloqueo.current = false; setGuardando(false); }
   };
   return <View style={styles.form}>
-    <View style={styles.options}>{(['observacion', 'consulta'] as const).map((value) => <Pressable key={value} accessibilityRole="radio" accessibilityState={{ checked: tipo === value }}
-      style={[styles.option, tipo === value && { backgroundColor: '#E0F2FE' }]} onPress={() => setTipo(value)}><Text>{value === 'consulta' ? 'Consulta realizada' : 'Observación'}</Text></Pressable>)}</View>
+    <View style={styles.options}>{(['observacion', 'consulta'] as const).map((value) => <Pressable disabled={guardando} key={value} accessibilityRole="radio" accessibilityState={{ checked: tipo === value, disabled: guardando }}
+      style={[styles.option, tipo === value && { backgroundColor: AppColors.infoSoft }]} onPress={() => setTipo(value)}><Text style={{ color: AppColors.text }}>{value === 'consulta' ? 'Consulta realizada' : 'Observación'}</Text></Pressable>)}</View>
     <Text style={styles.label}>Título</Text>
-    <FormInput accessibilityLabel="Título del registro de salud" value={titulo} onChangeText={setTitulo} maxLength={120} placeholder="Motivo de consulta u observación" />
+    <FormInput editable={!guardando} accessibilityLabel="Título del registro de salud" value={titulo} onChangeText={setTitulo} maxLength={120} placeholder="Motivo de consulta u observación" />
     <Text style={styles.label}>Fecha</Text>
-    <FormInput dateMode="date" accessibilityLabel="Fecha del evento de salud" value={fecha} onChangeText={setFecha} maxLength={10} placeholder="DD/MM/AAAA" />
+    <FormInput editable={!guardando} dateMode="date" accessibilityLabel="Fecha del evento de salud" value={fecha} onChangeText={setFecha} maxLength={10} placeholder="DD/MM/AAAA" />
     <Text style={styles.label}>Descripción</Text>
-    <FormInput accessibilityLabel="Descripción del evento de salud" value={descripcion} onChangeText={setDescripcion} maxLength={2000} multiline placeholder="Anota lo observado o las indicaciones de la consulta" />
+    <FormInput editable={!guardando} accessibilityLabel="Descripción del evento de salud" value={descripcion} onChangeText={setDescripcion} maxLength={2000} multiline placeholder="Anota lo observado o las indicaciones de la consulta" />
     {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
-    <Boton label="Guardar evento" onPress={guardar} /><Boton label="Cancelar" onPress={() => cerrar(false)} />
+    <Boton label={guardando ? 'Guardando…' : 'Guardar evento'} onPress={guardar} disabled={guardando} /><Boton label="Cancelar" onPress={() => descartar(() => cerrar(false))} disabled={guardando} />
   </View>;
 }
 function Boton({ label, onPress, disabled = false }: { label: string; onPress: () => void; disabled?: boolean }) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={[styles.button, disabled && { opacity: 0.5 }]}><Text style={styles.buttonText}>{label}</Text></Pressable>;
 }
-const styles = StyleSheet.create({
-  section: { gap: 14 }, title: { fontSize: 18, fontWeight: '700', color: '#111827' }, label: { fontSize: 15, fontWeight: '600', color: '#111827' },
-  text: { fontSize: 14, lineHeight: 21, color: '#6B7280' }, event: { gap: 12, padding: 14, borderLeftWidth: 3, borderLeftColor: '#0369A1', backgroundColor: '#F8FAFC', borderRadius: 10 },
-  date: { color: '#0369A1', fontWeight: '600' }, button: { padding: 12, borderRadius: 12, backgroundColor: '#0369A1', alignItems: 'center' }, buttonText: { color: '#FFFFFF', fontWeight: '600' },
-  attachment: { gap: 8, paddingVertical: 8 }, thumbnail: { width: '100%', height: 120 }, link: { color: '#0369A1', fontWeight: '600' },
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
+  section: { gap: 14 }, title: { fontSize: 18, fontWeight: '700', color: AppColors.text }, label: { fontSize: 15, fontWeight: '600', color: AppColors.text },
+  text: { fontSize: 14, lineHeight: 21, color: AppColors.textSecondary }, event: { gap: 12, padding: 14, borderLeftWidth: 3, borderLeftColor: AppColors.primaryDark, backgroundColor: AppColors.surfaceMuted, borderRadius: 10 },
+  date: { color: AppColors.accent, fontWeight: '600' }, button: { padding: 12, borderRadius: 12, backgroundColor: AppColors.primaryDark, alignItems: 'center' }, buttonText: { color: AppColors.onPrimary, fontWeight: '600' },
+  attachment: { gap: 8, paddingVertical: 8 }, thumbnail: { width: '100%', height: 120 }, link: { color: AppColors.accent, fontWeight: '600' },
   modal: { flex: 1, padding: 16 }, image: { flex: 1, width: '100%' }, form: { gap: 12 }, options: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  option: { padding: 12, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 12 }, error: { color: '#B91C1C' },
-});
+  option: { padding: 12, borderWidth: 1, borderColor: AppColors.border, borderRadius: 12 }, error: { color: AppColors.danger },
+}));

@@ -26,7 +26,8 @@ export function crearAgenda(citas: Cita[], tratamientos: Tratamiento[], recordat
 }
 
 export type FiltroAgenda = 'Hoy' | 'Esta semana' | 'Vencidos' | 'Todos';
-export function filtrarAgenda(eventos: EventoAgenda[], filtro: FiltroAgenda, mascotaId: Identificador | null, ahora = Date.now()) {
+export type FiltroTipoAgenda = 'todos' | EventoAgenda['tipo'];
+export function filtrarAgenda(eventos: EventoAgenda[], filtro: FiltroAgenda, mascotaId: Identificador | null, ahora = Date.now(), tipo: FiltroTipoAgenda = 'todos') {
   const hoy = new Date(ahora);
   hoy.setHours(0, 0, 0, 0);
   const manana = new Date(hoy); manana.setDate(manana.getDate() + 1);
@@ -34,10 +35,31 @@ export function filtrarAgenda(eventos: EventoAgenda[], filtro: FiltroAgenda, mas
   const finSemana = new Date(lunes); finSemana.setDate(finSemana.getDate() + 7);
   return eventos.filter((e) => {
     if (mascotaId !== null && e.mascota_id !== mascotaId) return false;
+    if (tipo !== 'todos' && e.tipo !== tipo) return false;
     const fecha = Date.parse(e.fecha);
     if (filtro === 'Hoy') return fecha >= hoy.getTime() && fecha < manana.getTime();
     if (filtro === 'Esta semana') return fecha >= lunes.getTime() && fecha < finSemana.getTime();
     if (filtro === 'Vencidos') return fecha < ahora;
     return true;
   });
+}
+
+export function agruparAgenda(eventos: EventoAgenda[], ahora = Date.now()) {
+  const hoy = new Date(ahora); hoy.setHours(0, 0, 0, 0);
+  const manana = new Date(hoy); manana.setDate(manana.getDate() + 1);
+  const grupos = new Map<string, { clave: string; titulo: string; vencido: boolean; eventos: EventoAgenda[] }>();
+  const ordenados = [...eventos].sort((a, b) => Date.parse(a.fecha) - Date.parse(b.fecha));
+  for (const evento of ordenados) {
+    const fecha = new Date(evento.fecha);
+    if (!Number.isFinite(fecha.getTime())) continue;
+    const vencido = fecha.getTime() < ahora;
+    const dia = new Date(fecha); dia.setHours(0, 0, 0, 0);
+    const clave = vencido ? 'vencidos' : `${fecha.getFullYear()}-${fecha.getMonth()}-${fecha.getDate()}`;
+    const titulo = vencido ? 'Vencidos' : dia.getTime() === hoy.getTime() ? 'Hoy'
+      : dia.getTime() === manana.getTime() ? 'Mañana'
+        : fecha.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' });
+    if (!grupos.has(clave)) grupos.set(clave, { clave, titulo: titulo.charAt(0).toUpperCase() + titulo.slice(1), vencido, eventos: [] });
+    grupos.get(clave)!.eventos.push(evento);
+  }
+  return [...grupos.values()];
 }

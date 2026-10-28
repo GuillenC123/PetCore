@@ -27,7 +27,7 @@ function validar(esquema, { origen = 'body', obligatorios = [], parcial = false 
       const nombre = Object.keys(errores)[0];
       return res.status(400).json({ error: `${nombre}: ${errores[nombre]}`, errores });
     }
-    if (parcial && !Object.values(normalizados).some((valor) => valor !== null)) {
+    if (parcial && !Object.entries(normalizados).some(([nombre, valor]) => valor !== null || nombre === 'imagen')) {
       return res.status(400).json({ error: 'Envía al menos un campo editable con un valor.' });
     }
 

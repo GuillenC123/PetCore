@@ -1,3 +1,5 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 import { layoutStyles } from '@/components/AdaptiveLayout';
 // ============================================================================
 // mascota-detalle.tsx - Pantalla de Detalle de una Mascota
@@ -17,15 +19,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import PetHealthStatus from '@/components/PetHealthStatus';
 import WeightTracker from '@/components/WeightTracker';
-import PetImage from '@/components/PetImage';
-import { AppColors } from '@/constants/theme';
+import PhotoField from '@/components/PhotoField';
 import { useAuth } from '@/context/AuthContext';
 import { edadMascota } from '@/utils/salud';
 
 export default function MascotaDetalleScreen() {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   // Lee el id pasado en la URL (ej. el FAB navega a /mascota-detalle?id=1).
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { mascotas } = useAuth();
+  const { mascotas, actualizarFotoMascota } = useAuth();
 
   // Busca la mascota por id (convertimos el string a número).
   const mascota = mascotas.find((m) => String(m.id) === id);
@@ -64,7 +68,8 @@ export default function MascotaDetalleScreen() {
         showsVerticalScrollIndicator={false}>
         {/* ---- Foto grande de la mascota ---- */}
         <View style={styles.photoBlock}>
-          <PetImage url={mascota.imagen} nombre={mascota.nombre} size={140} />
+          <PhotoField label="Foto de la mascota" value={mascota.imagen}
+            onChange={(foto) => actualizarFotoMascota(mascota.id, foto)} />
         </View>
 
         {/* ---- Nombre y estado de salud ---- */}
@@ -104,9 +109,12 @@ export default function MascotaDetalleScreen() {
 
 // Pequeño componente interno para una fila etiqueta/valor del detalle.
 function Fila({ icon, etiqueta, valor }: { icon: IconName; etiqueta: string; valor: string }) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   return (
     <View style={styles.fila}>
-      <Ionicons name={icon} size={18} color={AppColors.primaryDark} />
+      <Ionicons name={icon} size={18} color={AppColors.accent} />
       <Text style={styles.filaEtiqueta}>{etiqueta}</Text>
       <Text style={styles.filaValor}>{valor}</Text>
     </View>
@@ -114,14 +122,17 @@ function Fila({ icon, etiqueta, valor }: { icon: IconName; etiqueta: string; val
 }
 
 function Separador() {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   return <View style={styles.separador} />;
 }
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   action: { paddingVertical: 12, alignItems: 'center' },
-  actionText: { color: '#0369A1', fontWeight: '700', fontSize: 15 },
+  actionText: { color: AppColors.accent, fontWeight: '700', fontSize: 15 },
   safe: {
     flex: 1,
     backgroundColor: AppColors.background,
@@ -210,7 +221,7 @@ const styles = StyleSheet.create({
   },
   separador: {
     height: 1,
-    backgroundColor: '#EEF0F3',
+    backgroundColor: AppColors.border,
     marginVertical: 4,
   },
   error: {
@@ -224,8 +235,8 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   backText: {
-    color: AppColors.primaryDark,
+    color: AppColors.accent,
     fontSize: 15,
     fontWeight: '700',
   },
-});
+}));

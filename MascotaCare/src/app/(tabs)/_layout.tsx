@@ -1,3 +1,5 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 // ============================================================================
 // (tabs)/_layout.tsx - Barra de navegación inferior (Bottom Tab Navigator)
 // ----------------------------------------------------------------------------
@@ -19,7 +21,6 @@ import type { BottomTabBarProps } from 'expo-router/tabs';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppColors } from '@/constants/theme';
 import { useTabletLayout } from '@/hooks/use-tablet-layout';
 
 // ---------------------------------------------------------------------------
@@ -29,7 +30,10 @@ import { useTabletLayout } from '@/hooks/use-tablet-layout';
 // cada ruta. La pestaña activa muestra una "píldora" azul celeste de fondo que
 // resalta el ícono y el texto; las inactivas van en gris.
 // ---------------------------------------------------------------------------
-function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+function CustomTabBar({ state, descriptors, emitter, navigateToTab }: BottomTabBarProps) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   // Los tabs se dibujan dentro del safe area (evita chocar con gestos del SO).
   const insets = useSafeAreaInsets();
   const { sidebar } = useTabletLayout();
@@ -37,7 +41,7 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   return (
     <View style={[styles.tabBar, { paddingBottom: insets.bottom + 8, paddingLeft: insets.left + 12, paddingRight: insets.right + 12 },
       sidebar && [styles.sidebar, { paddingTop: insets.top + 24, width: 204 + insets.left, paddingRight: 12 }]]}>
-      {sidebar && <View style={styles.brand}><Ionicons name="paw" size={28} color={AppColors.primaryDark} /><Text style={styles.brandText}>PetCore</Text></View>}
+      {sidebar && <View style={styles.brand}><Ionicons name="paw" size={28} color={AppColors.accent} /><Text style={styles.brandText}>PetCore</Text></View>}
       <ScrollView horizontal={!sidebar} showsHorizontalScrollIndicator={false} showsVerticalScrollIndicator={false}
         style={sidebar ? styles.sidebarScroll : styles.bottomScroll}
         contentContainerStyle={sidebar ? styles.sidebarLinks : styles.bottomLinks}>
@@ -52,13 +56,13 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 
         // Al tocar una pestaña, navegamos (o volvemos a enfocar si ya está).
         const onPress = () => {
-          const event = navigation.emit({
+          const event = emitter.emit({
             type: 'tabPress',
             target: route.key,
             canPreventDefault: true,
           });
           if (!isFocused && !event.defaultPrevented) {
-            navigation.navigate(route.name);
+            navigateToTab(route.key);
           }
         };
 
@@ -68,7 +72,7 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
             accessibilityLabel={options.title ?? route.name}
             key={route.key}
             onPress={onPress}
-            onLongPress={() => navigation.emit({ type: 'tabLongPress', target: route.key })}
+            onLongPress={() => emitter.emit({ type: 'tabLongPress', target: route.key })}
             style={[styles.tabButton, sidebar && styles.sideButton]}
             accessibilityState={isFocused ? { selected: true } : {}}>
             {/* Contenido de la pestaña: ícono + etiqueta. */}
@@ -76,7 +80,7 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
               <Ionicons
                 name={iconName}
                 size={22}
-                color={isFocused ? AppColors.primaryDark : AppColors.textSecondary}
+                color={isFocused ? AppColors.accent : AppColors.textSecondary}
               />
               <Text style={[styles.tabLabel, sidebar && styles.sideLabel, isFocused && styles.tabLabelActivo]}>
                 {options.title ?? route.name}
@@ -112,10 +116,10 @@ export default function TabsLayout() {
   );
 }
 
-const styles = StyleSheet.create({
-  sidebar: { flexDirection: 'column', borderTopLeftRadius: 0, borderTopRightRadius: 0, borderRightWidth: 1, borderRightColor: '#E2E8F0', elevation: 0, shadowOpacity: 0 },
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
+  sidebar: { flexDirection: 'column', borderTopLeftRadius: 0, borderTopRightRadius: 0, borderRightWidth: 1, borderRightColor: AppColors.border, elevation: 0, shadowOpacity: 0 },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 10, marginBottom: 28 },
-  brandText: { fontSize: 22, fontWeight: '800', color: AppColors.primaryDark },
+  brandText: { fontSize: 22, fontWeight: '800', color: AppColors.accent },
   sidebarScroll: { flex: 1 },
   bottomScroll: { flexGrow: 1, flexShrink: 1 },
   sidebarLinks: { gap: 12 },
@@ -161,7 +165,7 @@ const styles = StyleSheet.create({
     color: AppColors.textSecondary,
   },
   tabLabelActivo: {
-    color: AppColors.primaryDark,
+    color: AppColors.accent,
     fontWeight: '700',
   },
-});
+}));

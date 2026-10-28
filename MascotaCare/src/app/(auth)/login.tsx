@@ -1,3 +1,5 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 import { layoutStyles } from '@/components/AdaptiveLayout';
 // ============================================================================
 // (auth)/login.tsx - Pantalla de Iniciar Sesión
@@ -25,11 +27,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import FormInput from '@/components/FormInput';
-import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { validarCorreo, validarPassword } from '@/utils/validaciones';
 
 export default function LoginScreen() {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   // Estado de los campos del formulario.
   const [correo, setCorreo] = useState('');
   const [password, setPassword] = useState('');
@@ -81,7 +85,7 @@ export default function LoginScreen() {
           {/* Marca de la app. */}
           <View style={styles.brandBlock}>
             <View style={styles.logo}>
-              <Ionicons name="paw" size={34} color="#FFFFFF" />
+              <Ionicons name="paw" size={34} color={AppColors.onPrimary} />
             </View>
             <Text style={styles.appName}>PetCore</Text>
             <Text style={styles.tagline}>El cuidado de tus mascotas en un solo lugar.</Text>
@@ -124,7 +128,7 @@ export default function LoginScreen() {
             disabled={cargando}
             style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>
             {cargando ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color={AppColors.onPrimary} />
             ) : (
               <Text style={styles.buttonText}>Ingresar</Text>
             )}
@@ -148,7 +152,7 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: AppColors.background,
@@ -209,7 +213,7 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: AppColors.onPrimary,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -230,6 +234,6 @@ const styles = StyleSheet.create({
   link: {
     fontSize: 14,
     fontWeight: '700',
-    color: AppColors.primaryDark,
+    color: AppColors.accent,
   },
-});
+}));

@@ -79,6 +79,7 @@ function mensajeServidorNoDisponible(): string {
 // ---------------------------------------------------------------------------
 
 interface AuthContextValue {
+  actualizarFotoMascota: (id: Identificador, imagen: string | null) => Promise<void>;
   completarCita: (id: Identificador) => Promise<void>;
   actualizarCita: (id: Identificador, datos: Partial<Pick<Cita, 'titulo' | 'fecha_hora'>>) => Promise<void>;
   cancelarCita: (id: Identificador) => Promise<void>;
@@ -113,7 +114,7 @@ interface AuthContextValue {
   actualizarPesoMascota: (id: Identificador, peso: number | null) => Promise<void>;
   registrarPeso: (id: Identificador, peso: number, fecha: string) => Promise<void>;
   actualizarFichaSalud: (id: Identificador, datos: DatosFichaSalud) => Promise<void>;
-  actualizarPerfil: (datos: Pick<Usuario, 'nombre' | 'correo'>) => Promise<void>;
+  actualizarPerfil: (datos: Pick<Usuario, 'nombre' | 'correo' | 'imagen'>) => Promise<void>;
 }
 
 // Valor inicial por defecto del contexto (para TypeScript).
@@ -505,12 +506,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await registrarPeso(id, peso, fechaPesoHoy());
   }, [registrarPeso]);
 
-  const actualizarPerfil = React.useCallback(async (datos: Pick<Usuario, 'nombre' | 'correo'>) => {
+  const actualizarFotoMascota = React.useCallback(async (id: Identificador, imagen: string | null) => {
+    if (!mascotas.some((m) => m.id === id)) throw new Error('Mascota no encontrada.');
+    const sesion = versionSesion.current;
+    const guardada = token && conectado ? await apiActualizarMascota(token, id, { imagen }) : null;
+    if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
+    setHayCambiosLocales(true);
+    cambiosLocales.current.mascotas.add(String(id));
+    setMascotas((prev) => prev.map((m) => m.id === id ? { ...m, imagen: guardada ? guardada.imagen : imagen } : m));
+  }, [mascotas, token, conectado]);
+
+  const actualizarPerfil = React.useCallback(async (datos: Pick<Usuario, 'nombre' | 'correo' | 'imagen'>) => {
     const nombre = datos.nombre.normalize('NFC').trim();
     const correo = datos.correo.trim().toLowerCase();
     const sesion = versionSesion.current;
     if (token && conectado) {
-      const respuesta = await apiActualizarPerfil(token, { nombre, correo });
+      const respuesta = await apiActualizarPerfil(token, { nombre, correo, imagen: datos.imagen });
       if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
       setUsuario(respuesta.usuario);
       setToken(respuesta.token);
@@ -519,7 +530,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setHayCambiosLocales(true);
     setUsuario((actual) => actual ? {
       ...actual,
-      nombre, correo,
+      nombre, correo, ...(datos.imagen === undefined ? {} : { imagen: datos.imagen }),
     } : actual);
   }, [token, conectado]);
 
@@ -659,6 +670,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Valor expuesto por el contexto.
   // ==========================================================================
   const value: AuthContextValue = {
+    actualizarFotoMascota,
     completarCita,
     actualizarCita,
     cancelarCita,

@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
+import { useRef, useState } from 'react';
+import { useFormularioSalud } from '@/context/HealthEditContext';
 import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -15,6 +18,9 @@ type Edicion = { datos?: RegistroCarnet; aplicar?: boolean; anterior?: RegistroC
 const tipoLabel = (r: RegistroCarnet) => r.tipo === 'vacuna' ? 'Vacuna' : 'Desparasitación';
 
 export default function VaccineRecord({ mascota }: { mascota: Mascota }) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   const ahora = useAhora();
   const [editor, setEditor] = useState<Edicion | null>(null);
   const [foto, setFoto] = useState<string | null>(null);
@@ -65,6 +71,9 @@ export default function VaccineRecord({ mascota }: { mascota: Mascota }) {
 }
 
 function Formulario({ mascotaId, edicion, cerrar }: { mascotaId: Identificador; edicion: Edicion; cerrar: (guardado: boolean) => void }) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   const { guardarCarnet } = useAuth();
   const datos = edicion.datos;
   const [tipo, setTipo] = useState<RegistroCarnet['tipo']>(datos?.tipo ?? edicion.anterior?.tipo ?? 'vacuna');
@@ -75,6 +84,10 @@ function Formulario({ mascotaId, edicion, cerrar }: { mascotaId: Identificador; 
   const [foto, setFoto] = useState<string | null>(datos?.comprobante ?? null);
   const [error, setError] = useState('');
   const [seleccionando, setSeleccionando] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const bloqueo = useRef(false);
+  const [inicial] = useState(() => JSON.stringify({ tipo, nombre, aplicado, fecha, proxima, foto }));
+  const { descartar } = useFormularioSalud(JSON.stringify({ tipo, nombre, aplicado, fecha, proxima, foto }) !== inicial, seleccionando || guardando);
   const elegirFoto = async () => {
     setError(''); setSeleccionando(true);
     try {
@@ -84,56 +97,65 @@ function Formulario({ mascotaId, edicion, cerrar }: { mascotaId: Identificador; 
     finally { setSeleccionando(false); }
   };
   const guardar = async () => {
+    if (bloqueo.current || seleccionando) return;
+    bloqueo.current = true; setGuardando(true); setError('');
     try {
       await guardarCarnet(mascotaId, { tipo, nombre, fecha_aplicacion: aplicado ? fecha.trim() : null,
         proxima_fecha: proxima.trim() || null, comprobante: foto,
         anterior_id: datos?.anterior_id ?? edicion.anterior?.id }, datos?.id);
       cerrar(true);
     } catch (err) { setError(err instanceof Error ? err.message : 'No se pudo guardar.'); }
+    finally { bloqueo.current = false; setGuardando(false); }
   };
   return <View style={styles.card}>
     <Text style={styles.label}>{datos ? 'Actualizar registro' : 'Nuevo registro'}</Text>
     <View style={styles.options}>
-      <Opcion label="Vacuna" activo={tipo === 'vacuna'} onPress={() => setTipo('vacuna')} />
-      <Opcion label="Desparasitación" activo={tipo === 'desparasitacion'} onPress={() => setTipo('desparasitacion')} />
+      <Opcion disabled={guardando} label="Vacuna" activo={tipo === 'vacuna'} onPress={() => setTipo('vacuna')} />
+      <Opcion disabled={guardando} label="Desparasitación" activo={tipo === 'desparasitacion'} onPress={() => setTipo('desparasitacion')} />
     </View>
     <Text style={styles.label}>Nombre de la vacuna o desparasitante</Text>
-    <FormInput accessibilityLabel="Nombre de vacuna o desparasitante" value={nombre} onChangeText={setNombre} maxLength={120} placeholder="Nombre registrado por el veterinario" />
+    <FormInput editable={!guardando} accessibilityLabel="Nombre de vacuna o desparasitante" value={nombre} onChangeText={setNombre} maxLength={120} placeholder="Nombre registrado por el veterinario" />
     {!edicion.aplicar && <View style={styles.options}>
-      <Opcion label="Ya aplicado" activo={aplicado} onPress={() => setAplicado(true)} />
-      <Opcion label="Solo próxima fecha" activo={!aplicado} onPress={() => setAplicado(false)} />
+      <Opcion disabled={guardando} label="Ya aplicado" activo={aplicado} onPress={() => setAplicado(true)} />
+      <Opcion disabled={guardando} label="Solo próxima fecha" activo={!aplicado} onPress={() => setAplicado(false)} />
     </View>}
     {aplicado && <>
       <Text style={styles.label}>Fecha de aplicación</Text>
-      <FormInput dateMode="date" accessibilityLabel="Fecha de aplicación" value={fecha} onChangeText={setFecha} maxLength={10} placeholder="DD/MM/AAAA" />
+      <FormInput editable={!guardando} dateMode="date" accessibilityLabel="Fecha de aplicación" value={fecha} onChangeText={setFecha} maxLength={10} placeholder="DD/MM/AAAA" />
     </>}
     <Text style={styles.label}>Próxima fecha indicada por el veterinario {aplicado ? '(opcional)' : ''}</Text>
-    <FormInput dateMode="date" accessibilityLabel="Próxima fecha indicada por el veterinario" value={proxima} onChangeText={setProxima} maxLength={10} placeholder="DD/MM/AAAA" />
+    <FormInput editable={!guardando} dateMode="date" accessibilityLabel="Próxima fecha indicada por el veterinario" value={proxima} onChangeText={setProxima} maxLength={10} placeholder="DD/MM/AAAA" />
     <Text style={styles.text}>La próxima fecha se marca vencida a partir del día siguiente. Puedes registrar fechas anteriores para completar el historial.</Text>
-    <Boton label={seleccionando ? 'Abriendo fotos…' : foto ? 'Cambiar foto del comprobante' : 'Adjuntar foto del comprobante'} onPress={elegirFoto} disabled={seleccionando} />
+    <Boton label={seleccionando ? 'Abriendo fotos…' : foto ? 'Cambiar foto del comprobante' : 'Adjuntar foto del comprobante'} onPress={elegirFoto} disabled={seleccionando || guardando} />
     {!!foto && <>
       <Image source={{ uri: foto }} style={styles.preview} resizeMode="contain" accessibilityLabel="Comprobante seleccionado" />
-      <Boton label="Quitar foto" onPress={() => setFoto(null)} disabled={seleccionando} />
+      <Boton label="Quitar foto" onPress={() => setFoto(null)} disabled={seleccionando || guardando} />
     </>}
     <Text style={styles.text}>Los datos se guardan en tu cuenta al conectarte; la foto se conserva solo durante esta sesión.</Text>
     {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
-    <Boton label="Guardar registro" onPress={guardar} disabled={seleccionando} />
-    <Boton label="Cancelar" onPress={() => cerrar(false)} disabled={seleccionando} />
+    <Boton label={guardando ? 'Guardando…' : 'Guardar registro'} onPress={guardar} disabled={seleccionando || guardando} />
+    <Boton label="Cancelar" onPress={() => descartar(() => cerrar(false))} disabled={seleccionando || guardando} />
   </View>;
 }
 
 function Boton({ label, onPress, disabled = false }: { label: string; onPress: () => void; disabled?: boolean }) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={[styles.button, disabled && { opacity: 0.5 }]}><Text style={styles.buttonText}>{label}</Text></Pressable>;
 }
-function Opcion({ label, activo, onPress }: { label: string; activo: boolean; onPress: () => void }) {
-  return <Pressable accessibilityRole="radio" accessibilityState={{ checked: activo }} onPress={onPress} style={[styles.option, activo && styles.active]}><Text style={styles.text}>{label}</Text></Pressable>;
+function Opcion({ label, activo, onPress, disabled = false }: { label: string; activo: boolean; onPress: () => void; disabled?: boolean }) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
+  return <Pressable disabled={disabled} accessibilityRole="radio" accessibilityState={{ checked: activo, disabled }} onPress={onPress} style={[styles.option, activo && styles.active]}><Text style={styles.text}>{label}</Text></Pressable>;
 }
-const styles = StyleSheet.create({
-  section: { gap: 14 }, title: { fontSize: 18, fontWeight: '700', color: '#111827' },
-  label: { fontSize: 15, fontWeight: '600', color: '#111827' }, text: { fontSize: 14, lineHeight: 21, color: '#6B7280' },
-  card: { gap: 12, padding: 14, borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 14 },
-  button: { padding: 12, borderRadius: 12, backgroundColor: '#0369A1', alignItems: 'center' }, buttonText: { color: '#FFFFFF', fontWeight: '700' },
-  options: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, option: { padding: 12, borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 12 }, active: { backgroundColor: '#E0F2FE', borderColor: '#0369A1' },
-  preview: { width: '100%', height: 180 }, link: { color: '#0369A1', paddingVertical: 12, fontWeight: '600' },
-  error: { color: '#B91C1C' }, modal: { flex: 1, padding: 16, backgroundColor: '#FFFFFF' }, fullImage: { flex: 1, width: '100%' },
-});
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
+  section: { gap: 14 }, title: { fontSize: 18, fontWeight: '700', color: AppColors.text },
+  label: { fontSize: 15, fontWeight: '600', color: AppColors.text }, text: { fontSize: 14, lineHeight: 21, color: AppColors.textSecondary },
+  card: { gap: 12, padding: 14, borderWidth: 1, borderColor: AppColors.textMuted, borderRadius: 14 },
+  button: { padding: 12, borderRadius: 12, backgroundColor: AppColors.primaryDark, alignItems: 'center' }, buttonText: { color: AppColors.onPrimary, fontWeight: '700' },
+  options: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, option: { padding: 12, borderWidth: 1, borderColor: AppColors.textMuted, borderRadius: 12 }, active: { backgroundColor: AppColors.infoSoft, borderColor: AppColors.primaryDark },
+  preview: { width: '100%', height: 180 }, link: { color: AppColors.accent, paddingVertical: 12, fontWeight: '600' },
+  error: { color: AppColors.danger }, modal: { flex: 1, padding: 16, backgroundColor: AppColors.surface }, fullImage: { flex: 1, width: '100%' },
+}));

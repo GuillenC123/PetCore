@@ -1,3 +1,5 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 // ============================================================================
 // FAB.tsx - Botón Flotante de Acción (Floating Action Button)
 // ----------------------------------------------------------------------------
@@ -9,7 +11,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet } from 'react-native';
 
-import { AppColors } from '@/constants/theme';
 
 interface FABProps {
   /** Acción al pulsar el botón. */
@@ -17,18 +18,21 @@ interface FABProps {
 }
 
 export default function FAB({ onPress }: FABProps) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [styles.fab, pressed && styles.pressed]}
       accessibilityLabel="Agregar">
-      <Ionicons name="add" size={30} color="#FFFFFF" />
+      <Ionicons name="add" size={30} color={AppColors.onPrimary} />
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   fab: {
     position: 'absolute',
     right: 20,
@@ -49,4 +53,4 @@ const styles = StyleSheet.create({
   pressed: {
     transform: [{ scale: 0.92 }],
   },
-});
+}));

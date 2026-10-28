@@ -12,7 +12,7 @@ Aplicación para que los dueños organicen la salud y los cuidados de sus mascot
 - **Carnet:** vacunas, desparasitación, próximas aplicaciones y fotografías de comprobantes.
 - **Tratamientos:** indicaciones, duración, horarios y tomas administradas u omitidas.
 - **Historial:** consultas realizadas, aplicaciones, tratamientos iniciados, observaciones y adjuntos PDF o fotografías.
-- **Perfil:** datos del usuario, estadísticas, edición de nombre y correo, y cierre de sesión.
+- **Perfil:** datos del usuario, foto, estadísticas, edición de nombre y correo, apariencia y cierre de sesión.
 - **Ayuda:** guía sobre cómo utilizar la aplicación.
 - **Acceso:** inicio de sesión y registro con validaciones y mensajes de error.
 
@@ -26,7 +26,7 @@ Express verifica JWT, valida solicitudes y consulta PostgreSQL mediante `pg` y S
 
 | Capa | Tecnologías declaradas |
 | --- | --- |
-| Frontend | React 19.2.3, React Native 0.86.3, Expo SDK 57, TypeScript 6. |
+| Frontend | React 19.3.0, React Native 0.88.0, Expo SDK 58, TypeScript 6. |
 | Navegación y estado | Expo Router, React Context y hooks. |
 | Interfaz y dispositivo | StyleSheet, Ionicons, Expo Image, selectores de fecha, imágenes, documentos y compartir. |
 | Servidor | Node.js, Express 4, CORS, dotenv. |
@@ -94,7 +94,7 @@ PostgreSQL contiene `Usuario`, `Mascota`, `CitaMedica` y `Recordatorio`. Los dat
 
 ### 1. Requisitos y dependencias
 
-Necesitas Node.js, npm, PostgreSQL y acceso a `psql` o pgAdmin para la API real. La [referencia de Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/) establece Node.js 22.13.x como mínimo para ese SDK.
+Necesitas Node.js, npm, PostgreSQL y acceso a `psql` o pgAdmin para la API real. La [referencia de Expo SDK 58](https://docs.expo.dev/versions/v58.0.0/) detalla los requisitos de Node.js para ese SDK.
 
 Los pasos parten de `MascotaCare/`. Desde la raíz, ejecuta primero `cd MascotaCare`.
 
@@ -213,7 +213,7 @@ npm test --prefix server
 
 Las pruebas del servidor recorren rutas HTTP y sustituyen PostgreSQL; no verifican una base de datos real. El lint de Expo tiene como alcance predeterminado el frontend.
 
-Para los diez scripts de lógica del frontend en PowerShell:
+Para los dieciséis scripts del frontend en PowerShell:
 
 ```powershell
 $falloPruebas = $false
@@ -306,3 +306,67 @@ Las instalaciones nuevas ya incluyen las columnas en `server/db/schema.sql`.
 `npm run test:salud` desde `server`, con la API local levantada, comprueba el alta,
 la edición y recarga de la ficha y el historial de peso. Crea una cuenta temporal
 y elimina sus datos al terminar. `npm test` ejecuta las pruebas HTTP sin PostgreSQL.
+
+## Fotos de perfil y mascotas
+
+Se puede subir, cambiar o quitar una foto desde Editar perfil, Añadir mascota,
+Datos de salud y el detalle de la mascota. `PhotoField` utiliza `seleccionarFoto`
+para abrir la galería, recortar al centro y convertir a JPEG cuadrado de hasta
+512 píxeles y 512 KiB. Se envía como data URI, sin depender de rutas temporales.
+Cancelar la selección conserva la foto actual. Los botones se bloquean mientras
+se prepara o guarda y los errores permiten reintentar.
+
+La API valida la foto y PostgreSQL conserva `imagen` en columnas TEXT de usuarios
+y mascotas. Para bases existentes ejecutar `npm run db:migrate` en `server`;
+la migración `006-fotos.sql` conserva los datos actuales. Las fotos se recuperan
+al volver a acceder; en demo se conservan en los datos de demostración.
+`node scripts/test-fotos.cjs` comprueba selección, conversión, errores y recarga.
+En `server`, `npm run test:fotos` comprueba el flujo con la API local iniciada.
+
+## Catálogo de razas en español
+
+Añadir mascota y Editar datos de salud utilizan `BreedField`: lista con búsqueda
+para Perro o Gato y opciones Mestizo y Otra raza. Otro permite entrada manual.
+El cliente consulta `GET /api/razas?especie=Perro` o `Gato` en la API propia.
+El servidor consulta Wikidata, acepta solamente etiquetas en español y conserva
+el catálogo en memoria durante 24 horas. No requiere clave de API.
+Si falla la consulta se puede reintentar o introducir la raza manualmente.
+`test-razas.cjs` y las pruebas del servidor verifican catálogo, idioma, búsqueda,
+reintentos y cancelación.
+
+## Agenda de cuidados
+
+La agenda agrupa los cuidados por día y distingue vencidos, hoy y próximas fechas.
+Los filtros de periodo, tipo y mascota se combinan, muestran recuentos y permiten
+restablecer la selección. Los botones distinguen acciones principales, edición
+y cancelación. Las tomas futuras no permiten marcarse antes de tiempo.
+`test-agenda-ui.cjs` comprueba filtros, grupos y acciones de la interfaz.
+La navegación de las cuatro pestañas utiliza el contrato de Expo Router SDK 58;
+`test-navegacion.cjs` comprueba eventos, navegación y disposición de tableta.
+
+## Navegación por secciones de salud
+
+La portada muestra el resumen de la mascota y cinco tarjetas: Datos de salud,
+Peso, Vacunas y desparasitación, Tratamientos e Historial de salud.
+Cada tarjeta abre `/salud/[seccion]` con el ID de la mascota. Al volver se conserva
+la mascota seleccionada. En tableta aparece un menú lateral; en móvil se muestra
+solamente la sección elegida. Los módulos conservan sus funciones de edición,
+registro, documentos y guardado.
+
+`HealthEditProvider` avisa antes de abandonar o cancelar formularios modificados;
+permite seguir editando o descartar el borrador y bloquea la navegación durante
+el guardado. `test-salud-secciones.cjs` comprueba los cinco accesos, IDs BIGINT,
+resúmenes, confirmación y bloqueo de navegación.
+
+## Apariencia
+
+En **Perfil / Apariencia** se puede elegir **Claro**, **Oscuro** o **Automático**.
+Automático sigue el tema del dispositivo. La preferencia se guarda con AsyncStorage
+en el dispositivo y se mantiene al reiniciar o cerrar sesión.
+`AppearanceProvider` comparte la paleta semántica con pantallas, formularios,
+menús, avisos y selectores de fecha. También adapta la navegación y la barra de
+estado. Si falla el almacenamiento, la selección sigue aplicada durante la sesión
+y Perfil permite volver a seleccionarla para reintentar.
+
+`node scripts/test-apariencia.cjs` verifica recuperación, persistencia, cambios
+del sistema, escrituras sucesivas, errores y contraste de texto en ambos temas.

@@ -1,3 +1,5 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 import { AdaptiveColumns, layoutStyles } from '@/components/AdaptiveLayout';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -6,7 +8,6 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import FormInput from '@/components/FormInput';
-import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useAviso } from '@/context/AvisosContext';
 import { interpretarFechaVisita } from '@/utils/citas';
@@ -14,6 +15,9 @@ import { buscarPorId } from '@/utils/identificadores';
 import type { Identificador } from '@/types';
 
 export default function NuevaCitaScreen() {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   const { mascotas, agregarCita, modoDemo } = useAuth();
   const mostrarAviso = useAviso();
   const params = useLocalSearchParams<{ mascotaId?: string }>();
@@ -76,7 +80,7 @@ export default function NuevaCitaScreen() {
                   <Pressable key={mascota.id} accessibilityRole="radio" accessibilityState={{ checked: mascotaId === mascota.id }}
                     onPress={() => { setMascotaId(mascota.id); limpiarError('mascota'); }}
                     style={[styles.pet, mascotaId === mascota.id && styles.selected]}>
-                    <Ionicons name={mascotaId === mascota.id ? 'radio-button-on' : 'radio-button-off'} size={22} color={AppColors.primaryDark} />
+                    <Ionicons name={mascotaId === mascota.id ? 'radio-button-on' : 'radio-button-off'} size={22} color={AppColors.accent} />
                     <Text style={styles.petName}>{mascota.nombre}</Text>
                     <Text style={styles.description}>{mascota.especie}</Text>
                   </Pressable>
@@ -116,7 +120,7 @@ export default function NuevaCitaScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   safe: { flex: 1, backgroundColor: AppColors.background },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 8 },
   back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
@@ -125,11 +129,11 @@ const styles = StyleSheet.create({
   group: { gap: 10 },
   label: { fontSize: 16, fontWeight: '700', color: AppColors.text },
   description: { fontSize: 14, lineHeight: 21, color: AppColors.textSecondary },
-  pet: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12, padding: 16, borderRadius: 14, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: AppColors.surface },
+  pet: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12, padding: 16, borderRadius: 14, borderWidth: 1, borderColor: AppColors.border, backgroundColor: AppColors.surface },
   selected: { borderColor: AppColors.primaryDark, backgroundColor: AppColors.infoSoft },
   petName: { flex: 1, fontSize: 16, fontWeight: '600', color: AppColors.text },
   reason: { flex: 1, minHeight: 120, paddingVertical: 14, fontSize: 15, color: AppColors.text, textAlignVertical: 'top' },
   error: { fontSize: 14, color: AppColors.danger },
-  button: { backgroundColor: '#0369A1', borderRadius: 16, padding: 16, alignItems: 'center' },
-  buttonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 16 },
-});
+  button: { backgroundColor: AppColors.primaryDark, borderRadius: 16, padding: 16, alignItems: 'center' },
+  buttonText: { color: AppColors.onPrimary, fontWeight: '700', fontSize: 16 },
+}));

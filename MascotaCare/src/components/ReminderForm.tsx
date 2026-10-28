@@ -1,13 +1,17 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import FormInput from './FormInput';
 import { useAuth } from '@/context/AuthContext';
-import { AppColors } from '@/constants/theme';
 import type { Identificador, Recordatorio, TipoRecordatorio  } from '@/types';
 import { interpretarFechaVisita } from '@/utils/citas';
 import { fechaRecordatorio, REPETICIONES } from '@/utils/recordatorios';
 
 export default function ReminderForm({ recordatorio, cerrar }: { recordatorio?: Recordatorio; cerrar: (mensaje?: string) => void }) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   const { mascotas, guardarRecordatorio } = useAuth();
   const inicial = fechaRecordatorio(recordatorio?.vence_en ?? null);
   const [titulo, setTitulo] = useState(recordatorio?.titulo ?? '');
@@ -63,8 +67,8 @@ export default function ReminderForm({ recordatorio, cerrar }: { recordatorio?: 
           <Opcion key={value} label={label} activo={repeticion === value} disabled={guardando} onPress={() => setRepeticion(value)} />
         ))}
       </View>
-      {repeticion !== 'ninguna' && <Text>Al completar, se programará la siguiente fecha futura.</Text>}
-      {vinculadoACita && <Text>La mascota y el tipo pertenecen a la cita y no se pueden cambiar.</Text>}
+      {repeticion !== 'ninguna' && <Text style={{ color: AppColors.text }}>Al completar, se programará la siguiente fecha futura.</Text>}
+      {vinculadoACita && <Text style={{ color: AppColors.text }}>La mascota y el tipo pertenecen a la cita y no se pueden cambiar.</Text>}
       {!!error && <Text style={styles.error} accessibilityRole="alert">{error}</Text>}
       <Pressable disabled={guardando} accessibilityState={{ disabled: guardando, busy: guardando }} accessibilityRole="button" style={styles.button} onPress={guardar}><Text style={styles.buttonText}>{guardando ? 'Guardando…' : 'Guardar recordatorio'}</Text></Pressable>
       <Pressable disabled={guardando} accessibilityRole="button" style={styles.button} onPress={() => cerrar()}><Text style={styles.buttonText}>Cancelar</Text></Pressable>
@@ -73,17 +77,20 @@ export default function ReminderForm({ recordatorio, cerrar }: { recordatorio?: 
 }
 
 function Opcion({ label, activo, disabled = false, onPress }: { label: string; activo: boolean; disabled?: boolean; onPress: () => void }) {
-  return <Pressable disabled={disabled} accessibilityRole="radio" accessibilityState={{ checked: activo, disabled }} onPress={onPress} style={[styles.option, activo && styles.active]}><Text>{label}</Text></Pressable>;
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
+  return <Pressable disabled={disabled} accessibilityRole="radio" accessibilityState={{ checked: activo, disabled }} onPress={onPress} style={[styles.option, activo && styles.active]}><Text style={{ color: AppColors.text }}>{label}</Text></Pressable>;
 }
 
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   form: { gap: 12, padding: 16, backgroundColor: AppColors.surface, borderRadius: 16 },
   title: { fontSize: 20, fontWeight: '700', color: AppColors.text },
   label: { fontSize: 15, fontWeight: '600', color: AppColors.text },
   options: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  option: { padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#D1D5DB' },
-  active: { backgroundColor: AppColors.infoSoft, borderColor: '#0369A1' },
-  button: { padding: 14, backgroundColor: '#0369A1', borderRadius: 12, alignItems: 'center' },
-  buttonText: { color: '#FFFFFF', fontWeight: '700' },
-  error: { color: '#B91C1C' },
-});
+  option: { padding: 12, borderRadius: 12, borderWidth: 1, borderColor: AppColors.textMuted },
+  active: { backgroundColor: AppColors.infoSoft, borderColor: AppColors.primaryDark },
+  button: { padding: 14, backgroundColor: AppColors.primaryDark, borderRadius: 12, alignItems: 'center' },
+  buttonText: { color: AppColors.onPrimary, fontWeight: '700' },
+  error: { color: AppColors.danger },
+}));

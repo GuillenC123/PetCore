@@ -1,3 +1,5 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 import { AdaptiveColumns, layoutStyles } from '@/components/AdaptiveLayout';
 // ============================================================================
 // recordatorios.tsx - Pantalla Modal de Recordatorios
@@ -19,11 +21,13 @@ import SaveFeedback from '@/components/SaveFeedback';
 import { useAccionGuardado } from '@/hooks/use-accion-guardado';
 import { useAhora } from '@/hooks/use-ahora';
 import { fechaRecordatorio, ordenarRecordatorios } from '@/utils/recordatorios';
-import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import type { Recordatorio } from '@/types';
 
 export default function RecordatoriosScreen() {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   const { recordatorios, tacharRecordatorio, posponerRecordatorio, eliminarRecordatorio, conectado } = useAuth();
   const ahora = useAhora();
   const [editor, setEditor] = useState<Recordatorio | 'nuevo' | null>(null);
@@ -107,9 +111,9 @@ export default function RecordatoriosScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  newButton: { padding: 16, borderRadius: 14, backgroundColor: '#0369A1', alignItems: 'center' },
-  newText: { color: '#FFFFFF', fontWeight: '700', fontSize: 16 },
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
+  newButton: { padding: 16, borderRadius: 14, backgroundColor: AppColors.primaryDark, alignItems: 'center' },
+  newText: { color: AppColors.onPrimary, fontWeight: '700', fontSize: 16 },
   safe: {
     flex: 1,
     backgroundColor: AppColors.background,
@@ -155,4 +159,4 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.7,
   },
-});
+}));

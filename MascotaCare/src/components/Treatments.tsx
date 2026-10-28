@@ -1,14 +1,19 @@
-import { useState } from 'react';
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
+import { useRef, useState } from 'react';
+import { useFormularioSalud } from '@/context/HealthEditContext';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useAhora } from '@/hooks/use-ahora';
 import type { Identificador, EstadoToma, Tratamiento  } from '@/types';
-import { AppColors } from '@/constants/theme';
 import { formatearFechaCita } from '@/utils/estados';
 import FormInput from './FormInput';
 import TimeSchedule from './TimeSchedule';
 
 export default function Treatments({ mascotaId, nombre }: { mascotaId: Identificador; nombre: string }) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   const { tratamientos, conectado } = useAuth();
   const [creando, setCreando] = useState(false);
   const [mensaje, setMensaje] = useState('');
@@ -21,11 +26,14 @@ export default function Treatments({ mascotaId, nombre }: { mascotaId: Identific
     }} /> : <Boton label="Añadir tratamiento" onPress={() => { setMensaje(''); setCreando(true); }} />}
     {!!mensaje && <Text accessibilityRole="alert" style={styles.text}>{mensaje}</Text>}
     {!lista.length && !creando && <Text style={styles.text}>Aún no hay tratamientos registrados.</Text>}
-    {lista.map((t) => <TratamientoCard key={t.id} tratamiento={t} />)}
+    {!creando && lista.map((t) => <TratamientoCard key={t.id} tratamiento={t} />)}
   </View>;
 }
 
 function Formulario({ mascotaId, cerrar }: { mascotaId: Identificador; cerrar: (guardado: boolean) => void }) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   const { agregarTratamiento } = useAuth();
   const [medicamento, setMedicamento] = useState('');
   const [indicaciones, setIndicaciones] = useState('');
@@ -33,34 +41,43 @@ function Formulario({ mascotaId, cerrar }: { mascotaId: Identificador; cerrar: (
   const [duracion, setDuracion] = useState('');
   const [horarios, setHorarios] = useState('');
   const [error, setError] = useState('');
+  const [guardando, setGuardando] = useState(false);
+  const bloqueo = useRef(false);
+  const { descartar } = useFormularioSalud(!!(medicamento || indicaciones || inicio || duracion || horarios), guardando);
   const guardar = async () => {
+    if (bloqueo.current) return;
     if (!/^\d+$/.test(duracion.trim())) { setError('Escribe la duración en días completos.'); return; }
+    bloqueo.current = true; setGuardando(true); setError('');
     try {
       await agregarTratamiento({ mascota_id: mascotaId, medicamento, indicaciones, inicio,
         duracion_dias: Number(duracion), horarios: horarios.split(',') });
       cerrar(true);
     } catch (err) { setError(err instanceof Error ? err.message : 'No se pudo guardar.'); }
+    finally { bloqueo.current = false; setGuardando(false); }
   };
   return <View style={styles.card}>
     <Text style={styles.label}>Medicamento</Text>
-    <FormInput accessibilityLabel="Medicamento" placeholder="Nombre del medicamento" value={medicamento} onChangeText={setMedicamento} maxLength={120} />
+    <FormInput editable={!guardando} accessibilityLabel="Medicamento" placeholder="Nombre del medicamento" value={medicamento} onChangeText={setMedicamento} maxLength={120} />
     <Text style={styles.label}>Indicaciones del veterinario</Text>
-    <FormInput accessibilityLabel="Indicaciones del veterinario" placeholder="Transcribe la dosis, vía de administración y demás indicaciones" value={indicaciones} onChangeText={setIndicaciones} multiline maxLength={2000} />
+    <FormInput editable={!guardando} accessibilityLabel="Indicaciones del veterinario" placeholder="Transcribe la dosis, vía de administración y demás indicaciones" value={indicaciones} onChangeText={setIndicaciones} multiline maxLength={2000} />
     <Text style={styles.label}>Fecha de inicio</Text>
-    <FormInput dateMode="date" accessibilityLabel="Fecha de inicio" placeholder="DD/MM/AAAA" value={inicio} onChangeText={setInicio} maxLength={10} />
+    <FormInput editable={!guardando} dateMode="date" accessibilityLabel="Fecha de inicio" placeholder="DD/MM/AAAA" value={inicio} onChangeText={setInicio} maxLength={10} />
     <Text style={styles.label}>Duración en días</Text>
-    <FormInput accessibilityLabel="Duración en días" placeholder="Número de días indicado" value={duracion} onChangeText={setDuracion} keyboardType="number-pad" maxLength={3} />
+    <FormInput editable={!guardando} accessibilityLabel="Duración en días" placeholder="Número de días indicado" value={duracion} onChangeText={setDuracion} keyboardType="number-pad" maxLength={3} />
     <Text style={styles.label}>Horarios diarios (24 horas)</Text>
-    <TimeSchedule value={horarios} onChange={setHorarios} />
+    <TimeSchedule value={horarios} onChange={setHorarios} disabled={guardando} />
     <Text style={styles.text}>Se generará una toma por horario cada día, desde la fecha de inicio. Usa los horarios indicados por el veterinario y la hora local de tu dispositivo.</Text>
     <Text style={styles.text}>Los datos se guardan en tu cuenta al conectarte; en modo demostración se conservan durante esta sesión.</Text>
     {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
-    <Boton label="Guardar tratamiento" onPress={guardar} />
-    <Boton label="Cancelar" onPress={() => cerrar(false)} />
+    <Boton label={guardando ? 'Guardando…' : 'Guardar tratamiento'} onPress={guardar} disabled={guardando} />
+    <Boton label="Cancelar" onPress={() => descartar(() => cerrar(false))} disabled={guardando} />
   </View>;
 }
 
 function TratamientoCard({ tratamiento: t }: { tratamiento: Tratamiento }) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   const { marcarToma } = useAuth();
   const ahora = useAhora();
   const [dia, setDia] = useState(() => {
@@ -111,19 +128,22 @@ function TratamientoCard({ tratamiento: t }: { tratamiento: Tratamiento }) {
 }
 
 function Boton({ label, onPress, disabled = false }: { label: string; onPress: () => void; disabled?: boolean }) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   return <Pressable accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={[styles.button, disabled && styles.disabled]}><Text style={styles.buttonText}>{label}</Text></Pressable>;
 }
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   section: { gap: 14, marginTop: 8 },
-  card: { gap: 12, padding: 14, borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 14, backgroundColor: AppColors.surface },
+  card: { gap: 12, padding: 14, borderWidth: 1, borderColor: AppColors.textMuted, borderRadius: 14, backgroundColor: AppColors.surface },
   title: { fontSize: 18, fontWeight: '700', color: AppColors.text },
   label: { fontSize: 15, fontWeight: '600', color: AppColors.text },
   text: { fontSize: 14, lineHeight: 21, color: AppColors.textSecondary },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  dose: { gap: 10, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E5E7EB' },
-  button: { backgroundColor: '#0369A1', padding: 12, borderRadius: 12, alignItems: 'center' },
-  buttonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
+  dose: { gap: 10, paddingTop: 12, borderTopWidth: 1, borderTopColor: AppColors.border },
+  button: { backgroundColor: AppColors.primaryDark, padding: 12, borderRadius: 12, alignItems: 'center' },
+  buttonText: { color: AppColors.onPrimary, fontWeight: '700', fontSize: 14 },
   disabled: { opacity: 0.45 },
-  error: { color: '#B91C1C' },
-  success: { color: '#15803D' },
-});
+  error: { color: AppColors.danger },
+  success: { color: AppColors.successDark },
+}));

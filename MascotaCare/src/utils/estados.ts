@@ -6,7 +6,7 @@
 // líneas decorativas de las tarjetas).
 // ============================================================================
 
-import { AppColors } from '@/constants/theme';
+import { AppColors, type AppPalette } from '@/constants/theme';
 import type { EstadoCita, EstadoMascota } from '@/types';
 
 // Tonos disponibles para los Badge y para las barras verticales de las citas.
@@ -64,16 +64,16 @@ export function configurarEstadoCita(estado: EstadoCita): EstadoMascotaUI {
 // ---------------------------------------------------------------------------
 
 /** Devuelve el color de acento de un tono (para la línea lateral de citas). */
-export function colorDeTono(tone: Tone): string {
+export function colorDeTono(tone: Tone, colores: AppPalette = AppColors): string {
   switch (tone) {
     case 'success':
-      return AppColors.success;
+      return colores.success;
     case 'danger':
-      return AppColors.danger;
+      return colores.danger;
     case 'info':
-      return AppColors.info;
+      return colores.info;
     default:
-      return AppColors.textMuted;
+      return colores.textMuted;
   }
 }
 

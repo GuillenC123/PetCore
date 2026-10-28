@@ -1,3 +1,5 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 // ============================================================================
 // StatCard.tsx - Tarjeta de Estadística (pantalla de Perfil)
 // ----------------------------------------------------------------------------
@@ -7,7 +9,6 @@
 
 import { StyleSheet, Text, View } from 'react-native';
 
-import { AppColors } from '@/constants/theme';
 
 interface StatCardProps {
   /** Valor numérico grande que se muestra en azul. */
@@ -17,6 +18,9 @@ interface StatCardProps {
 }
 
 export default function StatCard({ valor, label }: StatCardProps) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   return (
     <View style={styles.card}>
       <Text style={styles.valor}>{valor}</Text>
@@ -25,7 +29,7 @@ export default function StatCard({ valor, label }: StatCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   card: {
     flex: 1,
     backgroundColor: AppColors.surface,
@@ -44,10 +48,10 @@ const styles = StyleSheet.create({
   valor: {
     fontSize: 28,
     fontWeight: '800',
-    color: AppColors.primaryDark,
+    color: AppColors.accent,
   },
   label: {
     fontSize: 13,
     color: AppColors.textSecondary,
   },
-});
+}));

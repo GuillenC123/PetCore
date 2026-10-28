@@ -1,3 +1,5 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 // ============================================================================
 // AppointmentCard.tsx - Tarjeta de Cita
 // ----------------------------------------------------------------------------
@@ -11,7 +13,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { AppColors } from '@/constants/theme';
 import type { Cita } from '@/types';
 import { colorDeTono, configurarEstadoCita, formatearFechaCita } from '@/utils/estados';
 import Badge from './Badge';
@@ -22,10 +23,13 @@ interface AppointmentCardProps {
 }
 
 export default function AppointmentCard({ cita }: AppointmentCardProps) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   // Config de estado -> texto + tono de badge.
   const estadoUI = configurarEstadoCita(cita.estado);
   // Color de la línea vertical del borde izquierdo.
-  const colorAcento = colorDeTono(estadoUI.tone);
+  const colorAcento = colorDeTono(estadoUI.tone, AppColors);
 
   return (
     <View style={[styles.card, { borderLeftColor: colorAcento }]}>
@@ -54,7 +58,7 @@ export default function AppointmentCard({ cita }: AppointmentCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   card: {
     backgroundColor: AppColors.surface,
     borderRadius: 16,
@@ -96,4 +100,4 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: AppColors.textSecondary,
   },
-});
+}));

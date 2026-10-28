@@ -67,7 +67,7 @@ test('validación de las rutas HTTP', async (t) => {
     ['PUT', '/mascotas/1', { nombre: null }],
     ['PUT', '/mascotas/1', {}],
     ['PUT', '/mascotas/1', { usuario_id: 2 }],
-    ['PUT', '/mascotas/1', { imagen: null }],
+    ['PUT', '/mascotas/1', { imagen: 'data:image/svg+xml;base64,PHN2Zz4=' }],
     ['GET', '/mascotas/no-es-id'],
     ['DELETE', '/mascotas/-1'],
     ['DELETE', '/citas/1.5'],
@@ -268,5 +268,49 @@ test('validación de las rutas HTTP', async (t) => {
     assert.equal(cuerpo.usuario.correo, 'ana.perez@example.com');
     assert.equal(jwt.verify(cuerpo.token, process.env.JWT_SECRET).correo, 'ana.perez@example.com');
     assert.deepEqual(consultas[0].parametros.slice(0, 3), ['1', 'Ana Pérez', 'ana.perez@example.com']);
+    assert.equal(consultas[0].parametros[3], false, 'omitir la foto conserva la existente');
+  });
+  await t.test('guarda y elimina fotos de mascotas, filtrando por propietario', async () => {
+    const imagen = 'data:image/jpeg;base64,/9j/2Q==';
+    consultas.length = 0;
+    resultados = [{ rowCount: 1, rows: [{ ...mascota, id: '1', imagen }] }];
+    const alta = await enviar('POST', '/mascotas', { ...mascota, imagen });
+    assert.equal(alta.status, 201);
+    assert.equal((await alta.json()).imagen, imagen);
+    assert.ok(consultas[0].parametros.includes(imagen));
+    for (const foto of [imagen, null]) {
+      consultas.length = 0;
+      resultados = [{ rowCount: 1, rows: [{ id: '1', imagen: null, registros_peso: [] }] },
+        { rowCount: 1, rows: [{ id: '1', imagen: foto }] }];
+      const respuesta = await enviar('PUT', '/mascotas/1', { imagen: foto });
+      assert.equal(respuesta.status, 200);
+      assert.equal((await respuesta.json()).imagen, foto);
+      const cambio = consultas.find((q) => /UPDATE Mascota/.test(q.sql));
+      assert.deepEqual(cambio.parametros, ['1', '1', foto]);
+    }
+  });
+  await t.test('foto de perfil vuelve al iniciar sesión y queda fuera del JWT', async () => {
+    const imagen = 'data:image/jpeg;base64,/9j/2Q==';
+    const token = jwt.sign({ id: '1' }, process.env.JWT_SECRET);
+    const usuario = { id: '1', nombre: 'Ana', correo: 'ana@example.com', imagen };
+    consultas.length = 0;
+    resultados = [{ rowCount: 1, rows: [usuario] }];
+    const cambio = await enviar('PUT', '/auth/perfil', { nombre: 'Ana', correo: usuario.correo, imagen }, token);
+    assert.equal(cambio.status, 200);
+    const cuerpo = await cambio.json();
+    assert.equal(cuerpo.usuario.imagen, imagen);
+    assert.equal(jwt.verify(cuerpo.token, process.env.JWT_SECRET).imagen, undefined);
+    assert.deepEqual(consultas[0].parametros.slice(3), [true, imagen]);
+    const bcrypt = require('bcryptjs');
+    resultados = [{ rowCount: 1, rows: [{ ...usuario, password_hash: await bcrypt.hash('123456', 4) }] }];
+    const acceso = await enviar('POST', '/auth/login', { correo: usuario.correo, password: '123456' });
+    assert.equal(acceso.status, 200);
+    assert.equal((await acceso.json()).usuario.imagen, imagen);
+    resultados = [{ rowCount: 1, rows: [{ ...usuario, imagen: null }] }];
+    const borrado = await enviar('PUT', '/auth/perfil', { nombre: 'Ana', correo: usuario.correo, imagen: null }, token);
+    assert.equal(borrado.status, 200);
+    assert.equal((await borrado.json()).usuario.imagen, null);
+    const invalida = await enviar('PUT', '/auth/perfil', { nombre: 'Ana', correo: usuario.correo, imagen: 'data:image/jpeg;base64,basura' }, token);
+    assert.equal(invalida.status, 400);
   });
 });

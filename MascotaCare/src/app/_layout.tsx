@@ -16,7 +16,7 @@
 
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from 'react-native';
+import { AppearanceProvider, useAppearance } from '@/context/AppearanceContext';
 
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { AvisosProvider } from '@/context/AvisosContext';
@@ -28,26 +28,29 @@ import DataLoadState from '@/components/DataLoadState';
  */
 function RootNavigator() {
   const { usuario, token, estadoDatos, modoDemo, cargarDatos, logout, reintentarGuardado, hayCambiosLocales } = useAuth();
+  const { colors } = useAppearance();
   const autenticado = usuario !== null;
 
   const navigation = (
     <Stack
       screenOptions={{
         headerShown: false, // Cada pantalla dibuja su propia cabecera.
-        contentStyle: { backgroundColor: '#F4F6F9' },
+        contentStyle: { backgroundColor: colors.background },
       }}>
       {/* Grupo protegido: pantallas principales de la app. */}
-      <Stack.Protected guard={autenticado}>
+      <Stack.Protected guard={autenticado} redirectTo="/login">
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="mascota-detalle" />
+        <Stack.Screen name="salud/[seccion]" />
         <Stack.Screen name="nueva-mascota" />
         <Stack.Screen name="nueva-cita" />
+        <Stack.Screen name="editar-cita" />
         <Stack.Screen name="editar-perfil" />
         <Stack.Screen name="ayuda" />
       </Stack.Protected>
 
       {/* Grupo público: acceso/registro. */}
-      <Stack.Protected guard={!autenticado}>
+      <Stack.Protected guard={!autenticado} redirectTo="/">
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
 
@@ -69,15 +72,20 @@ function RootNavigator() {
   );
 }
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
+function ThemedRoot() {
+  const { scheme, colors, ready } = useAppearance();
+  if (!ready) return null;
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={{ ...(scheme === 'dark' ? DarkTheme : DefaultTheme), colors: { ...(scheme === 'dark' ? DarkTheme : DefaultTheme).colors, background: colors.background, card: colors.surface, text: colors.text, border: colors.border, primary: colors.accent } }}>
       <AuthProvider>
         <RootNavigator />
-        <StatusBar style="dark" />
+        <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       </AuthProvider>
     </ThemeProvider>
   );
+}
+
+export default function RootLayout() {
+  return <AppearanceProvider><ThemedRoot /></AppearanceProvider>;
 }

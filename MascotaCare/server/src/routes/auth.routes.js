@@ -54,7 +54,7 @@ router.post('/registro', validar(esquemas.registro, { obligatorios: ['nombre', '
     const resultado = await pool.query(
       `INSERT INTO Usuario (nombre, correo, password_hash)
        VALUES ($1, $2, $3)
-       RETURNING id, nombre, correo`,
+       RETURNING id, nombre, correo, imagen`,
       [nombre.trim(), correo.toLowerCase(), passwordHash]
     );
     const usuario = resultado.rows[0];
@@ -79,7 +79,7 @@ router.post('/login', validar(esquemas.login, { obligatorios: ['correo', 'passwo
 
     // Busca al usuario por su correo.
     const resultado = await pool.query(
-      'SELECT id, nombre, correo, password_hash FROM Usuario WHERE correo = $1',
+      'SELECT id, nombre, correo, imagen, password_hash FROM Usuario WHERE correo = $1',
       [correo.toLowerCase()]
     );
 
@@ -97,7 +97,7 @@ router.post('/login', validar(esquemas.login, { obligatorios: ['correo', 'passwo
     }
 
     // Construye el objeto público (sin el hash) y firma el token.
-    const usuarioPublico = { id: usuario.id, nombre: usuario.nombre, correo: usuario.correo };
+    const usuarioPublico = { id: usuario.id, nombre: usuario.nombre, correo: usuario.correo, imagen: usuario.imagen ?? null };
     res.json({ usuario: usuarioPublico, token: firmarToken(usuarioPublico) });
   } catch (err) {
     console.error('Error en login:', err);
@@ -111,10 +111,11 @@ router.post('/login', validar(esquemas.login, { obligatorios: ['correo', 'passwo
 router.put('/perfil', authMiddleware, validar(esquemas.perfil, { obligatorios: ['nombre', 'correo'] }), async (req, res) => {
   try {
     const resultado = await pool.query(
-      `UPDATE Usuario SET nombre = $2, correo = $3, actualizado_en = NOW()
+      `UPDATE Usuario SET nombre = $2, correo = $3, actualizado_en = NOW(),
+          imagen = CASE WHEN $4::boolean THEN $5::text ELSE imagen END
        WHERE id = $1
-       RETURNING id, nombre, correo`,
-      [req.usuario.id, req.body.nombre, req.body.correo]
+       RETURNING id, nombre, correo, imagen`,
+      [req.usuario.id, req.body.nombre, req.body.correo, req.body.imagen !== undefined, req.body.imagen ?? null]
     );
     const usuario = resultado.rows[0];
     return res.json({ usuario, token: firmarToken(usuario) });

@@ -18,6 +18,7 @@ const authRouter = require('./routes/auth.routes');
 const mascotasRouter = require('./routes/mascotas.routes');
 const citasRouter = require('./routes/citas.routes');
 const recordatoriosRouter = require('./routes/recordatorios.routes');
+const { crearRouterRazas } = require('./routes/razas.routes');
 
 const app = express();
 
@@ -39,6 +40,7 @@ app.get('/api/estado', (_req, res) => {
 
 // --- Rutas públicas (no requieren token) ---
 app.use('/api/auth', authRouter);
+app.use('/api/razas', crearRouterRazas());
 
 // --- Rutas protegidas (requieren token en la cabecera Authorization) ---
 app.use('/api/mascotas', authMiddleware, mascotasRouter);

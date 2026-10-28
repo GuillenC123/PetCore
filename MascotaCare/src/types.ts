@@ -24,6 +24,16 @@ export interface DatosApp {
   recordatorios: Recordatorio[];
 }
 
+export interface CatalogoRazas {
+  idioma: 'es';
+  especie: 'Perro' | 'Gato';
+  razas: string[];
+  fuente: string;
+  urlFuente: string;
+  actualizadoEn: string;
+  desactualizado: boolean;
+}
+
 export type OrigenCache = 'api' | 'demo';
 
 export interface DestinoCache {
@@ -61,6 +71,8 @@ export type TipoRecordatorio = 'vacuna' | 'alimento' | 'cita' | 'dosis' | 'gener
 // ---------------------------------------------------------------------------
 
 export interface Usuario {
+  /** Foto portable guardada en la cuenta. */
+  imagen?: string | null;
   /** Identificador de la base de datos, sin pérdida de precisión. */
   id: Identificador;
   /** Nombre completo del usuario (se muestra en el saludo). */

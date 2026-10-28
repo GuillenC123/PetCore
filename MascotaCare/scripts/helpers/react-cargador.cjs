@@ -59,6 +59,7 @@ function crearCargador(react, almacenamiento = crearAlmacenamiento()) {
     }).outputText;
     const resolver = (nombre) => {
       if (nombre === 'react') return react;
+      if (nombre === '@/context/AppearanceContext') return {useAppColors:()=>cargar('src/constants/theme.ts').AppColors};
       if (nombre === 'react-native') return native;
       if (nombre === 'react-native-safe-area-context') return { useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }) };
       if (nombre === '@react-native-async-storage/async-storage') return { __esModule: true, default: almacenamiento };

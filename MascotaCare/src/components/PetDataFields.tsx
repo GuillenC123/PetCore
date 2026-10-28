@@ -1,6 +1,8 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import type { ReactNode } from 'react';
 import type { Mascota } from '@/types';
-import { AppColors } from '@/constants/theme';
 import { edadMascota, validarFichaSalud, type DatosFichaSalud } from '@/utils/salud';
 import { validarPeso } from '@/utils/validaciones';
 import FormInput from './FormInput';
@@ -30,9 +32,12 @@ export function prepararDatos(datos: PetDataDraft): DatosFichaSalud & { especie:
 }
 
 /** Los mismos campos se usan al crear la mascota y al editar su ficha. */
-export default function PetDataFields({ value, onChange, disabled = false }: {
-  value: PetDataDraft; onChange: (value: PetDataDraft) => void; disabled?: boolean;
+export default function PetDataFields({ value, onChange, disabled = false, afterSpecies }: {
+  value: PetDataDraft; onChange: (value: PetDataDraft) => void; disabled?: boolean; afterSpecies?: ReactNode;
 }) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   const cambiar = <K extends keyof PetDataDraft>(campo: K, valor: PetDataDraft[K]) => onChange({ ...value, [campo]: valor });
   const opcion = (label: string, activo: boolean, onPress: () => void) => (
     <Pressable key={label} disabled={disabled} accessibilityRole="radio" accessibilityState={{ checked: activo, disabled }}
@@ -41,6 +46,7 @@ export default function PetDataFields({ value, onChange, disabled = false }: {
   return <View style={styles.form}>
     <Text style={styles.label}>Tipo de animal</Text>
     <View style={styles.options}>{['Perro', 'Gato', 'Otro'].map((especie) => opcion(especie, value.especie === especie, () => cambiar('especie', especie)))}</View>
+    {afterSpecies}
     <Text style={styles.label}>Edad</Text>
     <View style={styles.options}>
       {opcion('Edad aproximada', !value.usaNacimiento, () => cambiar('usaNacimiento', false))}
@@ -58,10 +64,10 @@ export default function PetDataFields({ value, onChange, disabled = false }: {
     <Text style={styles.text}>Puedes añadir o modificar estos datos después en Ficha de salud. Los campos vacíos se muestran como «Sin registrar».</Text>
   </View>;
 }
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   form: { gap: 12 }, label: { fontSize: 15, fontWeight: '700', color: AppColors.text },
   text: { fontSize: 14, lineHeight: 21, color: AppColors.textSecondary },
   options: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  option: { padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#D1D5DB' },
+  option: { padding: 12, borderRadius: 12, borderWidth: 1, borderColor: AppColors.textMuted },
   active: { backgroundColor: AppColors.infoSoft, borderColor: AppColors.primaryDark },
-});
+}));

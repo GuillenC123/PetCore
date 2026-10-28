@@ -1,17 +1,17 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 // ============================================================================
 // PetImage.tsx - Imagen circular de una mascota (con placeholder por defecto)
 // ----------------------------------------------------------------------------
 // Muestra la foto de la mascota si existe (prop `url`). Si no hay foto, se
 // dibuja un círculo de color suave con un emoji de huella 🐾 como imagen por
 // defecto (placeholder). De esta forma la tarjeta siempre se ve completa y el
-// usuario puede colocar una imagen manualmente desde la PC sustituyendo el
-// valor de la prop `url` (o la columna "imagen" de la base de datos).
+// usuario puede seleccionar o cambiar la imagen desde la ficha de salud.
 // ============================================================================
 
 import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { AppColors } from '@/constants/theme';
 
 interface PetImageProps {
   /** URI de la imagen (red o local). null => placeholder por defecto. */
@@ -23,6 +23,9 @@ interface PetImageProps {
 }
 
 export default function PetImage({ url, nombre, size = 56 }: PetImageProps) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   // Si hay una foto, la mostramos recortada en círculo.
   if (url) {
     return (
@@ -43,7 +46,7 @@ export default function PetImage({ url, nombre, size = 56 }: PetImageProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   image: {
     backgroundColor: AppColors.infoSoft, // fondo mientras carga la imagen.
   },
@@ -53,4 +56,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
-});
+}));

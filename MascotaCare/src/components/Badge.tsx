@@ -1,3 +1,5 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 // ============================================================================
 // Badge.tsx - Etiqueta (badge) redondeada de estado
 // ----------------------------------------------------------------------------
@@ -12,7 +14,6 @@
 
 import { StyleSheet, Text, View } from 'react-native';
 
-import { AppColors } from '@/constants/theme';
 
 type BadgeTone = 'success' | 'danger' | 'info' | 'neutral';
 
@@ -24,14 +25,17 @@ interface BadgeProps {
 }
 
 // Mapa de colores (fondo claro + texto en el color semántico correspondiente).
-const TONE_STYLES = {
+const createToneStyles = (AppColors: AppPalette) => ({
   success: { background: AppColors.successSoft, foreground: AppColors.success },
   danger: { background: AppColors.dangerSoft, foreground: AppColors.danger },
   info: { background: AppColors.infoSoft, foreground: AppColors.info },
   neutral: { background: AppColors.background, foreground: AppColors.textSecondary },
-} as const;
+} as const);
 
 export default function Badge({ label, tone = 'neutral' }: BadgeProps) {
+  const AppColors = useAppColors();
+  const TONE_STYLES = createToneStyles(AppColors);
+
   const colores = TONE_STYLES[tone];
 
   return (

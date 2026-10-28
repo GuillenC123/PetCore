@@ -1,13 +1,17 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppColors } from '@/constants/theme';
 
 const AvisosContext = createContext<((mensaje: string) => void) | null>(null);
 
 /** Confirmaciones de acciones: sobreviven a la navegación y caducan a los 3 segundos. */
 export function AvisosProvider({ children }: { children: ReactNode }) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   const insets = useSafeAreaInsets();
   const [aviso, setAviso] = useState<{ mensaje: string } | null>(null);
   const mostrarAviso = useCallback((mensaje: string) => setAviso({ mensaje }), []);
@@ -42,10 +46,10 @@ export function useAviso() {
   return mostrarAviso;
 }
 
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   container: { flex: 1 },
   position: { position: 'absolute', left: 16, right: 16, alignItems: 'center', zIndex: 10 },
   notice: { backgroundColor: AppColors.successSoft, borderColor: AppColors.success,
     borderWidth: 1, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 14, maxWidth: 520 },
   message: { color: AppColors.success, fontSize: 15, fontWeight: '600', textAlign: 'center' },
-});
+}));

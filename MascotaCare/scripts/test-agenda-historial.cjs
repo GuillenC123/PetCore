@@ -33,6 +33,23 @@ assert.equal(agenda.filtrarAgenda(eventos,'Hoy',1,ahora).length,2);
 assert.equal(agenda.filtrarAgenda(eventos,'Vencidos',1,ahora).length,2);
 assert.equal(agenda.filtrarAgenda(eventos,'Esta semana',1,ahora).length,3);
 assert.equal(agenda.filtrarAgenda(eventos,'Todos',2,ahora).length,1);
+assert.equal(agenda.filtrarAgenda(eventos,'Hoy',1,ahora,'medicamento').length,1);
+assert.equal(agenda.filtrarAgenda(eventos,'Todos',2,ahora,'medicamento').length,0);
+assert.equal(agenda.filtrarAgenda(eventos,'Esta semana',1,ahora,'recordatorio').length,1);
+const porDias = [
+  { ...eventos[0], clave:'manana',fecha:iso(10,14) },
+  { ...eventos[0], clave:'futuro',fecha:iso(11,9) },
+  { ...eventos[0], clave:'hoy-tarde',fecha:iso(9,18) },
+  { ...eventos[0], clave:'ayer',fecha:iso(8,10) },
+  { ...eventos[0], clave:'hoy-temprano',fecha:iso(9,8) },
+  { ...eventos[0], clave:'hoy-mediodia',fecha:iso(9,12) },
+];
+const grupos = agenda.agruparAgenda(porDias,ahora);
+assert.deepEqual(grupos.slice(0,3).map(g=>g.titulo),['Vencidos','Hoy','Mañana']);
+assert.deepEqual(grupos[0].eventos.map(e=>e.clave),['ayer','hoy-temprano']);
+assert.deepEqual(grupos[1].eventos.map(e=>e.clave),['hoy-mediodia','hoy-tarde']);
+assert.equal(porDias[0].clave,'manana','agrupar no modifica el orden de entrada');
+assert.deepEqual(agenda.agruparAgenda([],ahora),[]);
 assert.equal(agenda.crearAgenda(citas,tratamientos,[{...recordatorios[0],vence_en:iso(10)}]).filter(e=>e.tipo==='recordatorio').length,1);
 const mascota = {id:1,observaciones:[{id:1,tipo:'observacion',titulo:'Nota',descripcion:'Detalles',fecha:iso(7)}],
   carnet:[{id:1,tipo:'vacuna',nombre:'Vacuna',fecha_aplicacion:'06/09/2026',proxima_fecha:'06/10/2026',comprobante:'file:///foto.jpg'}],

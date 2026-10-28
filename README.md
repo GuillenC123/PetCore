@@ -22,7 +22,7 @@ Agendar visitas desde el frontend ya funciona durante la sesión: crea una cita 
 
 ## Arquitectura y tecnologías
 
-El frontend usa **React Native 0.86.3, React 19.2.3, Expo SDK 57, Expo Router y TypeScript 6**. React Context comparte sesión y datos; `useCargaDatos` coordina recuperación, consultas y guardado; las utilidades procesan las respuestas y `fetch` consulta la API. AsyncStorage conserva una copia por usuario.
+El frontend usa **React Native 0.88.0, React 19.3.0, Expo SDK 58, Expo Router y TypeScript 6**. React Context comparte sesión y datos; `useCargaDatos` coordina recuperación, consultas y guardado; las utilidades procesan las respuestas y `fetch` consulta la API. AsyncStorage conserva una copia por usuario.
 
 La API propia usa **Node.js, Express 4, PostgreSQL y pg**, con validaciones, consultas SQL parametrizadas, bcrypt y JWT.
 
@@ -60,7 +60,7 @@ AsyncStorage 2.2.0 guarda las respuestas de API y las confirmaciones de recordat
 
 ## Ejecución
 
-Necesitas Node.js y npm; PostgreSQL para la API real. La [referencia de Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/) indica Node.js 22.13.x como mínimo para ese SDK.
+Necesitas Node.js y npm; PostgreSQL para la API real. La [referencia de Expo SDK 58](https://docs.expo.dev/versions/v58.0.0/) indica Node.js 22.13.x como mínimo para ese SDK. Usa Expo Go compatible con SDK 58.
 
 Desde la raíz:
 

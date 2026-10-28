@@ -1,3 +1,6 @@
+import AppearanceSelector from '@/components/AppearanceSelector';
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 import { AdaptiveColumns, layoutStyles } from '@/components/AdaptiveLayout';
 // ============================================================================
 // (tabs)/perfil.tsx - Pantalla de Perfil
@@ -10,6 +13,7 @@ import { AdaptiveColumns, layoutStyles } from '@/components/AdaptiveLayout';
 // ============================================================================
 
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,10 +21,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AppHeader from '@/components/AppHeader';
 import MenuRow, { type MenuOptionType } from '@/components/MenuRow';
 import StatCard from '@/components/StatCard';
-import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 
 export default function PerfilScreen() {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   const { usuario, mascotas, citas, recordatorios, logout } = useAuth();
 
   // Estadísticas dinámicas a partir de los datos actuales.
@@ -74,7 +80,8 @@ export default function PerfilScreen() {
         {/* Avatar circular de usuario + nombre y correo. */}
         <View style={styles.avatarBlock}>
           <View style={styles.avatar}>
-            <Ionicons name="person" size={44} color={AppColors.primaryDark} />
+            {usuario?.imagen ? <Image source={{ uri: usuario.imagen }} contentFit="cover" accessibilityLabel="Foto de perfil" style={{ width: 90, height: 90, borderRadius: 45 }} />
+              : <Ionicons name="person" size={44} color={AppColors.accent} />}
           </View>
           <Text style={styles.nombre}>{usuario?.nombre ?? 'Usuario'}</Text>
           <Text style={styles.correo}>{usuario?.correo ?? ''}</Text>
@@ -90,6 +97,7 @@ export default function PerfilScreen() {
         </View>
         {/* Menú de opciones. */}
         <View style={styles.menu}>
+          <AppearanceSelector />
           {opciones.map((op) => (
             <MenuRow
               key={op.tipo}
@@ -105,7 +113,7 @@ export default function PerfilScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: AppColors.background,
@@ -159,4 +167,4 @@ const styles = StyleSheet.create({
   menu: {
     gap: 12,
   },
-});
+}));

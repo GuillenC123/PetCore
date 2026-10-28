@@ -1,3 +1,5 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 // ============================================================================
 // FormInput.tsx - Campo de texto del formulario de autenticación
 // ----------------------------------------------------------------------------
@@ -17,7 +19,6 @@ import {
   type TextInputProps,
 } from 'react-native';
 
-import { AppColors } from '@/constants/theme';
 import DateTimeField from './DateTimeField';
 
 interface FormInputProps extends TextInputProps {
@@ -39,6 +40,9 @@ export default function FormInput({
   dateMode,
   ...inputProps
 }: FormInputProps) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   const [oculto, setOculto] = useState(true);
   const labelId = useId();
   // Si es un campo de contraseña, lo alternamos entre visible/oculto.
@@ -85,7 +89,7 @@ export default function FormInput({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   label: { fontSize: 15, fontWeight: '600', color: AppColors.text },
   visibility: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   wrapper: {
@@ -98,7 +102,7 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.surface,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: AppColors.border,
     paddingHorizontal: 14,
   },
   containerError: {
@@ -114,4 +118,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: AppColors.danger,
   },
-});
+}));

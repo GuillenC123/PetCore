@@ -1,3 +1,5 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 // ============================================================================
 // MenuRow.tsx - Fila de opción del menú (pantalla de Perfil)
 // ----------------------------------------------------------------------------
@@ -11,7 +13,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AppColors } from '@/constants/theme';
 
 // Tipos de opción del menú (círculo e ícono asociados).
 export type MenuOptionType = 'edit' | 'notifications' | 'help' | 'logout';
@@ -26,21 +27,25 @@ interface MenuRowProps {
 }
 
 // Configuración visual de cada tipo de opción.
-const TIPO_CONFIG: Record<MenuOptionType, { icon: IconName; color: string; bg: string }> = {
-  edit: { icon: 'create-outline', color: AppColors.primaryDark, bg: AppColors.infoSoft },
+const createTipoConfig = (AppColors: AppPalette): Record<MenuOptionType, { icon: IconName; color: string; bg: string }> => ({
+  edit: { icon: 'create-outline', color: AppColors.accent, bg: AppColors.infoSoft },
   notifications: {
     icon: 'notifications-outline',
-    color: AppColors.primaryDark,
+    color: AppColors.accent,
     bg: AppColors.infoSoft,
   },
-  help: { icon: 'help-circle-outline', color: AppColors.primaryDark, bg: AppColors.infoSoft },
+  help: { icon: 'help-circle-outline', color: AppColors.accent, bg: AppColors.infoSoft },
   logout: { icon: 'log-out-outline', color: AppColors.danger, bg: AppColors.dangerSoft },
-};
+});
 
 // Tipo de nombre de ícono (lo exportamos para reutilizarlo abajo).
 type IconName = keyof typeof Ionicons.glyphMap;
 
 export default function MenuRow({ label, tipo, onPress }: MenuRowProps) {
+  const AppColors = useAppColors();
+  const TIPO_CONFIG = createTipoConfig(AppColors);
+  const styles = createStyles(AppColors);
+
   const config = TIPO_CONFIG[tipo];
 
   return (
@@ -61,7 +66,7 @@ export default function MenuRow({ label, tipo, onPress }: MenuRowProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -93,4 +98,4 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.8,
   },
-});
+}));

@@ -55,6 +55,8 @@ CREATE TABLE IF NOT EXISTS Usuario (
     actualizado_en TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE Usuario ADD COLUMN IF NOT EXISTS imagen TEXT;
+
 -- REGLA DE NEGOCIO: El correo debe tener un formato razonable.
 ALTER TABLE Usuario DROP CONSTRAINT IF EXISTS chk_usuario_correo;
 ALTER TABLE Usuario ADD CONSTRAINT chk_usuario_correo
@@ -80,6 +82,8 @@ CREATE TABLE IF NOT EXISTS Mascota (
     CONSTRAINT fk_mascota_usuario
         FOREIGN KEY (usuario_id) REFERENCES Usuario (id) ON DELETE RESTRICT
 );
+
+ALTER TABLE Mascota ALTER COLUMN imagen TYPE TEXT;
 
 -- Índice para acelerar la consulta "mascotas de un usuario".
 -- Ampliación aditiva que conserva las mascotas existentes.

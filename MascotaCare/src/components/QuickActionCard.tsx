@@ -1,3 +1,5 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 // ============================================================================
 // QuickActionCard.tsx - Botón de Acción Rápida
 // ----------------------------------------------------------------------------
@@ -9,7 +11,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AppColors } from '@/constants/theme';
 
 // Nombres de íconos permitidos (tono de Ionicons de MaterialCommunityIcons).
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -30,18 +31,21 @@ interface QuickActionCardProps {
 export default function QuickActionCard({
   icon,
   label,
-  circleColor = AppColors.infoSoft,
-  iconColor = AppColors.primaryDark,
+  circleColor,
+  iconColor,
   onPress,
 }: QuickActionCardProps) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
       {/* Círculo de color claro con el ícono centrado. */}
-      <View style={[styles.circle, { backgroundColor: circleColor }]}>
-        <Ionicons name={icon} size={26} color={iconColor} />
+      <View style={[styles.circle, { backgroundColor: circleColor ?? AppColors.infoSoft }]}>
+        <Ionicons name={icon} size={26} color={iconColor ?? AppColors.accent} />
       </View>
 
       {/* Texto descriptivo de la acción. */}
@@ -50,7 +54,7 @@ export default function QuickActionCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   card: {
     flex: 1,
     backgroundColor: AppColors.surface,
@@ -85,4 +89,4 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.8,
   },
-});
+}));

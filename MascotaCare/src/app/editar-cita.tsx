@@ -1,3 +1,5 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -6,7 +8,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import FormInput from '@/components/FormInput';
 import { layoutStyles } from '@/components/AdaptiveLayout';
-import { AppColors } from '@/constants/theme';
 import { useAviso } from '@/context/AvisosContext';
 import { useAuth } from '@/context/AuthContext';
 import { buscarPorId } from '@/utils/identificadores';
@@ -24,6 +25,9 @@ function horaLocal(iso: string) {
 }
 
 export default function EditarCitaScreen() {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { citas, actualizarCita } = useAuth();
   const mostrarAviso = useAviso();
@@ -86,15 +90,15 @@ export default function EditarCitaScreen() {
   </SafeAreaView>;
 }
 
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   safe: { flex: 1, backgroundColor: AppColors.background },
   content: { padding: 20, gap: 16 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   back: { width: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center' },
   title: { fontSize: 24, fontWeight: '800', color: AppColors.text },
   description: { fontSize: 14, lineHeight: 21, color: AppColors.textSecondary },
-  error: { color: '#B91C1C', fontSize: 14 },
-  button: { padding: 16, borderRadius: 16, backgroundColor: '#0369A1', alignItems: 'center' },
-  buttonText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+  error: { color: AppColors.danger, fontSize: 14 },
+  button: { padding: 16, borderRadius: 16, backgroundColor: AppColors.primaryDark, alignItems: 'center' },
+  buttonText: { fontSize: 16, fontWeight: '700', color: AppColors.onPrimary },
   disabled: { opacity: 0.55 },
-});
+}));

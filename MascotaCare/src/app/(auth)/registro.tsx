@@ -1,3 +1,5 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 import { layoutStyles } from '@/components/AdaptiveLayout';
 // ============================================================================
 // (auth)/registro.tsx - Pantalla de Registro de Cuenta
@@ -25,11 +27,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import FormInput from '@/components/FormInput';
-import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { validarTexto, validarCorreo, validarPassword } from '@/utils/validaciones';
 
 export default function RegistroScreen() {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   // Estado de cada campo del formulario.
   const [nombre, setNombre] = useState('');
   const [correo, setCorreo] = useState('');
@@ -144,7 +148,7 @@ export default function RegistroScreen() {
             disabled={cargando}
             style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>
             {cargando ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color={AppColors.onPrimary} />
             ) : (
               <Text style={styles.buttonText}>Registrarme</Text>
             )}
@@ -163,7 +167,7 @@ export default function RegistroScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: AppColors.background,
@@ -206,7 +210,7 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: AppColors.onPrimary,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -222,6 +226,6 @@ const styles = StyleSheet.create({
   link: {
     fontSize: 14,
     fontWeight: '700',
-    color: AppColors.primaryDark,
+    color: AppColors.accent,
   },
-});
+}));

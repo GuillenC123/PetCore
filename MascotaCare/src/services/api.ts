@@ -2,7 +2,7 @@
 import { Platform } from 'react-native';
 
 import { normalizarIdentificador } from '@/utils/identificadores';
-import type { ApiError, AuthResponse, Cita, DatosApp, EstadoCita, EstadoMascota, Identificador, Mascota, ObservacionSalud, Recordatorio, RegistroCarnet, Tratamiento, Usuario } from '@/types';
+import type { ApiError, AuthResponse, CatalogoRazas, Cita, DatosApp, EstadoCita, EstadoMascota, Identificador, Mascota, ObservacionSalud, Recordatorio, RegistroCarnet, Tratamiento, Usuario } from '@/types';
 
 const HOST = Platform.select({ android: '10.0.2.2', default: 'localhost' });
 export const API_URL = (process.env.EXPO_PUBLIC_API_URL?.trim() || `http://${HOST}:4000/api`).replace(/\/+$/, '');
@@ -147,6 +147,18 @@ export async function apiLogin(correo: string, password: string, signal?: AbortS
   return sesionApi(datos);
 }
 
+export async function apiGetRazas(especie: 'Perro' | 'Gato', signal?: AbortSignal): Promise<CatalogoRazas> {
+  const datos = await request<CatalogoRazas>(`/razas?especie=${encodeURIComponent(especie)}`, { signal });
+  return adaptar(() => {
+    if (datos.idioma !== 'es' || datos.especie !== especie || !Array.isArray(datos.razas) || !datos.razas.length || datos.razas.length > 1000 ||
+        datos.razas.some((raza) => typeof raza !== 'string' || !raza.trim() || raza.length > 120) ||
+        typeof datos.fuente !== 'string' || typeof datos.desactualizado !== 'boolean') {
+      throw new Error('Catálogo de razas inválido.');
+    }
+    return datos;
+  });
+}
+
 export async function apiRegistro(nombre: string, correo: string, password: string, signal?: AbortSignal): Promise<AuthResponse> {
   const datos = await request<AuthResponse>('/auth/registro', {
     method: 'POST', signal, body: JSON.stringify({ nombre, correo, password }),
@@ -154,7 +166,7 @@ export async function apiRegistro(nombre: string, correo: string, password: stri
   return sesionApi(datos);
 }
 
-export async function apiActualizarPerfil(token: string, datos: Pick<Usuario, 'nombre' | 'correo'>): Promise<AuthResponse> {
+export async function apiActualizarPerfil(token: string, datos: Pick<Usuario, 'nombre' | 'correo' | 'imagen'>): Promise<AuthResponse> {
   const respuesta = await request<AuthResponse>('/auth/perfil', {
     method: 'PUT', headers: autorizar(token), body: JSON.stringify(datos),
   });

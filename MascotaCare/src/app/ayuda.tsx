@@ -1,10 +1,11 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 import { layoutStyles } from '@/components/AdaptiveLayout';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppColors } from '@/constants/theme';
 
 const secciones: {
   titulo: string;
@@ -89,6 +90,9 @@ const secciones: {
 ];
 
 export default function AyudaScreen() {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   const volver = () => {
     if (router.canGoBack()) router.back();
     else router.replace('/perfil');
@@ -116,7 +120,7 @@ export default function AyudaScreen() {
         {secciones.map((seccion) => (
           <View key={seccion.titulo} style={styles.card}>
             <View style={styles.cardHeader}>
-              <Ionicons name={seccion.icono} size={23} color={AppColors.primaryDark} />
+              <Ionicons name={seccion.icono} size={23} color={AppColors.accent} />
               <Text style={styles.cardTitle} accessibilityRole="header">{seccion.titulo}</Text>
             </View>
             <Text style={styles.description}>{seccion.descripcion}</Text>
@@ -127,7 +131,7 @@ export default function AyudaScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   safe: { flex: 1, backgroundColor: AppColors.background },
   header: {
     flexDirection: 'row',
@@ -146,4 +150,4 @@ const styles = StyleSheet.create({
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   cardTitle: { flex: 1, fontSize: 16, fontWeight: '700', color: AppColors.text },
   description: { fontSize: 14, lineHeight: 22, color: AppColors.textSecondary },
-});
+}));

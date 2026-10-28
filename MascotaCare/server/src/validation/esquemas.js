@@ -1,4 +1,5 @@
 const { campo, cadena, enumeracion, identificador, correo, password, fecha, fechaHora } = require('./reglas');
+const { foto } = require('./fotos');
 
 const peso = campo((valor) => typeof valor === 'number' && Number.isFinite(valor) && valor > 0,
  'Ingresa un peso mayor que cero en kg.', { nullable: true });
@@ -16,7 +17,7 @@ const mascota = {
   // La edad se guarda como texto (por ejemplo, "3 años" o "6 meses").
   edad: cadena(60),
   estado: enumeracion(['saludable', 'malestar', 'vacuna_pendiente', 'en_tratamiento']),
-  imagen: cadena(500, 0, { nullable: true }),
+  imagen: foto,
 };
 const cita = {
   titulo: cadena(200),
@@ -40,7 +41,7 @@ const recordatorio = {
 module.exports = {
   registro: { nombre: cadena(120, 2), correo, password },
   login: { correo, password },
-  perfil: { nombre: cadena(120, 2), correo },
+  perfil: { nombre: cadena(120, 2), correo, imagen: foto },
   mascota,
   peso: { peso: { ...peso, nullable: false }, fecha: campo(diaPasado, "Ingresa una fecha válida que no sea futura (AAAA-MM-DD).") },
   cita,

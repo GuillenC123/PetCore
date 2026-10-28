@@ -1,3 +1,5 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 // ============================================================================
 // PetCard.tsx - Tarjeta de Mascota
 // ----------------------------------------------------------------------------
@@ -11,7 +13,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AppColors } from '@/constants/theme';
 import type { Mascota } from '@/types';
 import { edadMascota } from '@/utils/salud';
 import PetHealthStatus from './PetHealthStatus';
@@ -27,6 +28,9 @@ interface PetCardProps {
 }
 
 export default function PetCard({ mascota, showStatus = true, onPress }: PetCardProps) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   // Guarda las config: ejecutamos la utilidad que convierte el estado en
   // etiqueta legible y tono de color para el badge.
 
@@ -51,7 +55,7 @@ export default function PetCard({ mascota, showStatus = true, onPress }: PetCard
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -82,4 +86,4 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.85,
   },
-});
+}));

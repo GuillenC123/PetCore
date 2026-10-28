@@ -1,3 +1,5 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 // ============================================================================
 // ReminderCard.tsx - Tarjeta de Recordatorio
 // ----------------------------------------------------------------------------
@@ -11,7 +13,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AppColors } from '@/constants/theme';
 import type { Recordatorio } from '@/types';
 import { formatearFechaCita } from '@/utils/estados';
 import { estadoRecordatorio, fechaRecordatorio, REPETICIONES } from '@/utils/recordatorios';
@@ -28,6 +29,9 @@ interface ReminderCardProps {
 }
 
 export default function ReminderCard({ recordatorio, onToggle, ahora, onEdit, onPostpone, onDelete, disabled = false }: ReminderCardProps) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   // El subtítulo en rojo con alerta corresponde a recordatorios que vencen hoy/mañana.
   const estado = estadoRecordatorio(recordatorio, ahora);
   const esUrgente = estado === 'Vencido' || estado === 'Hoy';
@@ -41,7 +45,7 @@ export default function ReminderCard({ recordatorio, onToggle, ahora, onEdit, on
       <View style={styles.info}>
         <Text style={styles.titulo}>{recordatorio.titulo}</Text>
         {!!recordatorio.mascota_nombre && <Text style={styles.subtitulo}>{recordatorio.mascota_nombre}</Text>}
-        <Text style={[styles.subtitulo, esUrgente && { color: '#B91C1C' }]}>{estado}{fecha ? ` · ${formatearFechaCita(fecha.toISOString())}` : ''}</Text>
+        <Text style={[styles.subtitulo, esUrgente && { color: AppColors.danger }]}>{estado}{fecha ? ` · ${formatearFechaCita(fecha.toISOString())}` : ''}</Text>
         <Text style={styles.subtitulo}>{REPETICIONES[recordatorio.repeticion ?? 'ninguna']}</Text>
         {!!recordatorio.ultima_realizacion && <Text style={styles.subtitulo}>Última realización: {formatearFechaCita(recordatorio.ultima_realizacion)}</Text>}
         <View style={styles.subtituloRow}>
@@ -72,17 +76,17 @@ export default function ReminderCard({ recordatorio, onToggle, ahora, onEdit, on
         style={[styles.checkbox, recordatorio.completado && styles.checkboxMarcado]}
         accessibilityLabel={`Marcar ${recordatorio.titulo}`}>
         {recordatorio.completado && (
-          <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+          <Ionicons name="checkmark" size={16} color={AppColors.onPrimary} />
         )}
       </Pressable>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   action: { paddingVertical: 12, paddingHorizontal: 4 },
-  link: { color: '#0369A1', fontWeight: '600' },
+  link: { color: AppColors.accent, fontWeight: '600' },
   delete: { color: AppColors.danger, fontWeight: '600' },
   card: {
     flexDirection: 'row',
@@ -131,4 +135,4 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.primary,
     borderColor: AppColors.primary,
   },
-});
+}));

@@ -1,8 +1,9 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppColors } from '@/constants/theme';
 import type { EstadoCargaDatos } from '@/types';
 
 interface Props {
@@ -21,6 +22,9 @@ export default function DataLoadState({
   activo = true, estado, modoDemo, hayCambiosLocales = false,
   reintentar, reintentarGuardado, salir, children,
 }: Props) {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   const insets = useSafeAreaInsets();
   const cargando = ['inicial', 'recuperando', 'cargando'].includes(estado.estado);
   const ocupado = cargando || estado.guardandoCache;
@@ -41,7 +45,7 @@ export default function DataLoadState({
           accessibilityLiveRegion="polite">
           {mostrarAviso && (
             <>
-              {cargando && <ActivityIndicator color={AppColors.primary} accessibilityLabel="Actualizando datos" />}
+              {cargando && <ActivityIndicator color={AppColors.accent} accessibilityLabel="Actualizando datos" />}
               <Text style={styles.message}>
                 {estado.datosDisponibles ? `${modoDemo && estado.procedencia === 'cache' ? 'Demostración · ' : ''}${procedencia}${fecha ? ` · ${fecha}` : ''}`
                   : estado.estado === 'recuperando' ? 'Recuperando tus datos…' : cargando ? 'Cargando tus datos…' : 'No se pudieron cargar tus datos.'}
@@ -83,21 +87,21 @@ export default function DataLoadState({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   container: { flex: 1, backgroundColor: AppColors.background },
   content: { flex: 1 }, hidden: { display: 'none' },
   initial: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, gap: 12 },
   notice: { padding: 12, gap: 6, backgroundColor: AppColors.infoSoft },
   compactNotice: { backgroundColor: AppColors.background, paddingBottom: 0, gap: 0 },
   compactButton: { backgroundColor: 'transparent' },
-  compactButtonText: { color: AppColors.primaryDark },
+  compactButtonText: { color: AppColors.accent },
   message: { fontSize: 14, color: AppColors.text, textAlign: 'center' },
   detail: { color: AppColors.textSecondary, fontSize: 12, textAlign: 'center' },
   error: { color: AppColors.danger, fontSize: 14, textAlign: 'center' },
   actions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 },
   button: { padding: 10, minHeight: 44, borderRadius: 12, backgroundColor: AppColors.primary, justifyContent: 'center' },
   disabled: { opacity: 0.5 },
-  buttonText: { fontWeight: '600', color: '#FFFFFF' },
+  buttonText: { fontWeight: '600', color: AppColors.onPrimary },
   exit: { padding: 12, minHeight: 44 },
-  exitText: { color: AppColors.primary, fontWeight: '600' },
-});
+  exitText: { color: AppColors.accent, fontWeight: '600' },
+}));

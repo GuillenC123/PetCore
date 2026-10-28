@@ -1,4 +1,6 @@
-import { AdaptiveColumns, layoutStyles } from '@/components/AdaptiveLayout';
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
+import { layoutStyles } from '@/components/AdaptiveLayout';
 // ============================================================================
 // nueva-mascota.tsx - Formulario "Añadir nueva mascota"
 // ----------------------------------------------------------------------------
@@ -28,7 +30,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import FormInput from '@/components/FormInput';
-import { AppColors } from '@/constants/theme';
+import PhotoField from '@/components/PhotoField';
+import BreedField from '@/components/BreedField';
 import { useAuth } from '@/context/AuthContext';
 import { useAviso } from '@/context/AvisosContext';
 import type { EstadoMascota } from '@/types';
@@ -36,8 +39,13 @@ import PetDataFields, { datosIniciales, prepararDatos } from '@/components/PetDa
 import { validarTexto } from '@/utils/validaciones';
 
 export default function NuevaMascotaScreen() {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   // Estado local de cada campo del formulario.
   const [nombre, setNombre] = useState('');
+  const [imagen, setImagen] = useState<string | null>(null);
+  const [preparandoFoto, setPreparandoFoto] = useState(false);
   const [datos, setDatos] = useState(datosIniciales);
   const [raza, setRaza] = useState('');
 
@@ -69,7 +77,7 @@ export default function NuevaMascotaScreen() {
   // GUARDAR: si pasa la validación, crea la mascota y vuelve a la lista.
   // -------------------------------------------------------------------------
   const guardar = async () => {
-    if (bloqueo.current || !validar()) return;
+    if (bloqueo.current || preparandoFoto || !validar()) return;
     bloqueo.current = true;
     setGuardando(true);
 
@@ -79,7 +87,7 @@ export default function NuevaMascotaScreen() {
         ...prepararDatos(datos),
         raza: raza.trim(),
         estado: 'saludable' as EstadoMascota,
-        imagen: null,
+        imagen,
       });
       mostrarAviso(modoDemo ? 'Mascota registrada para esta sesión.' : 'Mascota registrada.');
       router.back();
@@ -117,8 +125,8 @@ export default function NuevaMascotaScreen() {
             Registra a tu nuevo compañero para empezar a cuidarlo.
           </Text>
 
-          {/* ---- Camapos del formulario ---- */}
-          <AdaptiveColumns>
+          <PhotoField label="Foto de la mascota" value={imagen} onChange={setImagen} disabled={guardando} onBusyChange={setPreparandoFoto} />
+          {/* ---- Campos del formulario ---- */}
             <FormInput
               icon="paw-outline"
               placeholder="Nombre de la mascota"
@@ -129,23 +137,19 @@ export default function NuevaMascotaScreen() {
               error={errores.nombre}
             />
 
-            <FormInput
-              icon="information-circle-outline"
-              placeholder="Raza (ej. Golden Retriever)"
-              label="Raza"
-              value={raza}
-              onChangeText={setRaza}
-              autoCapitalize="words"
-              error={errores.raza}
-            />
-
-          </AdaptiveColumns>
-          <PetDataFields value={datos} onChange={setDatos} disabled={guardando} />
+          <PetDataFields value={datos} disabled={guardando} onChange={(nuevos) => {
+            if (nuevos.especie !== datos.especie) {
+              setRaza('');
+              setErrores((actual) => ({ ...actual, raza: '' }));
+            }
+            setDatos(nuevos);
+          }} afterSpecies={<BreedField key={datos.especie} especie={datos.especie} value={raza} disabled={guardando}
+            error={errores.raza} onChange={(valor) => { setRaza(valor); setErrores((actual) => ({ ...actual, raza: '' })); }} />} />
 
           {/* ---- Botón guardar ---- */}
           <Pressable
             onPress={guardar}
-            disabled={guardando}
+            disabled={guardando || preparandoFoto}
             accessibilityState={{ disabled: guardando, busy: guardando }}
             accessibilityRole="button"
             style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>
@@ -158,7 +162,7 @@ export default function NuevaMascotaScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: AppColors.background,
@@ -208,9 +212,9 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: AppColors.onPrimary,
     fontSize: 16,
     fontWeight: '700',
   },
   error: { fontSize: 14, color: AppColors.danger },
-});
+}));

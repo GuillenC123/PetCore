@@ -27,7 +27,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Permite seleccionar fotos de los comprobantes de tu mascota.",
+          "photosPermission": "Permite seleccionar fotos para tu perfil, tus mascotas y sus comprobantes.",
           "cameraPermission": false,
           "microphonePermission": false
         }

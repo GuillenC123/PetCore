@@ -22,7 +22,7 @@ assert.equal(util.valorSelector('29/02/2028','date').getDate(),29);
 assert.equal(util.valorSelector('08:05','time').getHours(),8);
 assert.equal(util.valorSelector('08:05','time').getMinutes(),5);
 assert.equal(util.valorSelector('','date',fecha),fecha);
-const { default: WebField } = cargar('src/components/DateTimeField.web.tsx', nombre => nombre === '@/utils/fecha-selector' ? util : require(nombre));
+const { default: WebField } = cargar('src/components/DateTimeField.web.tsx', nombre => nombre === '@/utils/fecha-selector' ? util : nombre === '@/context/AppearanceContext' ? {useAppColors:()=>({}),useAppearance:()=>({scheme:'light'})} : require(nombre));
 let valor;
 const props = {mode:'date',value:'09/02/2028',label:'Fecha',onChange:v=>{valor=v;}};
 const arbol = WebField(props);

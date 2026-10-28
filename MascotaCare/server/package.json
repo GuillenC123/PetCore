@@ -9,6 +9,7 @@
     "dev": "node --watch src/index.js",
     "test": "node --test test/*.test.js",
     "test:salud": "node scripts/test-ficha-salud.js",
+    "test:fotos": "node scripts/test-fotos.js",
     "db:migrate": "node scripts/migrar.js"
   },
   "dependencies": {

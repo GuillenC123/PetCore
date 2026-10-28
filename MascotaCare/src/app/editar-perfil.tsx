@@ -1,3 +1,5 @@
+import { useAppColors } from '@/context/AppearanceContext';
+import type { AppPalette } from '@/constants/theme';
 import { layoutStyles } from '@/components/AdaptiveLayout';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -6,16 +8,21 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import FormInput from '@/components/FormInput';
-import { AppColors } from '@/constants/theme';
+import PhotoField from '@/components/PhotoField';
 import { useAuth } from '@/context/AuthContext';
 import { validarCorreo, validarNombrePerfil } from '@/utils/validaciones';
 
 export default function EditarPerfilScreen() {
+  const AppColors = useAppColors();
+  const styles = createStyles(AppColors);
+
   const { usuario, actualizarPerfil } = useAuth();
   // El borrador es independiente del contexto: cancelar no modifica el usuario.
   const [nombre, setNombre] = useState(usuario?.nombre ?? '');
   const [correo, setCorreo] = useState(usuario?.correo ?? '');
-  const [errores, setErrores] = useState<{ nombre?: string; correo?: string }>({});
+  const [imagen, setImagen] = useState(usuario?.imagen ?? null);
+  const [preparandoFoto, setPreparandoFoto] = useState(false);
+  const [errores, setErrores] = useState<{ nombre?: string; correo?: string; general?: string }>({});
   const [guardado, setGuardado] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
@@ -31,15 +38,15 @@ export default function EditarPerfilScreen() {
     };
     setErrores(nuevosErrores);
     setGuardado(false);
-    if (nuevosErrores.nombre || nuevosErrores.correo || !usuario || guardando) return;
+    if (nuevosErrores.nombre || nuevosErrores.correo || !usuario || guardando || preparandoFoto) return;
     setGuardando(true);
     try {
-      await actualizarPerfil({ nombre, correo });
+      await actualizarPerfil({ nombre, correo, imagen });
       setNombre(nombre.normalize('NFC').trim());
       setCorreo(correo.trim().toLowerCase());
       setGuardado(true);
     } catch (error) {
-      setErrores({ correo: error instanceof Error ? error.message : 'No se pudo actualizar el perfil.' });
+      setErrores({ general: error instanceof Error ? error.message : 'No se pudo actualizar el perfil.' });
     } finally {
       setGuardando(false);
     }
@@ -57,7 +64,9 @@ export default function EditarPerfilScreen() {
           <View style={styles.back} />
         </View>
         <ScrollView contentContainerStyle={[styles.content, layoutStyles.form]} keyboardShouldPersistTaps="handled">
-          <Text style={styles.subtitle}>Actualiza tu nombre y correo electrónico.</Text>
+          <Text style={styles.subtitle}>Actualiza tu foto, nombre y correo electrónico.</Text>
+          <PhotoField label="Foto de perfil" usuario value={imagen} disabled={guardando} onBusyChange={setPreparandoFoto}
+            onChange={(foto) => { setImagen(foto); setGuardado(false); }} />
           <View style={styles.field}>
             <Text style={styles.label}>Nombre</Text>
             <FormInput icon="person-outline" accessibilityLabel="Nombre" placeholder="Nombre completo"
@@ -78,12 +87,13 @@ export default function EditarPerfilScreen() {
                 setErrores((actual) => ({ ...actual, correo: undefined }));
               }} />
           </View>
+          {!!errores.general && <Text style={styles.error} accessibilityRole="alert">{errores.general}</Text>}
           {guardado ? (
             <Text style={styles.success} accessibilityRole="alert" accessibilityLiveRegion="polite">
               Perfil actualizado correctamente
             </Text>
           ) : null}
-          <Pressable onPress={guardar} disabled={guardando} accessibilityRole="button"
+          <Pressable onPress={guardar} disabled={guardando || preparandoFoto} accessibilityRole="button"
             style={({ pressed }) => [styles.button, guardando && styles.disabled, pressed && styles.pressed]}>
             <Text style={styles.buttonText}>{guardando ? 'Guardando…' : 'Guardar cambios'}</Text>
           </Pressable>
@@ -97,7 +107,7 @@ export default function EditarPerfilScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   safe: { flex: 1, backgroundColor: AppColors.background },
   flex: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 8 },
@@ -108,10 +118,11 @@ const styles = StyleSheet.create({
   field: { gap: 6 },
   label: { fontSize: 14, fontWeight: '700', color: AppColors.text },
   button: { backgroundColor: AppColors.primaryDark, borderRadius: 14, padding: 16, alignItems: 'center' },
-  buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  buttonText: { color: AppColors.onPrimary, fontSize: 16, fontWeight: '700' },
   cancel: { borderRadius: 14, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: AppColors.primaryDark },
-  cancelText: { color: AppColors.primaryDark, fontSize: 16, fontWeight: '700' },
+  cancelText: { color: AppColors.accent, fontSize: 16, fontWeight: '700' },
   success: { color: AppColors.success, fontSize: 14, fontWeight: '600' },
+  error: { color: AppColors.danger, fontSize: 14 },
   pressed: { opacity: 0.7 },
   disabled: { opacity: 0.55 },
-});
+}));
