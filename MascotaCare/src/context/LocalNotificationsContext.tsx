@@ -117,7 +117,7 @@ export function LocalNotificationsProvider({ children }: { children: ReactNode }
       }
       await AsyncStorage.setItem(`petcore.avisos:${sesion}`, String(valor));
       if (actual.current === sesion) { setPreferencia({ owner: sesion, habilitado: valor }); setRevision((prev) => prev + 1); }
-    } catch { if (actual.current === sesion) setError('No se pudo guardar la configuración de avisos. Vuelve a intentarlo.'); }
+    } catch (causa) { if (actual.current === sesion) setError(causa instanceof Error && causa.name === 'PermisoNotificacionesError' ? causa.message : 'No se pudo guardar la configuración de avisos. Vuelve a intentarlo.'); }
     finally { bloqueo.current = false; setOcupado(false); }
   };
   const prueba = async () => {

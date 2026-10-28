@@ -48,7 +48,7 @@ export default function PermissionsPanel() {
         if (montado.current) setEstados((prev) => ({ ...prev, [tipo]: estado }));
         if (tipo === 'notificaciones') await avisos.actualizar();
       }
-    } catch { if (montado.current) setError('No se pudo abrir el permiso. Intenta nuevamente desde Ajustes del dispositivo.'); }
+    } catch (causa) { if (montado.current) setError(causa instanceof Error && causa.name === 'PermisoNotificacionesError' ? causa.message : 'No se pudo abrir el permiso. Intenta nuevamente desde Ajustes del dispositivo.'); }
     finally { bloqueo.current = false; if (montado.current) setOcupado(false); }
   };
   return <View style={{ padding: 18, borderRadius: 16, gap: 14, backgroundColor: colors.surface }}>
@@ -61,6 +61,8 @@ export default function PermissionsPanel() {
         style={{ padding: 12, minHeight: 44, borderRadius: 10, backgroundColor: colors.infoSoft, opacity: ocupado ? 0.5 : 1 }}>
         <Text style={{ color: colors.accent, fontWeight: '600' }}>{estados[tipo] === 'bloqueado' || estados[tipo] === 'permitido' ? `Abrir Ajustes de ${titulo.toLowerCase()}` : `Permitir ${titulo.toLowerCase()}`}</Text>
       </Pressable>
+      {estados[tipo] === 'denegado' && <Pressable accessibilityRole="button" disabled={ocupado} onPress={() => void abrirAjustesPermisos().catch(() => setError('Abre los permisos de la aplicación desde Ajustes del dispositivo.'))}
+        style={{ minHeight: 44, padding: 12 }}><Text style={{ color: colors.accent }}>Abrir Ajustes de {titulo.toLowerCase()}</Text></Pressable>}
     </View>)}
     {!!error && <><Text accessibilityRole="alert" style={{ color: colors.danger }}>{error}</Text><Pressable accessibilityRole="button" onPress={() => void actualizar()} style={{ minHeight: 44, padding: 12 }}><Text style={{ color: colors.accent }}>Reintentar consulta de permisos</Text></Pressable></>}
   </View>;
