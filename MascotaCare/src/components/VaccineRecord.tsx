@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { useFormularioSalud } from '@/context/HealthEditContext';
 import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as ImagePicker from 'expo-image-picker';
+import PhotoField from './PhotoField';
 import type { Identificador, Mascota, RegistroCarnet  } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { useAhora } from '@/hooks/use-ahora';
@@ -88,14 +88,6 @@ function Formulario({ mascotaId, edicion, cerrar }: { mascotaId: Identificador; 
   const bloqueo = useRef(false);
   const [inicial] = useState(() => JSON.stringify({ tipo, nombre, aplicado, fecha, proxima, foto }));
   const { descartar } = useFormularioSalud(JSON.stringify({ tipo, nombre, aplicado, fecha, proxima, foto }) !== inicial, seleccionando || guardando);
-  const elegirFoto = async () => {
-    setError(''); setSeleccionando(true);
-    try {
-      const resultado = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: false, quality: 1 });
-      if (!resultado.canceled && resultado.assets[0]) setFoto(resultado.assets[0].uri);
-    } catch { setError('No se pudo abrir la foto. Revisa el acceso a tus fotos e inténtalo de nuevo.'); }
-    finally { setSeleccionando(false); }
-  };
   const guardar = async () => {
     if (bloqueo.current || seleccionando) return;
     bloqueo.current = true; setGuardando(true); setError('');
@@ -126,11 +118,7 @@ function Formulario({ mascotaId, edicion, cerrar }: { mascotaId: Identificador; 
     <Text style={styles.label}>Próxima fecha indicada por el veterinario {aplicado ? '(opcional)' : ''}</Text>
     <FormInput editable={!guardando} dateMode="date" accessibilityLabel="Próxima fecha indicada por el veterinario" value={proxima} onChangeText={setProxima} maxLength={10} placeholder="DD/MM/AAAA" />
     <Text style={styles.text}>La próxima fecha se marca vencida a partir del día siguiente. Puedes registrar fechas anteriores para completar el historial.</Text>
-    <Boton label={seleccionando ? 'Abriendo fotos…' : foto ? 'Cambiar foto del comprobante' : 'Adjuntar foto del comprobante'} onPress={elegirFoto} disabled={seleccionando || guardando} />
-    {!!foto && <>
-      <Image source={{ uri: foto }} style={styles.preview} resizeMode="contain" accessibilityLabel="Comprobante seleccionado" />
-      <Boton label="Quitar foto" onPress={() => setFoto(null)} disabled={seleccionando || guardando} />
-    </>}
+    <PhotoField label="Foto del comprobante" comprobante value={foto} onChange={setFoto} disabled={guardando} onBusyChange={setSeleccionando} />
     <Text style={styles.text}>Los datos se guardan en tu cuenta al conectarte; la foto se conserva solo durante esta sesión.</Text>
     {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
     <Boton label={guardando ? 'Guardando…' : 'Guardar registro'} onPress={guardar} disabled={seleccionando || guardando} />

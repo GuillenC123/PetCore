@@ -1,12 +1,19 @@
+import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
-/** Selecciona y convierte a una foto portable; nunca guarda una URI temporal. */
-export async function seleccionarFoto(): Promise<string | null> {
-  // Debe abrirse directamente desde el botón para conservar el gesto en web.
-  const resultado = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ['images'], allowsMultipleSelection: false, quality: 1,
-  });
+export type OrigenFoto = 'galeria' | 'camara';
+
+/** Cámara y galería comparten compresión y una URI portable. */
+export async function seleccionarFoto(origen: OrigenFoto = 'galeria', cuadrada = true): Promise<string | null> {
+  if (origen === 'camara') {
+    if (Platform.OS === 'web') throw new Error('Para tomar una foto, abre PetCore en tu teléfono. Puedes elegir una imagen de la galería aquí.');
+    const permiso = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permiso.granted) throw new Error('Se necesita acceso a la cámara para tomar una foto. Puedes seleccionar una imagen de la galería.');
+  }
+  const resultado = origen === 'camara'
+    ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], allowsEditing: false, quality: 1 })
+    : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: false, quality: 1 });
   if (resultado.canceled || !resultado.assets[0]) return null;
   const foto = resultado.assets[0];
   const contexto = ImageManipulator.manipulate(foto.uri);
@@ -14,8 +21,9 @@ export async function seleccionarFoto(): Promise<string | null> {
   try {
     const lado = Math.min(foto.width, foto.height);
     if (lado <= 0) throw new Error('No se pudo leer la imagen. Prueba con otra foto.');
-    contexto.crop({ originX: (foto.width - lado) / 2, originY: (foto.height - lado) / 2, width: lado, height: lado });
-    contexto.resize({ width: Math.min(lado, 512), height: Math.min(lado, 512) });
+    if (cuadrada) contexto.crop({ originX: (foto.width - lado) / 2, originY: (foto.height - lado) / 2, width: lado, height: lado });
+    if (cuadrada) contexto.resize({ width: Math.min(lado, 512), height: Math.min(lado, 512) });
+    else if (Math.max(foto.width, foto.height) > 1280) contexto.resize(foto.width >= foto.height ? { width: 1280 } : { height: 1280 });
     imagen = await contexto.renderAsync();
     const guardada = await imagen.saveAsync({ format: SaveFormat.JPEG, compress: 0.75, base64: true });
     if (!guardada.base64) throw new Error('No se pudo preparar la foto. Inténtalo nuevamente.');

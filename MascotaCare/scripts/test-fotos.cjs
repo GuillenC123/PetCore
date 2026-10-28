@@ -18,8 +18,8 @@ async function main() {
   const codigo = ts.transpileModule(fs.readFileSync(path.join(__dirname, '../src/services/fotos.ts'), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
-  new Function('require', 'module', 'exports', codigo)((nombre) => nombre === 'expo-image-picker'
-    ? { launchImageLibraryAsync: async () => seleccion }
+  new Function('require', 'module', 'exports', codigo)((nombre) => nombre === 'react-native' ? {Platform:{OS:'android'}} : nombre === 'expo-image-picker'
+    ? { launchImageLibraryAsync: async () => seleccion, launchCameraAsync: async () => seleccion, requestCameraPermissionsAsync: async () => ({granted:true}) }
     : { ImageManipulator: { manipulate: () => contexto }, SaveFormat: { JPEG: 'jpeg' } }, modulo, modulo.exports);
   assert.equal(await modulo.exports.seleccionarFoto(), null);
   assert.equal(liberar, 0);
@@ -27,6 +27,15 @@ async function main() {
   assert.equal(await modulo.exports.seleccionarFoto(), 'data:image/jpeg;base64,/9j/2Q==');
   assert.deepEqual(transformaciones, [{ originX: 500, originY: 0, width: 1000, height: 1000 }, { width: 512, height: 512 }]);
   assert.equal(liberar, 2);
+
+  transformaciones = [];
+  assert.equal(await modulo.exports.seleccionarFoto('camara'), 'data:image/jpeg;base64,/9j/2Q==');
+  assert.equal(transformaciones.length, 2);
+  transformaciones = [];
+  await modulo.exports.seleccionarFoto('camara', false);
+  assert.deepEqual(transformaciones, [{width:1280}]);
+  seleccion = {canceled:true};
+  assert.equal(await modulo.exports.seleccionarFoto('camara'), null);
 
   // Contexto y cliente HTTP reales: guardar, quitar y conservar foto ante fallo.
   const hooks = crearReact();

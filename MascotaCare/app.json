@@ -28,7 +28,7 @@
         "expo-image-picker",
         {
           "photosPermission": "Permite seleccionar fotos para tu perfil, tus mascotas y sus comprobantes.",
-          "cameraPermission": false,
+          "cameraPermission": "Permite tomar fotos para tu perfil, tus mascotas y sus comprobantes de salud.",
           "microphonePermission": false
         }
       ],

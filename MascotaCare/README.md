@@ -370,3 +370,12 @@ y Perfil permite volver a seleccionarla para reintentar.
 
 `node scripts/test-apariencia.cjs` verifica recuperación, persistencia, cambios
 del sistema, escrituras sucesivas, errores y contraste de texto en ambos temas.
+
+### APF3: cámara
+
+En perfil, mascotas y comprobantes del carnet se puede elegir la galería o tomar
+una foto con la cámara en Android/iOS. Cancelar conserva la imagen anterior.
+Los comprobantes mantienen su proporción para no recortar el documento.
+En web se conserva la selección de archivos; la cámara se prueba en el teléfono.
+El mensaje nativo de cámara se configura en `app.json`; cambiarlo requiere una
+nueva compilación de la app instalada (Expo Go utiliza sus propios permisos).
