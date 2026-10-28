@@ -37,16 +37,16 @@ const deferred=()=>{let resolve;return {promise:new Promise(r=>resolve=r),resolv
  // El proveedor real conecta preferencias, datos, permisos y apertura segura.
  const h=crearReact(),storage=crearAlmacenamiento(),syncs=[],routes=[];
  let auth={usuario:{id:1},modoDemo:false,mascotas:pets,citas,tratamientos:meds,recordatorios:reminders,estadoDatos:{datosDisponibles:true}};
- let listener=null,requests=0;
+ let listener=null,requests=0,falloPermiso=false;
  const notifications={setNotificationHandler:()=>{},addNotificationResponseReceivedListener:fn=>{listener=fn;return {remove(){}}},getLastNotificationResponseAsync:async()=>null,clearLastNotificationResponseAsync:async()=>{}};
  const mod=load('src/context/LocalNotificationsContext.tsx',n=>{
   if(n==='react')return h.react;
   if(n==='react-native')return {Platform:{OS:'android'},AppState:{currentState:'active',addEventListener:()=>({remove(){}})}};
   if(n==='expo-router')return {router:{push:r=>routes.push(r)}};
-  if(n==='expo-notifications')return notifications;
+  if(n==='@/services/notificaciones-locales-api')return notifications;
   if(n==='@react-native-async-storage/async-storage')return {__esModule:true,default:storage};
   if(n==='./AuthContext')return {useAuth:()=>auth};
-  if(n==='@/services/permisos')return {consultarPermiso:async()=> 'permitido',solicitarPermiso:async()=>{requests++;return 'permitido'}};
+  if(n==='@/services/permisos')return {consultarPermiso:async()=> {if(falloPermiso)throw Error('fallo temporal');return 'permitido'},solicitarPermiso:async()=>{requests++;return 'permitido'}};
   if(n==='@/services/avisos-dispositivo')return {sincronizarAvisosDispositivo:async(owner,list)=>{syncs.push([owner,list]);return list?.length??0}};
   if(n==='@/utils/avisos-locales')return u;
   if(n==='@/utils/agenda')return pure('src/utils/agenda.ts');
@@ -55,6 +55,8 @@ const deferred=()=>{let resolve;return {promise:new Promise(r=>resolve=r),resolv
  const render=()=>h.render(()=>mod.LocalNotificationsProvider({children:null})).props.value;
  render();await flush();assert.equal(render().habilitado,false);assert.equal(requests,0);
  await render().cambiar(true);render();await flush();assert.equal(render().habilitado,true);assert.equal(requests,1);assert.equal(storage.valores.get('petcore.avisos:api:1'),'true');assert.equal(syncs.at(-1)[1].length,3);
+ falloPermiso=true;await render().actualizar();assert.match(render().error,/consultar el permiso/);assert.equal(render().habilitado,true);
+ falloPermiso=false;await render().actualizar();await flush();assert.equal(render().error,'');await flush();
  listener({notification:{request:{identifier:expected[0].identifier,content:{data:expected[0].data}}}});render();assert.equal(routes.at(-1).pathname,'/cuidado');assert.equal(routes.at(-1).params.clave,'cita-1');
  listener({notification:{request:{identifier:'extra',content:{data:{...expected[0].data,owner:'api:2'}}}}});render();assert.equal(routes.length,1);
  await render().cambiar(false);render();assert.deepEqual(syncs.at(-1)[1],[]);
@@ -69,7 +71,7 @@ const deferred=()=>{let resolve;return {promise:new Promise(r=>resolve=r),resolv
    {request:{identifier:'petcore:otra',content:{data:{petcore:true,owner:'api:2'}}}},
    {request:{identifier:'externa',content:{data:{}}}},
   ],dismissNotificationAsync:async id=>dismissed.push(id)};
- const adapter=load('src/services/avisos-dispositivo.ts',n=>n==='react-native'?{Platform:{OS:'android'}}:n==='./permisos'?{CANAL_CUIDADOS:'cuidados',prepararCanal:async()=>{}}:n==='./sincronizar-avisos'?{crearSincronizadorAvisos}:n==='expo-notifications'?nativeNotifications:require(n));
+ const adapter=load('src/services/avisos-dispositivo.ts',n=>n==='react-native'?{Platform:{OS:'android'}}:n==='./permisos'?{CANAL_CUIDADOS:'cuidados',prepararCanal:async()=>{}}:n==='./sincronizar-avisos'?{crearSincronizadorAvisos}:n==='@/services/notificaciones-locales-api'?nativeNotifications:require(n));
  await adapter.sincronizarAvisosDispositivo('api:1',expected,new Set(expected.map(x=>x.identifier)));
  assert.equal(nativeRequests.length,3);assert.equal(nativeRequests[0].trigger.type,'date');assert.equal(nativeRequests[0].trigger.delivery,'bestEffort');assert.equal(nativeRequests[0].trigger.date.getTime(),expected[0].fecha);assert.equal(nativeRequests[0].trigger.channelId,'cuidados');
  assert.deepEqual(dismissed,['petcore:otra']);

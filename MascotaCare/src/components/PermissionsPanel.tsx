@@ -20,8 +20,16 @@ export default function PermissionsPanel() {
   const bloqueo = useRef(false);
   const actualizar = useCallback(async () => {
     try {
-      const [camara, notificaciones] = await Promise.all([consultarPermiso('camara'), consultarPermiso('notificaciones')]);
-      if (montado.current) { setEstados({ camara, notificaciones }); setError(''); }
+      const resultados = await Promise.allSettled([consultarPermiso('camara'), consultarPermiso('notificaciones')]);
+      if (montado.current) {
+        const tipos: TipoPermiso[] = ['camara', 'notificaciones'];
+        setEstados((prev) => {
+          const siguientes = { ...prev };
+          resultados.forEach((resultado, i) => { if (resultado.status === 'fulfilled') siguientes[tipos[i]] = resultado.value; });
+          return siguientes;
+        });
+        setError(resultados.some((resultado) => resultado.status === 'rejected') ? 'No se pudo consultar uno de los permisos. Los demás siguen disponibles. Pulsa Reintentar.' : '');
+      }
     } catch { if (montado.current) setError('No se pudo consultar los permisos. Vuelve a intentarlo.'); }
   }, []);
   useEffect(() => {

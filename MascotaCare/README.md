@@ -213,7 +213,7 @@ npm test --prefix server
 
 Las pruebas del servidor recorren rutas HTTP y sustituyen PostgreSQL; no verifican una base de datos real. El lint de Expo tiene como alcance predeterminado el frontend.
 
-Para los dieciocho scripts del frontend en PowerShell:
+Para los diecinueve scripts del frontend en PowerShell:
 
 ```powershell
 $falloPruebas = $false
@@ -420,3 +420,14 @@ simulados y verifican aceptación, rechazo, bloqueo, aislamiento, concurrencia,
 reintento, cambios de fecha, preferencias y apertura de cuidados. La prueba
 real de cámara y recepción fuera de la app debe realizarse en Android/iOS.
 Consulta el protocolo de evidencias en `../docs/APF3.md`.
+
+### Compatibilidad de avisos con Expo Go SDK 58
+
+La entrada general de expo-notifications 58.1.6 importa funciones push como
+TopicSubscriptionModule, que pueden no existir en el binario de Expo Go.
+`services/notificaciones-locales-api.ts` agrupa exclusivamente las entradas
+locales de permisos, programación, presentación y recepción. No se modifican
+los archivos de node_modules. `test-notificaciones-expo-go.cjs` recorre las
+dependencias reales de Android/iOS y comprueba que esta API no carga módulos
+push; debe mantenerse al actualizar la dependencia. Un error temporal al
+consultar permisos no borra la preferencia de avisos y se limpia al reintentar.

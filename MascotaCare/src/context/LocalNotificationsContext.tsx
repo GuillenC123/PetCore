@@ -20,6 +20,8 @@ export function LocalNotificationsProvider({ children }: { children: ReactNode }
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState('');
   const [syncError, setSyncError] = useState('');
+  const [permissionError, setPermissionError] = useState('');
+  const [recepcionError, setRecepcionError] = useState('');
   const [cantidad, setCantidad] = useState(0);
   const [revision, setRevision] = useState(0);
   const [respuesta, setRespuesta] = useState<NotificationResponse | null>(null);
@@ -34,16 +36,16 @@ export function LocalNotificationsProvider({ children }: { children: ReactNode }
     const sesion = owner;
     try {
       const estado = await consultarPermiso('notificaciones');
-      if (actual.current === sesion) { setPermiso(estado); setRevision((prev) => prev + 1); }
-    } catch { if (actual.current === sesion) setError('No se pudo consultar el permiso de notificaciones. Inténtalo nuevamente.'); }
+      if (actual.current === sesion) { setPermiso(estado); setPermissionError(''); setRevision((prev) => prev + 1); }
+    } catch { if (actual.current === sesion) setPermissionError('No se pudo consultar el permiso de notificaciones. Inténtalo nuevamente.'); }
   }, [owner]);
 
   useEffect(() => {
     if (!owner) return;
     let vigente = true;
-    Promise.all([AsyncStorage.getItem(`petcore.avisos:${owner}`), consultarPermiso('notificaciones')]).then(([guardado, estado]) => {
+    AsyncStorage.getItem(`petcore.avisos:${owner}`).then((guardado) => {
       if (!vigente) return;
-      setPreferencia({ owner, habilitado: guardado === 'true' }); setPermiso(estado); setError('');
+      setPreferencia({ owner, habilitado: guardado === 'true' }); setError('');
     }).catch(() => {
       if (vigente) { setPreferencia({ owner, habilitado: false }); setError('No se pudo recuperar la configuración de avisos. Vuelve a activar los avisos para guardarla.'); }
     });
@@ -51,6 +53,7 @@ export function LocalNotificationsProvider({ children }: { children: ReactNode }
   }, [owner]);
 
   useEffect(() => {
+    void Promise.resolve().then(actualizar);
     const subscription = AppState.addEventListener('change', (state) => { if (state === 'active') void actualizar(); });
     const timer = setInterval(() => { if (AppState.currentState === 'active') void actualizar(); }, 60_000);
     return () => { subscription.remove(); clearInterval(timer); };
@@ -76,7 +79,7 @@ export function LocalNotificationsProvider({ children }: { children: ReactNode }
     if (Platform.OS === 'web') return;
     let vigente = true;
     let subscription: { remove: () => void } | undefined;
-    import('expo-notifications').then(async (n) => {
+    import('@/services/notificaciones-locales-api').then(async (n) => {
       if (!vigente) return;
       n.setNotificationHandler({ handleNotification: async (notification) => {
         const mostrar = notification.request.content.data?.petcore === true && notification.request.content.data?.owner === actual.current;
@@ -84,10 +87,10 @@ export function LocalNotificationsProvider({ children }: { children: ReactNode }
       } });
       subscription = n.addNotificationResponseReceivedListener((response) => { if (vigente) setRespuesta(response); });
       const last = await n.getLastNotificationResponseAsync();
-      if (vigente && last) setRespuesta(last);
-    }).catch(() => { if (vigente) setError('No se pudo iniciar la recepción de avisos. Reabre la app para reintentar.'); });
+      if (vigente) { setRecepcionError(''); if (last) setRespuesta(last); }
+    }).catch(() => { if (vigente) setRecepcionError('No se pudo iniciar la recepción de avisos. Reabre la app para reintentar.'); });
     return () => { vigente = false; subscription?.remove(); };
-  }, []);
+  }, [revision]);
 
   useEffect(() => {
     if (!respuesta || !owner || !estadoDatos.datosDisponibles) return;
@@ -98,7 +101,7 @@ export function LocalNotificationsProvider({ children }: { children: ReactNode }
     if (consumidas.current.size > 100) consumidas.current.delete(consumidas.current.values().next().value!);
     const clave = leerDestinoAviso(respuesta.notification.request.content.data ?? {}, owner);
     if (clave) router.push({ pathname: '/cuidado', params: { clave, owner } });
-    void import('expo-notifications').then((n) => n.clearLastNotificationResponseAsync()).catch(() => {});
+    void import('@/services/notificaciones-locales-api').then((n) => n.clearLastNotificationResponseAsync()).catch(() => {});
   }, [respuesta, owner, estadoDatos.datosDisponibles]);
 
   const cambiar = async (valor: boolean) => {
@@ -122,7 +125,7 @@ export function LocalNotificationsProvider({ children }: { children: ReactNode }
     bloqueo.current = true; setOcupado(true); setError('');
     const sesion = owner;
     try {
-      const n = await import('expo-notifications');
+      const n = await import('@/services/notificaciones-locales-api');
       const { prepararCanal, CANAL_CUIDADOS } = await import('@/services/permisos');
       await prepararCanal();
       if (actual.current !== sesion) return;
@@ -134,7 +137,7 @@ export function LocalNotificationsProvider({ children }: { children: ReactNode }
     } catch { if (actual.current === sesion) setError('No se pudo programar el aviso de prueba. Revisa el permiso y vuelve a intentar.'); }
     finally { bloqueo.current = false; setOcupado(false); }
   };
-  const value = { habilitado, listo, ocupado, cantidad, permiso, error: error || syncError, cambiar, actualizar, prueba };
+  const value = { habilitado, listo, ocupado, cantidad, permiso, error: error || permissionError || recepcionError || syncError, cambiar, actualizar, prueba };
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 

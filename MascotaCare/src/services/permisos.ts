@@ -15,13 +15,13 @@ export function estadoPermiso(respuesta: { granted: boolean; canAskAgain: boolea
 export async function consultarPermiso(tipo: TipoPermiso): Promise<EstadoPermiso> {
   if (Platform.OS === 'web') return 'no_disponible';
   if (tipo === 'camara') return estadoPermiso(await ImagePicker.getCameraPermissionsAsync());
-  const notifications = await import('expo-notifications');
+  const notifications = await import('@/services/notificaciones-locales-api');
   return estadoPermiso(await notifications.getPermissionsAsync());
 }
 
 export async function prepararCanal() {
   if (Platform.OS !== 'android') return;
-  const notifications = await import('expo-notifications');
+  const notifications = await import('@/services/notificaciones-locales-api');
   await notifications.setNotificationChannelAsync(CANAL_CUIDADOS, {
     name: 'Cuidados de mascotas', importance: notifications.AndroidImportance.HIGH,
     sound: 'default', vibrationPattern: [0, 250, 250, 250],
@@ -34,7 +34,7 @@ export async function solicitarPermiso(tipo: TipoPermiso): Promise<EstadoPermiso
   if (actual === 'permitido' || actual === 'bloqueado' || actual === 'no_disponible') return actual;
   if (tipo === 'camara') return estadoPermiso(await ImagePicker.requestCameraPermissionsAsync());
   await prepararCanal(); // Android 13 requiere un canal antes del diálogo.
-  const notifications = await import('expo-notifications');
+  const notifications = await import('@/services/notificaciones-locales-api');
   return estadoPermiso(await notifications.requestPermissionsAsync({ ios: { allowAlert: true, allowBadge: true, allowSound: true } }));
 }
 

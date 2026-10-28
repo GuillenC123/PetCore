@@ -6,7 +6,7 @@ function load(file,resolve){const module={exports:{}};const code=ts.transpileMod
  const native={Platform:{get OS(){return os}},Linking:{openSettings:async()=>settings++}};
  const picker={getCameraPermissionsAsync:async()=>permission,requestCameraPermissionsAsync:async()=>{requested++;return permission}};
  const notifications={AndroidImportance:{HIGH:4},getPermissionsAsync:async()=>permission,setNotificationChannelAsync:async()=>events.push('canal'),requestPermissionsAsync:async()=>{events.push('solicitar');return permission}};
- const p=load('src/services/permisos.ts',n=>n==='react-native'?native:n==='expo-image-picker'?picker:n==='expo-notifications'?(imports++,notifications):require(n));
+ const p=load('src/services/permisos.ts',n=>n==='react-native'?native:n==='expo-image-picker'?picker:n==='@/services/notificaciones-locales-api'?(imports++,notifications):require(n));
  assert.equal(await p.consultarPermiso('camara'),'pendiente');assert.equal(requested,0);
  assert.equal(await p.solicitarPermiso('camara'),'pendiente');assert.equal(requested,1);
  permission={granted:false,canAskAgain:true,status:'denied'};assert.equal(await p.solicitarPermiso('camara'),'denegado');

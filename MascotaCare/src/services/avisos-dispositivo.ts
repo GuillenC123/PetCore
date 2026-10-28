@@ -6,12 +6,12 @@ import { crearSincronizadorAvisos } from './sincronizar-avisos';
 export const sincronizarAvisosDispositivo = crearSincronizadorAvisos({
   listar: async () => {
     if (Platform.OS === 'web') return [];
-    const n = await import('expo-notifications');
+    const n = await import('@/services/notificaciones-locales-api');
     return n.getAllScheduledNotificationsAsync();
   },
-  cancelar: async (id) => { const n = await import('expo-notifications'); await n.cancelScheduledNotificationAsync(id); },
+  cancelar: async (id) => { const n = await import('@/services/notificaciones-locales-api'); await n.cancelScheduledNotificationAsync(id); },
   programar: async (aviso) => {
-    const n = await import('expo-notifications');
+    const n = await import('@/services/notificaciones-locales-api');
     await prepararCanal();
     await n.scheduleNotificationAsync({ identifier: aviso.identifier,
       content: { title: aviso.title, body: aviso.body, sound: 'default', data: aviso.data },
@@ -20,7 +20,7 @@ export const sincronizarAvisosDispositivo = crearSincronizadorAvisos({
   },
   limpiarEntregados: async (owner, activos) => {
     if (Platform.OS === 'web') return;
-    const n = await import('expo-notifications');
+    const n = await import('@/services/notificaciones-locales-api');
     for (const aviso of await n.getPresentedNotificationsAsync()) {
       const { identifier, content } = aviso.request;
       if (identifier.startsWith('petcore:') && content.data?.petcore === true &&
