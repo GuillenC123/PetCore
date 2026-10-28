@@ -1,3 +1,4 @@
+import LocalNotificationsCard from '@/components/LocalNotificationsCard';
 import PermissionsPanel from '@/components/PermissionsPanel';
 import AppearanceSelector from '@/components/AppearanceSelector';
 import { useAppColors } from '@/context/AppearanceContext';
@@ -99,6 +100,7 @@ export default function PerfilScreen() {
         {/* Menú de opciones. */}
         <View style={styles.menu}>
           <AppearanceSelector />
+          <LocalNotificationsCard />
           <PermissionsPanel />
           {opciones.map((op) => (
             <MenuRow

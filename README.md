@@ -18,7 +18,7 @@ La interfaz usa la marca **PetCore**; el proyecto y la configuración de Expo co
 | Recordatorios | Crear, editar, completar, posponer y repetir tareas. |
 | Perfil y acceso | Login, registro, edición de perfil, ayuda y cierre de sesión. |
 
-Agendar visitas desde el frontend ya funciona durante la sesión: crea una cita y un recordatorio y cambia la mascota a `malestar`. Los avisos se consultan dentro de la app; todavía no hay notificaciones al teléfono.
+Agendar visitas desde el frontend ya funciona durante la sesión: crea una cita y un recordatorio y cambia la mascota a `malestar`. Los avisos de cuidados se pueden activar en Perfil para programar notificaciones locales en Android/iOS.
 
 ## Arquitectura y tecnologías
 

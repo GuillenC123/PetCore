@@ -29,7 +29,7 @@ const createCuidados = (AppColors: AppPalette) => ({
   recordatorio: { nombre: 'Recordatorio', icono: 'notifications-outline' as Icono, color: AppColors.purple, fondo: AppColors.purpleSoft },
 });
 
-export default function CareAgenda({ initialFilter = 'Hoy', compact = false }: { initialFilter?: FiltroAgenda; compact?: boolean }) {
+export default function CareAgenda({ initialFilter = 'Hoy', compact = false, eventoClave }: { initialFilter?: FiltroAgenda; compact?: boolean; eventoClave?: string }) {
   const AppColors = useAppColors();
   const CUIDADOS = createCuidados(AppColors);
   const styles = createStyles(AppColors);
@@ -44,7 +44,7 @@ export default function CareAgenda({ initialFilter = 'Hoy', compact = false }: {
   const [abierto, setAbierto] = useState<string | null>(null);
   const todos = crearAgenda(citas, tratamientos, recordatorios);
   const finHoy = new Date(ahora); finHoy.setHours(23, 59, 59, 999);
-  const eventos = compact ? todos.filter((e) => Date.parse(e.fecha) <= finHoy.getTime()) : filtrarAgenda(todos, filtro, mascotaId, ahora, tipo);
+  const eventos = eventoClave ? todos.filter((evento) => evento.clave === eventoClave) : compact ? todos.filter((e) => Date.parse(e.fecha) <= finHoy.getTime()) : filtrarAgenda(todos, filtro, mascotaId, ahora, tipo);
   const visibles = eventos.slice(0, compact ? 3 : limite);
   const sinFecha = recordatorios.filter((r) => !r.completado && !fechaRecordatorio(r.vence_en) &&
     (mascotaId === null || mascotaId === r.mascota_id) && (tipo === 'todos' || tipo === 'recordatorio')).length;
@@ -102,7 +102,7 @@ export default function CareAgenda({ initialFilter = 'Hoy', compact = false }: {
   };
 
   return <View style={styles.section}>
-    {!compact && <View style={styles.filters}>
+    {!compact && !eventoClave && <View style={styles.filters}>
       <View style={styles.filterHeader}>
         <View style={styles.inline}><Ionicons name="options-outline" size={18} color={AppColors.accent} /><Text style={styles.filterTitle}>Filtrar cuidados</Text></View>
         {hayFiltros && <Pressable accessibilityRole="button" accessibilityLabel="Restablecer filtros de agenda" onPress={() => limpiar()} style={styles.reset}><Text style={styles.link}>Restablecer</Text></Pressable>}
@@ -134,7 +134,7 @@ export default function CareAgenda({ initialFilter = 'Hoy', compact = false }: {
           : filtro === 'Hoy' ? 'Todos los cuidados de hoy, incluidos los que ya vencieron.' : 'Todos tus cuidados pendientes, ordenados por fecha.'}</Text>
     </View>}
     <SaveFeedback {...guardado} />
-    {sinFecha > 0 && <Pressable accessibilityRole="button" onPress={() => router.push('/recordatorios')} style={styles.undated}>
+    {!eventoClave && sinFecha > 0 && <Pressable accessibilityRole="button" onPress={() => router.push('/recordatorios')} style={styles.undated}>
       <View style={styles.undatedIcon}><Ionicons name="calendar-outline" size={20} color={AppColors.warning} /></View>
       <View style={styles.flex}><Text style={styles.undatedTitle}>{sinFecha} {sinFecha === 1 ? 'recordatorio sin fecha' : 'recordatorios sin fecha'}</Text><Text style={styles.hint}>Añade una fecha para verlo{sinFecha === 1 ? '' : 's'} en tu agenda.</Text></View>
       <Ionicons name="chevron-forward" size={18} color={AppColors.warning} />
@@ -145,8 +145,8 @@ export default function CareAgenda({ initialFilter = 'Hoy', compact = false }: {
     </View>}
     {!eventos.length && <View style={styles.empty}>
       <View style={styles.emptyIcon}><Ionicons name="checkmark-done-outline" size={28} color={AppColors.success} /></View>
-      <Text style={styles.emptyTitle}>{compact ? 'Todo al día por ahora' : 'Sin cuidados para estos filtros'}</Text>
-      <Text style={styles.emptyDescription}>{compact ? 'No tienes cuidados de hoy ni vencidos por registrar.' : 'Puedes cambiar los filtros o añadir un nuevo cuidado.'}</Text>
+      <Text style={styles.emptyTitle}>{eventoClave ? 'Este cuidado ya no está pendiente' : compact ? 'Todo al día por ahora' : 'Sin cuidados para estos filtros'}</Text>
+      <Text style={styles.emptyDescription}>{eventoClave ? 'Puede haberse completado, eliminado o cambiado de fecha. Consulta la agenda para ver los cuidados actuales.' : compact ? 'No tienes cuidados de hoy ni vencidos por registrar.' : 'Puedes cambiar los filtros o añadir un nuevo cuidado.'}</Text>
       {!compact && hayFiltros && <Pressable accessibilityRole="button" onPress={() => limpiar('Todos')} style={styles.reset}><Text style={styles.link}>Ver todos los cuidados</Text></Pressable>}
     </View>}
     {compact ? <AdaptiveColumns singleColumn>{visibles.map(tarjeta)}</AdaptiveColumns>

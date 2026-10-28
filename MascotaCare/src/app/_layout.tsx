@@ -1,3 +1,4 @@
+import { LocalNotificationsProvider } from '@/context/LocalNotificationsContext';
 // ============================================================================
 // _layout.tsx - Raíz de la aplicación MascotaCare (navegación)
 // ----------------------------------------------------------------------------
@@ -47,6 +48,7 @@ function RootNavigator() {
         <Stack.Screen name="editar-cita" />
         <Stack.Screen name="editar-perfil" />
         <Stack.Screen name="ayuda" />
+        <Stack.Screen name="cuidado" />
       </Stack.Protected>
 
       {/* Grupo público: acceso/registro. */}
@@ -79,7 +81,7 @@ function ThemedRoot() {
   return (
     <ThemeProvider value={{ ...(scheme === 'dark' ? DarkTheme : DefaultTheme), colors: { ...(scheme === 'dark' ? DarkTheme : DefaultTheme).colors, background: colors.background, card: colors.surface, text: colors.text, border: colors.border, primary: colors.accent } }}>
       <AuthProvider>
-        <RootNavigator />
+        <LocalNotificationsProvider><RootNavigator /></LocalNotificationsProvider>
         <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       </AuthProvider>
     </ThemeProvider>

@@ -1,3 +1,4 @@
+import { useLocalNotifications } from '@/context/LocalNotificationsContext';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Platform, Pressable, Text, View } from 'react-native';
 import { useAppColors } from '@/context/AppearanceContext';
@@ -11,6 +12,7 @@ const OPTIONS: { tipo: TipoPermiso; titulo: string; descripcion: string }[] = [
 
 export default function PermissionsPanel() {
   const colors = useAppColors();
+  const avisos = useLocalNotifications();
   const [estados, setEstados] = useState<Partial<Record<TipoPermiso, EstadoPermiso>>>({});
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState('');
@@ -36,6 +38,7 @@ export default function PermissionsPanel() {
       else {
         const estado = await solicitarPermiso(tipo);
         if (montado.current) setEstados((prev) => ({ ...prev, [tipo]: estado }));
+        if (tipo === 'notificaciones') await avisos.actualizar();
       }
     } catch { if (montado.current) setError('No se pudo abrir el permiso. Intenta nuevamente desde Ajustes del dispositivo.'); }
     finally { bloqueo.current = false; if (montado.current) setOcupado(false); }

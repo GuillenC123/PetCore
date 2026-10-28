@@ -16,7 +16,7 @@ Aplicación para que los dueños organicen la salud y los cuidados de sus mascot
 - **Ayuda:** guía sobre cómo utilizar la aplicación.
 - **Acceso:** inicio de sesión y registro con validaciones y mensajes de error.
 
-Agendar una visita exige mascota, motivo y fecha futura. Se crean una cita y su recordatorio, y la mascota pasa a `malestar`. Posponer el aviso conserva la fecha de la visita. Todavía no se envían notificaciones al teléfono.
+Agendar una visita exige mascota, motivo y fecha futura. Se crean una cita y su recordatorio, y la mascota pasa a `malestar`. Posponer el aviso conserva la fecha de la visita. En Android/iOS se pueden activar los avisos locales del teléfono desde Perfil.
 
 ## Arquitectura y tecnologías
 
@@ -213,7 +213,7 @@ npm test --prefix server
 
 Las pruebas del servidor recorren rutas HTTP y sustituyen PostgreSQL; no verifican una base de datos real. El lint de Expo tiene como alcance predeterminado el frontend.
 
-Para los dieciséis scripts del frontend en PowerShell:
+Para los dieciocho scripts del frontend en PowerShell:
 
 ```powershell
 $falloPruebas = $false
@@ -388,3 +388,35 @@ un bloqueo ofrece abrir Ajustes. Al regresar a la app se consulta el estado otra
 vez. El selector de galería utiliza el acceso limitado del selector del sistema,
 sin solicitar acceso general a toda la biblioteca. La web explica qué funciones
 requieren Android/iOS sin intentar cargar notificaciones nativas.
+
+### APF3: notificaciones locales
+
+Perfil / Avisos de cuidados permite activar o desactivar los avisos para la cuenta
+y el dispositivo, consultar el número programado y enviar una prueba de 5 segundos.
+La preferencia se conserva con AsyncStorage, separada para API y demo.
+Se programa la hora de las citas, las dosis pendientes y los recordatorios con
+fecha; los recordatorios sin hora avisan a las 09:00 locales. No se generan avisos
+de cuidados ya vencidos, completados o cancelados. Un aviso original de cita no
+se duplica con su recordatorio vinculado.
+
+Un sincronizador compara los avisos reales del sistema con la agenda, actualiza
+las fechas y cancela los obsoletos al editar, completar, eliminar o cerrar sesión.
+Solo modifica avisos identificados como propios de PetCore. Sus operaciones se
+serializan para evitar que una respuesta antigua reprograme avisos de otra cuenta.
+Al tocar un aviso se abre el cuidado actual, después de autenticar la cuenta
+correcta; un cuidado completado o eliminado muestra un estado informativo.
+
+Se programan los próximos 50 avisos y se renueva la lista al cambiar los datos,
+al regresar a primer plano y cada minuto mientras la app está activa. Los
+recordatorios repetidos avanzan al completarlos, como en la agenda. La entrega
+es de tipo bestEffort: el ahorro de batería y los ajustes del sistema pueden
+retrasarla. No requiere permiso especial de alarmas exactas ni Firebase/APNs.
+No hay notificaciones push ni programación web. Los avisos ya programados los
+entrega el sistema aunque la app no esté abierta; la reposición de los siguientes
+requiere volver a abrir la app.
+
+Las pruebas `test-permisos.cjs` y `test-avisos-locales.cjs` utilizan adaptadores
+simulados y verifican aceptación, rechazo, bloqueo, aislamiento, concurrencia,
+reintento, cambios de fecha, preferencias y apertura de cuidados. La prueba
+real de cámara y recepción fuera de la app debe realizarse en Android/iOS.
+Consulta el protocolo de evidencias en `../docs/APF3.md`.
