@@ -1,3 +1,4 @@
+import AnimatedPressable from '@/components/AnimatedPressable';
 import { useAppColors } from '@/context/AppearanceContext';
 import type { AppPalette } from '@/constants/theme';
 // ============================================================================
@@ -9,7 +10,7 @@ import type { AppPalette } from '@/constants/theme';
 // ============================================================================
 
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 
 // Nombres de íconos permitidos (tono de Ionicons de MaterialCommunityIcons).
@@ -39,7 +40,7 @@ export default function QuickActionCard({
   const styles = createStyles(AppColors);
 
   return (
-    <Pressable
+    <AnimatedPressable
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
@@ -50,7 +51,8 @@ export default function QuickActionCard({
 
       {/* Texto descriptivo de la acción. */}
       <Text style={styles.label}>{label}</Text>
-    </Pressable>
+      <Ionicons name="arrow-forward" size={16} color={AppColors.accent} />
+    </AnimatedPressable>
   );
 }
 
@@ -58,7 +60,9 @@ const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   card: {
     flex: 1,
     backgroundColor: AppColors.surface,
-    borderRadius: 18,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: AppColors.border,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 20,
@@ -67,16 +71,17 @@ const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
     minWidth: 0,
     gap: 12,
     // Sombra suave.
-    elevation: 3,
+    elevation: 1,
     shadowColor: '#000',
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.03,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
   },
   circle: {
     width: 52,
     height: 52,
-    borderRadius: 26,
+    borderRadius: 18,
+    transform: [{ rotate: '-6deg' }],
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -1,3 +1,4 @@
+import AnimatedPressable from '@/components/AnimatedPressable';
 import { useAppColors } from '@/context/AppearanceContext';
 import type { AppPalette } from '@/constants/theme';
 // ============================================================================
@@ -11,11 +12,11 @@ import type { AppPalette } from '@/constants/theme';
 // ============================================================================
 
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 
 // Tipos de opción del menú (círculo e ícono asociados).
-export type MenuOptionType = 'edit' | 'notifications' | 'help' | 'logout';
+export type MenuOptionType = 'edit' | 'settings' | 'help' | 'logout';
 
 interface MenuRowProps {
   /** Texto de la opción. */
@@ -29,8 +30,8 @@ interface MenuRowProps {
 // Configuración visual de cada tipo de opción.
 const createTipoConfig = (AppColors: AppPalette): Record<MenuOptionType, { icon: IconName; color: string; bg: string }> => ({
   edit: { icon: 'create-outline', color: AppColors.accent, bg: AppColors.infoSoft },
-  notifications: {
-    icon: 'notifications-outline',
+  settings: {
+    icon: 'settings-outline',
     color: AppColors.accent,
     bg: AppColors.infoSoft,
   },
@@ -49,7 +50,7 @@ export default function MenuRow({ label, tipo, onPress }: MenuRowProps) {
   const config = TIPO_CONFIG[tipo];
 
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+    <AnimatedPressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
       {/* Círculo azul claro con el ícono de la opción. */}
       <View style={[styles.circle, { backgroundColor: config.bg }]}>
         <Ionicons name={config.icon} size={20} color={config.color} />
@@ -62,7 +63,7 @@ export default function MenuRow({ label, tipo, onPress }: MenuRowProps) {
 
       {/* Flecha hacia la derecha. */}
       <Ionicons name="chevron-forward" size={18} color={AppColors.textMuted} />
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 

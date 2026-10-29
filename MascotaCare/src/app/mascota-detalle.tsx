@@ -15,7 +15,7 @@ import { layoutStyles } from '@/components/AdaptiveLayout';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import PetScreen from '@/components/PetScreen';
 
 import PetHealthStatus from '@/components/PetHealthStatus';
 import WeightTracker from '@/components/WeightTracker';
@@ -37,19 +37,19 @@ export default function MascotaDetalleScreen() {
   // Si no existe (id inválido), mostramos un mensaje de no encontrada.
   if (!mascota) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <PetScreen style={styles.safe}>
         <Text style={styles.error}>Mascota no encontrada.</Text>
         <Pressable onPress={() => router.back()} style={styles.back}>
           <Text style={styles.backText}>Volver</Text>
         </Pressable>
-      </SafeAreaView>
+      </PetScreen>
     );
   }
 
   // Config de estado -> etiqueta y tono para el badge.
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
+    <PetScreen style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
       {/* Cabecera del detalle con botón atrás. */}
       <View style={styles.header}>
         <Pressable
@@ -103,7 +103,7 @@ export default function MascotaDetalleScreen() {
           </Pressable>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </PetScreen>
   );
 }
 

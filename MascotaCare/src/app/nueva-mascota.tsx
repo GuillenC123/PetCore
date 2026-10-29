@@ -27,7 +27,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import PetScreen from '@/components/PetScreen';
 
 import FormInput from '@/components/FormInput';
 import PhotoField from '@/components/PhotoField';
@@ -100,7 +100,7 @@ export default function NuevaMascotaScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
+    <PetScreen style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -158,7 +158,7 @@ export default function NuevaMascotaScreen() {
           {!!errores.general && <Text style={styles.error} accessibilityRole="alert">{errores.general}</Text>}
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </PetScreen>
   );
 }
 

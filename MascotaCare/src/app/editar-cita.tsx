@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import PetScreen from '@/components/PetScreen';
 
 import FormInput from '@/components/FormInput';
 import { layoutStyles } from '@/components/AdaptiveLayout';
@@ -57,14 +57,14 @@ export default function EditarCitaScreen() {
   };
 
   if (!cita) {
-    return <SafeAreaView style={styles.safe}><View style={styles.content}>
+    return <PetScreen style={styles.safe}><View style={styles.content}>
       <Text style={styles.title}>Visita no encontrada</Text>
       <Text style={styles.description}>Actualiza la agenda e inténtalo nuevamente.</Text>
       <Pressable style={styles.button} onPress={() => router.replace('/citas')}><Text style={styles.buttonText}>Volver a citas</Text></Pressable>
-    </View></SafeAreaView>;
+    </View></PetScreen>;
   }
 
-  return <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
+  return <PetScreen style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
     <KeyboardAvoidingView style={styles.safe} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={[styles.content, layoutStyles.form]} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
@@ -87,7 +87,7 @@ export default function EditarCitaScreen() {
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
-  </SafeAreaView>;
+  </PetScreen>;
 }
 
 const createStyles = (AppColors: AppPalette) => (StyleSheet.create({

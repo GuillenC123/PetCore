@@ -26,6 +26,8 @@ const codigo = ts.transpileModule(fs.readFileSync(path.join(__dirname,'../src/co
 }).outputText;
 const modulo = {exports:{}};
 new Function('require','module','exports',codigo)((nombre)=>{
+  if(nombre==='@/components/AnimatedPressable') return {__esModule:true,default:'Pressable'};
+  if(nombre==='@/components/AnimatedSection') return {__esModule:true,default:'View'};
   if(nombre==='react') return hooks.react;
   if(nombre==='react-native') return {StyleSheet:{create:v=>v},Alert:{alert(){}},Pressable:'Pressable',ScrollView:'ScrollView',Text:'Text',View:'View'};
   if(nombre==='expo-router') return {router:{push:destino=>acciones.push(['navegar',destino])}};

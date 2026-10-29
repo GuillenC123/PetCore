@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import PetScreen from '@/components/PetScreen';
 
 import FormInput from '@/components/FormInput';
 import PhotoField from '@/components/PhotoField';
@@ -53,7 +53,7 @@ export default function EditarPerfilScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
+    <PetScreen style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.header}>
           <Pressable onPress={volver} accessibilityRole="button" accessibilityLabel="Volver al perfil"
@@ -103,7 +103,7 @@ export default function EditarPerfilScreen() {
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </PetScreen>
   );
 }
 

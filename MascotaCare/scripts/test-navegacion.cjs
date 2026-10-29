@@ -11,6 +11,7 @@ const codigo = ts.transpileModule(fs.readFileSync(path.join(__dirname, '../src/a
   compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 },
 }).outputText;
 new Function('require', 'module', 'exports', codigo)((nombre) => {
+  if (nombre === '@/components/AnimatedPressable') return { __esModule: true, default: 'Pressable' };
   if (nombre === 'expo-router') return { Tabs: Object.assign(() => null, { Screen: () => null }) };
   if (nombre === 'react-native') return { StyleSheet: { create: (valor) => valor }, Pressable: 'Pressable', ScrollView: 'ScrollView', Text: 'Text', View: 'View' };
   if (nombre === 'react-native-safe-area-context') return { useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) };

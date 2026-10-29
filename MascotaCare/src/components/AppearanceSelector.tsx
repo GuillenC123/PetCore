@@ -1,5 +1,6 @@
+import AnimatedPressable from '@/components/AnimatedPressable';
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useAppearance, type AppearancePreference } from '@/context/AppearanceContext';
 
 const OPTIONS: { value: AppearancePreference; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -16,13 +17,13 @@ export default function AppearanceSelector() {
     <View accessibilityRole="radiogroup" accessibilityLabel="Modo de apariencia" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
       {OPTIONS.map(({ value, label, icon }) => {
         const selected = preference === value;
-        return <Pressable key={value} accessibilityRole="radio" accessibilityLabel={`Modo ${label.toLowerCase()}`}
+        return <AnimatedPressable key={value} accessibilityRole="radio" accessibilityLabel={`Modo ${label.toLowerCase()}`}
           accessibilityState={{ checked: selected, disabled: !ready }} disabled={!ready} onPress={() => setPreference(value)}
           style={{ flexGrow: 1, flexBasis: 85, minHeight: 76, alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12,
             borderRadius: 12, borderWidth: 2, borderColor: selected ? colors.accent : colors.border, backgroundColor: selected ? colors.infoSoft : colors.surface }}>
           <Ionicons name={icon} size={22} color={selected ? colors.accent : colors.textSecondary} />
           <Text style={{ fontSize: 13, fontWeight: selected ? '700' : '500', color: selected ? colors.accent : colors.text }}>{label}</Text>
-        </Pressable>;
+        </AnimatedPressable>;
       })}
     </View>
     {storageError && <Text accessibilityRole="alert" style={{ color: colors.danger, fontSize: 13 }}>El modo se aplicó, pero no se pudo guardar en este dispositivo. Vuelve a seleccionarlo para reintentar.</Text>}

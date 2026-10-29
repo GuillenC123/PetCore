@@ -28,37 +28,37 @@ export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
 /**
  * Paleta de colores del sistema de diseño de MascotaCare.
- * - primary: azul claro/celeste usado en botones, íconos y enlaces activos.
+ * - primary: verde azulado usado en botones, íconos y enlaces activos.
  * - status: colores semánticos para estados (éxito, alerta, información).
  * - AppColors define el modo claro; useAppColors selecciona la paleta activa.
  */
 export const AppColors = {
-  accent: "#0369A1", onPrimary: "#FFFFFF", border: "#E2E8F0",
-  surfaceMuted: "#F1F5F9", warning: "#92400E", warningSoft: "#FFFBEB",
-  purple: "#6D28D9", purpleSoft: "#EDE9FE", teal: "#0F766E", tealSoft: "#CCFBF1",
-  orange: "#9A3412", orangeSoft: "#FFEDD5",
-  /** Azul primario / celeste de acento. */
-  primary: '#0369A1',
-  /** Variante más saturada del azul (para contrastes y botones sólidos). */
-  primaryDark: '#0369A1',
+  accent: "#186B65", onPrimary: "#FFFFFF", border: "#DFE7E1",
+  surfaceMuted: "#F0F4EF", warning: "#92400E", warningSoft: "#FFFBEB",
+  purple: "#6D28D9", purpleSoft: "#F0EBFA", teal: "#176C60", tealSoft: "#E1F2E9",
+  orange: "#9A3412", orangeSoft: "#FFF0DF",
+  /** Verde azulado de la marca. */
+  primary: '#186B65',
+  /** Color para botones sólidos. */
+  primaryDark: '#186B65',
   /** Fondo muy claro para superficies y tarjetas (blanco). */
   surface: '#FFFFFF',
-  /** Fondo general de la app (gris muy claro). */
-  background: '#F4F6F9',
+  /** Fondo general de la app (marfil suave). */
+  background: '#F7F8F2',
   /** Texto principal. */
-  text: '#111827',
+  text: '#213B38',
   /** Texto secundario (gris). */
-  textSecondary: '#4B5563',
+  textSecondary: '#536962',
   /** Gris claro para íconos y líneas separadoras. */
   textMuted: '#D1D5DB',
   /** Verde de éxito (Saludable / Programado). */
   success: '#166534',
   /** Fondo claro del verde de éxito (badge). */
   successSoft: '#DCFCE7',
-  /** Azul de información (Confirmado). */
-  info: '#0369A1',
-  /** Fondo claro del azul de información (badge). */
-  infoSoft: '#E0F2FE',
+  /** Color de información (Confirmado). */
+  info: '#186B65',
+  /** Fondo claro de información (badge). */
+  infoSoft: '#E5F2ED',
   /** Rojo de alerta (Vacuna pendiente / Pendiente). */
   danger: '#B91C1C',
   /** Fondo claro del rojo de alerta (badge). */
@@ -70,11 +70,11 @@ export const AppColors = {
 /** Paleta semántica compartida por pantallas y controles. */
 export type AppPalette = { [K in keyof typeof AppColors]: string };
 export const DarkAppColors: AppPalette = {
-  primary: '#0369A1', primaryDark: '#0369A1', accent: '#7DD3FC', onPrimary: '#FFFFFF',
-  surface: '#182334', background: '#0C1421', surfaceMuted: '#223146', border: '#36465C',
-  text: '#F1F5F9', textSecondary: '#BCC8D8', textMuted: '#899BB2',
+  primary: '#186B65', primaryDark: '#186B65', accent: '#8DDBCB', onPrimary: '#FFFFFF',
+  surface: '#192D2C', background: '#102020', surfaceMuted: '#233B38', border: '#36514C',
+  text: '#F0F7F3', textSecondary: '#BCCFC8', textMuted: '#8BA79E',
   success: '#86EFAC', successSoft: '#153D2C', successDark: '#4ADE80',
-  info: '#7DD3FC', infoSoft: '#14364D', danger: '#FCA5A5', dangerSoft: '#47242F',
+  info: '#8DDBCB', infoSoft: '#203F39', danger: '#FCA5A5', dangerSoft: '#47242F',
   warning: '#FCD34D', warningSoft: '#41351C', purple: '#C4B5FD', purpleSoft: '#342750',
   teal: '#5EEAD4', tealSoft: '#153F3D', orange: '#FDBA74', orangeSoft: '#482D20',
 };

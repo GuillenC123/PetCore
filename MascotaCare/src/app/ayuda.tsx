@@ -4,7 +4,7 @@ import { layoutStyles } from '@/components/AdaptiveLayout';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import PetScreen from '@/components/PetScreen';
 
 
 const secciones: {
@@ -60,7 +60,7 @@ const secciones: {
   {
     titulo: 'Notificaciones y recordatorios',
     icono: 'notifications-outline',
-    descripcion: 'Toca la campana o entra en Perfil → Notificaciones. Puedes crear y editar recordatorios, elegir mascota, fecha y hora, y repetirlos cada día, semana o mes. Al completar uno repetido se programa la siguiente fecha futura. Puedes posponer un aviso una hora o un día, o cambiar su fecha desde Editar. Posponer el aviso de una visita no cambia la fecha de la cita. Los avisos se consultan dentro de la app; aún no se envían notificaciones al teléfono.',
+    descripcion: 'Toca la campana o entra en Agenda → Recordatorios. Puedes crear y editar recordatorios, elegir mascota, fecha y hora, y repetirlos cada día, semana o mes. Al completar uno repetido se programa la siguiente fecha futura. Puedes posponer un aviso una hora o un día, o cambiar su fecha desde Editar. Posponer el aviso de una visita no cambia la fecha de la cita. En Perfil → Configuración puedes activar los avisos locales del dispositivo, revisar los permisos de cámara y notificaciones y elegir la apariencia clara, oscura o automática.',
   },
   {
     titulo: 'Guardado y reintento',
@@ -99,7 +99,7 @@ export default function AyudaScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
+    <PetScreen style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.header}>
         <Pressable
           onPress={volver}
@@ -127,7 +127,7 @@ export default function AyudaScreen() {
           </View>
         ))}
       </ScrollView>
-    </SafeAreaView>
+    </PetScreen>
   );
 }
 

@@ -1,3 +1,4 @@
+import AnimatedPressable from '@/components/AnimatedPressable';
 import { useAppColors } from '@/context/AppearanceContext';
 import type { AppPalette } from '@/constants/theme';
 // ============================================================================
@@ -9,7 +10,7 @@ import type { AppPalette } from '@/constants/theme';
 // ============================================================================
 
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 
 interface AppHeaderProps {
@@ -25,20 +26,19 @@ export default function AppHeader({ onPressBell }: AppHeaderProps) {
     <View style={styles.container}>
       {/* ---- Marca: huella + "PetCore" ---- */}
       <View style={styles.brand}>
-        <Ionicons name="paw" size={22} color={AppColors.accent} />
-        <Text style={styles.brandText}>PetCore</Text>
+        <View style={styles.brandIcon}><Ionicons name="paw" size={22} color={AppColors.onPrimary} /></View>
+        <View><Text style={styles.brandText}>PetCore</Text><Text style={styles.brandCaption}>Juntos en cada huella</Text></View>
       </View>
 
       {/* ---- Botón campana (abre los recordatorios) ---- */}
-      <Pressable
+      <AnimatedPressable
         accessibilityRole="button" hitSlop={6}
         onPress={onPressBell}
         style={({ pressed }) => [styles.bellButton, pressed && styles.pressed]}
         accessibilityLabel="Recordatorios">
         <Ionicons name="notifications-outline" size={24} color={AppColors.textSecondary} />
-        {/* Punto de notificación para llamar la atención. */}
-        <View style={styles.dot} />
-      </Pressable>
+
+      </AnimatedPressable>
     </View>
   );
 }
@@ -52,8 +52,10 @@ const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   brand: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 10,
   },
+  brandIcon: { width: 44, height: 44, borderRadius: 16, backgroundColor: AppColors.primary, alignItems: 'center', justifyContent: 'center', transform: [{ rotate: '-8deg' }] },
+  brandCaption: { color: AppColors.textSecondary, fontSize: 10, marginTop: 1 },
   brandText: {
     fontSize: 18,
     fontWeight: '800',
@@ -72,15 +74,6 @@ const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
-  },
-  dot: {
-    position: 'absolute',
-    top: 8,
-    right: 9,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: AppColors.danger,
   },
   pressed: {
     opacity: 0.7,

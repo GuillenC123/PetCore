@@ -42,6 +42,8 @@ assert.match(conDatos.historial,/Medicación/);
 // La portada solo contiene cinco accesos, todos conservan el ID BIGINT.
 const destinos = [];
 const { default: Portada } = cargarComponente('src/components/HealthRecord.tsx', (nombre) => {
+  if(nombre==='@/components/AnimatedSection') return {__esModule:true,default:'AnimatedSection'};
+  if(nombre==='@/components/AnimatedPressable') return {__esModule:true,default:'Pressable'};
   if(nombre==='expo-router') return {router:{push:(ruta)=>destinos.push(ruta)}};
   if(nombre==='@expo/vector-icons') return {Ionicons:'Icon'};
   if(nombre==='react-native') return {StyleSheet:{create:v=>v},Pressable:'Pressable',Text:'Text',View:'View'};

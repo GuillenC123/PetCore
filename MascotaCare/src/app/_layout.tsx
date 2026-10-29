@@ -22,6 +22,7 @@ import { AppearanceProvider, useAppearance } from '@/context/AppearanceContext';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { AvisosProvider } from '@/context/AvisosContext';
 import DataLoadState from '@/components/DataLoadState';
+import { MotionProvider, useReducedMotion } from '@/context/MotionContext';
 
 /**
  * Navegador que decide cuál grupo mostrar según el estado de autenticación.
@@ -30,12 +31,14 @@ import DataLoadState from '@/components/DataLoadState';
 function RootNavigator() {
   const { usuario, token, estadoDatos, modoDemo, cargarDatos, logout, reintentarGuardado, hayCambiosLocales } = useAuth();
   const { colors } = useAppearance();
+  const reducedMotion = useReducedMotion();
   const autenticado = usuario !== null;
 
   const navigation = (
     <Stack
       screenOptions={{
         headerShown: false, // Cada pantalla dibuja su propia cabecera.
+        animation: reducedMotion ? 'none' : 'fade',
         contentStyle: { backgroundColor: colors.background },
       }}>
       {/* Grupo protegido: pantallas principales de la app. */}
@@ -47,6 +50,7 @@ function RootNavigator() {
         <Stack.Screen name="nueva-cita" />
         <Stack.Screen name="editar-cita" />
         <Stack.Screen name="editar-perfil" />
+        <Stack.Screen name="configuracion" />
         <Stack.Screen name="ayuda" />
         <Stack.Screen name="cuidado" />
       </Stack.Protected>
@@ -59,7 +63,7 @@ function RootNavigator() {
       {/* Modal de recordatorios (accesible con o sin sesión). */}
       <Stack.Screen
         name="recordatorios"
-        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+        options={{ presentation: 'modal', animation: reducedMotion ? 'none' : 'slide_from_bottom' }}
       />
     </Stack>
   );
@@ -89,5 +93,5 @@ function ThemedRoot() {
 }
 
 export default function RootLayout() {
-  return <AppearanceProvider><ThemedRoot /></AppearanceProvider>;
+  return <MotionProvider><AppearanceProvider><ThemedRoot /></AppearanceProvider></MotionProvider>;
 }

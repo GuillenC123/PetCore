@@ -14,9 +14,10 @@ import { AdaptiveColumns, layoutStyles } from '@/components/AdaptiveLayout';
 
 import { router } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import PetScreen from '@/components/PetScreen';
 
 import AppHeader from '@/components/AppHeader';
+import PetHero from '@/components/PetHero';
 import CareAgenda from '@/components/CareAgenda';
 import { crearAgenda } from '@/utils/agenda';
 import PetCard from '@/components/PetCard';
@@ -40,7 +41,7 @@ export default function HomeScreen() {
   const pendientesHoy = cuidados.filter((e) => Date.parse(e.fecha) <= finHoy.getTime()).length;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+    <PetScreen style={styles.safe} edges={['top', 'left', 'right']}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.content, layoutStyles.page]}
@@ -49,17 +50,13 @@ export default function HomeScreen() {
         <AppHeader onPressBell={() => router.push('/recordatorios')} />
 
         {/* ------ Saludo y resumen ------ */}
-        <View style={styles.greeting}>
-          <Text style={styles.hola}>¡Hola, {primerNombre}!</Text>
-          <Text style={styles.parrafo}>
-            {pendientesHoy === 0 ? 'No tienes cuidados de hoy ni vencidos con fecha registrada.' : `Tienes ${pendientesHoy} cuidados de hoy o vencidos por revisar.`}
-          </Text>
-        </View>
+        <PetHero eyebrow="Una vida juntos" title={`¡Hola, ${primerNombre}!`}
+          description={pendientesHoy === 0 ? 'No tienes cuidados de hoy ni vencidos con fecha registrada. ¡Hora de compartir mimos!' : `Tienes ${pendientesHoy} cuidados de hoy o vencidos por revisar. Cada pequeño cuidado cuenta.`} />
 
         {/* ------ Acciones rápidas ------ */}
         <View style={styles.actionsRow}>
           <QuickActionCard
-            icon="add-circle-outline"
+            icon="paw-outline"
             label="Añadir Mascota"
             onPress={() => router.push('/nueva-mascota')}
           />
@@ -80,7 +77,7 @@ export default function HomeScreen() {
         <View style={layoutStyles.column}>
         {/* ------ Sección Mis Mascotas ------ */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Mis Mascotas</Text>
+          <Text style={styles.sectionTitle}>Mi familia peluda</Text>
           <Text style={styles.link} onPress={() => router.push('/mascotas')}>
             Ficha de salud
           </Text>
@@ -102,7 +99,7 @@ export default function HomeScreen() {
 
       </ScrollView>
 
-    </SafeAreaView>
+    </PetScreen>
   );
 }
 
@@ -121,20 +118,6 @@ const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
     maxWidth: 800,
     alignSelf: 'center',
     gap: 16,
-  },
-  greeting: {
-    gap: 4,
-    marginTop: 4,
-  },
-  hola: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: AppColors.text,
-  },
-  parrafo: {
-    fontSize: 14,
-    color: AppColors.textSecondary,
-    lineHeight: 20,
   },
   actionsRow: {
     flexDirection: 'row',

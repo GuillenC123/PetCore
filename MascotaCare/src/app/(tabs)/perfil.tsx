@@ -1,7 +1,5 @@
-import LocalNotificationsCard from '@/components/LocalNotificationsCard';
-import PermissionsPanel from '@/components/PermissionsPanel';
-import AppearanceSelector from '@/components/AppearanceSelector';
 import { useAppColors } from '@/context/AppearanceContext';
+import AnimatedSection from '@/components/AnimatedSection';
 import type { AppPalette } from '@/constants/theme';
 import { AdaptiveColumns, layoutStyles } from '@/components/AdaptiveLayout';
 // ============================================================================
@@ -11,16 +9,17 @@ import { AdaptiveColumns, layoutStyles } from '@/components/AdaptiveLayout';
 //   * Cabecera general.
 //   * Avatar circular de usuario + nombre y correo.
 //   * Estadísticas (Mascotas, Citas, Pendientes).
-//   * Menú de opciones (Editar Perfil, Notificaciones, Ayuda, Cerrar sesión).
+//   * Menú de opciones (Editar Perfil, Configuración, Ayuda, Cerrar sesión).
 // ============================================================================
 
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import PetScreen from '@/components/PetScreen';
 
 import AppHeader from '@/components/AppHeader';
+import PetHero from '@/components/PetHero';
 import MenuRow, { type MenuOptionType } from '@/components/MenuRow';
 import StatCard from '@/components/StatCard';
 import { useAuth } from '@/context/AuthContext';
@@ -39,7 +38,7 @@ export default function PerfilScreen() {
   // Opciones del menú de perfil.
   const opciones: { label: string; tipo: MenuOptionType }[] = [
     { label: 'Editar Perfil', tipo: 'edit' },
-    { label: 'Notificaciones', tipo: 'notifications' },
+    { label: 'Configuración', tipo: 'settings' },
     { label: 'Ayuda', tipo: 'help' },
     { label: 'Cerrar sesión', tipo: 'logout' },
   ];
@@ -50,8 +49,8 @@ export default function PerfilScreen() {
       case 'edit':
         router.push('/editar-perfil');
         break;
-      case 'notifications':
-        router.push('/recordatorios');
+      case 'settings':
+        router.push('/configuracion');
         break;
       case 'help':
         router.push('/ayuda');
@@ -63,7 +62,7 @@ export default function PerfilScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+    <PetScreen animate={false} style={styles.safe} edges={['top', 'left', 'right']}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.content, layoutStyles.page]}
@@ -72,48 +71,45 @@ export default function PerfilScreen() {
         <AppHeader onPressBell={() => router.push('/recordatorios')} />
 
         {/* Título y subtítulo. */}
-        <View style={styles.titleBlock}>
-          <Text style={styles.title}>Mi Perfil</Text>
-          <Text style={styles.subtitle}>Gestiona tu cuenta y preferencias.</Text>
-        </View>
+        <AnimatedSection><PetHero eyebrow="Su persona favorita" title="Mi perfil" tone="orange"
+          description="Tu espacio en esta pequeña gran familia. Personaliza tu cuenta y la forma de cuidarles." /></AnimatedSection>
 
         <AdaptiveColumns>
         <View style={layoutStyles.column}>
         {/* Avatar circular de usuario + nombre y correo. */}
-        <View style={styles.avatarBlock}>
+        <AnimatedSection delay={90} style={styles.avatarBlock}>
           <View style={styles.avatar}>
             {usuario?.imagen ? <Image source={{ uri: usuario.imagen }} contentFit="cover" accessibilityLabel="Foto de perfil" style={{ width: 90, height: 90, borderRadius: 45 }} />
               : <Ionicons name="person" size={44} color={AppColors.accent} />}
           </View>
           <Text style={styles.nombre}>{usuario?.nombre ?? 'Usuario'}</Text>
+          <View style={styles.familyBadge}><Ionicons name="heart" size={13} color={AppColors.teal} /><Text style={styles.familyText}>Parte de su mundo</Text></View>
           <Text style={styles.correo}>{usuario?.correo ?? ''}</Text>
-        </View>
+        </AnimatedSection>
 
         {/* Fila de estadísticas. */}
-        <View style={styles.statsRow}>
+        <AnimatedSection delay={170} style={styles.statsRow}>
           <StatCard valor={totalMascotas} label="Mascotas" />
           <StatCard valor={totalCitas} label="Citas" />
           <StatCard valor={pendientes} label="Pendiente" />
-        </View>
+        </AnimatedSection>
 
         </View>
         {/* Menú de opciones. */}
         <View style={styles.menu}>
-          <AppearanceSelector />
-          <LocalNotificationsCard />
-          <PermissionsPanel />
-          {opciones.map((op) => (
+          {opciones.map((op, index) => (
+            <AnimatedSection key={op.tipo} delay={190 + index * 65}>
             <MenuRow
-              key={op.tipo}
               label={op.label}
               tipo={op.tipo}
               onPress={() => manejarOpcion(op.tipo)}
             />
+            </AnimatedSection>
           ))}
         </View>
         </AdaptiveColumns>
       </ScrollView>
-    </SafeAreaView>
+    </PetScreen>
   );
 }
 
@@ -130,23 +126,17 @@ const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
     paddingBottom: 40,
     gap: 16,
   },
-  titleBlock: {
-    gap: 4,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: AppColors.text,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: AppColors.textSecondary,
-  },
   avatarBlock: {
     alignItems: 'center',
     gap: 6,
-    paddingVertical: 8,
+    padding: 24,
+    backgroundColor: AppColors.surface,
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: AppColors.border,
   },
+  familyBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: AppColors.tealSoft, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  familyText: { color: AppColors.teal, fontSize: 12, fontWeight: '600' },
   avatar: {
     width: 90,
     height: 90,

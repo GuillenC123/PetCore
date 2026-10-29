@@ -1,3 +1,4 @@
+import AnimatedPressable from '@/components/AnimatedPressable';
 import { useAppColors } from '@/context/AppearanceContext';
 import type { AppPalette } from '@/constants/theme';
 import { layoutStyles } from '@/components/AdaptiveLayout';
@@ -18,15 +19,15 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import PetScreen from '@/components/PetScreen';
 
 import FormInput from '@/components/FormInput';
+import PetHero from '@/components/PetHero';
 import { useAuth } from '@/context/AuthContext';
 import { validarTexto, validarCorreo, validarPassword } from '@/utils/validaciones';
 
@@ -81,7 +82,7 @@ export default function RegistroScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <PetScreen style={styles.safe}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -90,10 +91,7 @@ export default function RegistroScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           {/* Título del formulario. */}
-          <View>
-            <Text style={styles.title}>Crear Cuenta</Text>
-            <Text style={styles.subtitle}>Regístrate para gestionar a tus mascotas.</Text>
-          </View>
+          <PetHero eyebrow="Bienvenido a la familia" title="Crear cuenta" description="Empieza una nueva historia de cuidados junto a tus mascotas." />
 
           {/* Campos del formulario. */}
           <View style={styles.form}>
@@ -142,7 +140,7 @@ export default function RegistroScreen() {
           {errorApi ? <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.errorApi}>{errorApi}</Text> : null}
 
           {/* Botón de registro. */}
-          <Pressable
+          <AnimatedPressable
             accessibilityRole="button"
             onPress={manejarRegistro}
             disabled={cargando}
@@ -152,7 +150,7 @@ export default function RegistroScreen() {
             ) : (
               <Text style={styles.buttonText}>Registrarme</Text>
             )}
-          </Pressable>
+          </AnimatedPressable>
 
           {/* Enlace al login. */}
           <View style={styles.footer}>
@@ -163,7 +161,7 @@ export default function RegistroScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </PetScreen>
   );
 }
 
@@ -180,16 +178,6 @@ const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
     padding: 24,
     justifyContent: 'center',
     gap: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: AppColors.text,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: AppColors.textSecondary,
-    marginTop: 4,
   },
   form: {
     gap: 14,

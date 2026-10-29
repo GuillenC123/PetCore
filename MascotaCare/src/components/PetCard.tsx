@@ -1,3 +1,4 @@
+import AnimatedPressable from '@/components/AnimatedPressable';
 import { useAppColors } from '@/context/AppearanceContext';
 import type { AppPalette } from '@/constants/theme';
 // ============================================================================
@@ -11,7 +12,7 @@ import type { AppPalette } from '@/constants/theme';
 // ============================================================================
 
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import type { Mascota } from '@/types';
 import { edadMascota } from '@/utils/salud';
@@ -35,9 +36,12 @@ export default function PetCard({ mascota, showStatus = true, onPress }: PetCard
   // etiqueta legible y tono de color para el badge.
 
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
+    <AnimatedPressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
       {/* Imagen circular de la mascota (placeholder si no hay foto). */}
-      <PetImage url={mascota.imagen} nombre={mascota.nombre} size={60} />
+      <View style={styles.portrait}>
+        <PetImage url={mascota.imagen} nombre={mascota.nombre} size={64} />
+        <View style={styles.pawBadge}><Ionicons name="paw" size={12} color={AppColors.teal} /></View>
+      </View>
 
       {/* Información central de la mascota. */}
       <View style={styles.info}>
@@ -51,7 +55,7 @@ export default function PetCard({ mascota, showStatus = true, onPress }: PetCard
 
       {/* Flecha indicando que se puede navegar a otra pantalla. */}
       <Ionicons name="chevron-forward" size={20} color={AppColors.textMuted} />
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -60,16 +64,20 @@ const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: AppColors.surface,
-    borderRadius: 18,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: AppColors.border,
     padding: 16,
     gap: 14,
     // Sombra suave (elevación).
-    elevation: 3,
+    elevation: 1,
     shadowColor: '#000',
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.03,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
   },
+  portrait: { padding: 4, borderRadius: 40, backgroundColor: AppColors.tealSoft },
+  pawBadge: { position: 'absolute', right: -2, bottom: 0, width: 25, height: 25, borderRadius: 13, backgroundColor: AppColors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: AppColors.border },
   info: {
     flex: 1,
     gap: 3,

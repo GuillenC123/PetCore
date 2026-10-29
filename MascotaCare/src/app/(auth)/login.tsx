@@ -1,3 +1,4 @@
+import AnimatedPressable from '@/components/AnimatedPressable';
 import { useAppColors } from '@/context/AppearanceContext';
 import type { AppPalette } from '@/constants/theme';
 import { layoutStyles } from '@/components/AdaptiveLayout';
@@ -11,22 +12,21 @@ import { layoutStyles } from '@/components/AdaptiveLayout';
 // Registro. Muestra las credenciales de demostración como ayuda.
 // ============================================================================
 
-import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import PetScreen from '@/components/PetScreen';
 
 import FormInput from '@/components/FormInput';
+import PetIllustration from '@/components/PetIllustration';
 import { useAuth } from '@/context/AuthContext';
 import { validarCorreo, validarPassword } from '@/utils/validaciones';
 
@@ -74,7 +74,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <PetScreen style={styles.safe}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -84,11 +84,9 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}>
           {/* Marca de la app. */}
           <View style={styles.brandBlock}>
-            <View style={styles.logo}>
-              <Ionicons name="paw" size={34} color={AppColors.onPrimary} />
-            </View>
+            <PetIllustration />
             <Text style={styles.appName}>PetCore</Text>
-            <Text style={styles.tagline}>El cuidado de tus mascotas en un solo lugar.</Text>
+            <Text style={styles.tagline}>Más momentos juntos, más huellas felices.</Text>
           </View>
 
           {/* Título del formulario. */}
@@ -122,7 +120,7 @@ export default function LoginScreen() {
           {errorApi ? <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.errorApi}>{errorApi}</Text> : null}
 
           {/* Botón de acceso. */}
-          <Pressable
+          <AnimatedPressable
             accessibilityRole="button"
             onPress={manejarLogin}
             disabled={cargando}
@@ -132,7 +130,7 @@ export default function LoginScreen() {
             ) : (
               <Text style={styles.buttonText}>Ingresar</Text>
             )}
-          </Pressable>
+          </AnimatedPressable>
 
           {/* Ayuda del modo demo. */}
           <Text style={styles.demoHint}>
@@ -148,7 +146,7 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </PetScreen>
   );
 }
 
@@ -170,14 +168,6 @@ const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     marginBottom: 8,
-  },
-  logo: {
-    width: 72,
-    height: 72,
-    borderRadius: 22,
-    backgroundColor: AppColors.primaryDark,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   appName: {
     fontSize: 26,

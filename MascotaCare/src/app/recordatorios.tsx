@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import PetScreen from '@/components/PetScreen';
 
 import ReminderCard from '@/components/ReminderCard';
 import ReminderForm from '@/components/ReminderForm';
@@ -66,7 +66,7 @@ export default function RecordatoriosScreen() {
   const pendientes = recordatorios.filter((r) => !r.completado).length;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
+    <PetScreen style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
       {/* Cabecera del modal con botón de cierre. */}
       <View style={styles.header}>
         <Text style={styles.title}>Recordatorios</Text>
@@ -107,7 +107,7 @@ export default function RecordatoriosScreen() {
         )}
         </>}
       </ScrollView>
-    </SafeAreaView>
+    </PetScreen>
   );
 }
 

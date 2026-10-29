@@ -16,7 +16,7 @@ Aplicación para que los dueños organicen la salud y los cuidados de sus mascot
 - **Ayuda:** guía sobre cómo utilizar la aplicación.
 - **Acceso:** inicio de sesión y registro con validaciones y mensajes de error.
 
-Agendar una visita exige mascota, motivo y fecha futura. Se crean una cita y su recordatorio, y la mascota pasa a `malestar`. Posponer el aviso conserva la fecha de la visita. En Android/iOS se pueden activar los avisos locales del teléfono desde Perfil.
+Agendar una visita exige mascota, motivo y fecha futura. Se crean una cita y su recordatorio, y la mascota pasa a `malestar`. Posponer el aviso conserva la fecha de la visita. En Android/iOS se pueden activar los avisos locales del teléfono desde Perfil / Configuración.
 
 ## Arquitectura y tecnologías
 
@@ -360,13 +360,13 @@ resúmenes, confirmación y bloqueo de navegación.
 
 ## Apariencia
 
-En **Perfil / Apariencia** se puede elegir **Claro**, **Oscuro** o **Automático**.
+En **Perfil / Configuración / Apariencia** se puede elegir **Claro**, **Oscuro** o **Automático**.
 Automático sigue el tema del dispositivo. La preferencia se guarda con AsyncStorage
 en el dispositivo y se mantiene al reiniciar o cerrar sesión.
 `AppearanceProvider` comparte la paleta semántica con pantallas, formularios,
 menús, avisos y selectores de fecha. También adapta la navegación y la barra de
 estado. Si falla el almacenamiento, la selección sigue aplicada durante la sesión
-y Perfil permite volver a seleccionarla para reintentar.
+y Configuración permite volver a seleccionarla para reintentar.
 
 `node scripts/test-apariencia.cjs` verifica recuperación, persistencia, cambios
 del sistema, escrituras sucesivas, errores y contraste de texto en ambos temas.
@@ -382,7 +382,7 @@ nueva compilación de la app instalada (Expo Go utiliza sus propios permisos).
 
 ### APF3: permisos
 
-Perfil muestra el estado de cámara y notificaciones. Los permisos se solicitan
+Perfil / Configuración muestra el estado de cámara y notificaciones. Los permisos se solicitan
 solo al pulsar Permitir o Tomar foto. Un rechazo conserva el flujo de galería;
 un bloqueo ofrece abrir Ajustes. Al regresar a la app se consulta el estado otra
 vez. El selector de galería utiliza el acceso limitado del selector del sistema,
@@ -391,7 +391,7 @@ requieren Android/iOS sin intentar cargar notificaciones nativas.
 
 ### APF3: notificaciones locales
 
-Perfil / Avisos de cuidados permite activar o desactivar los avisos para la cuenta
+Perfil / Configuración / Avisos de cuidados permite activar o desactivar los avisos para la cuenta
 y el dispositivo, consultar el número programado y enviar una prueba de 5 segundos.
 La preferencia se conserva con AsyncStorage, separada para API y demo.
 Se programa la hora de las citas, las dosis pendientes y los recordatorios con

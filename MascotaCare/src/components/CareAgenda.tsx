@@ -1,10 +1,12 @@
 import { useAppColors } from '@/context/AppearanceContext';
+import AnimatedPressable from '@/components/AnimatedPressable';
+import AnimatedSection from '@/components/AnimatedSection';
 import type { AppPalette } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import type { Identificador } from '@/types';
 import { useState } from 'react';
 import { router } from 'expo-router';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useAhora } from '@/hooks/use-ahora';
 import { agruparAgenda, crearAgenda, filtrarAgenda, type EventoAgenda, type FiltroAgenda, type FiltroTipoAgenda } from '@/utils/agenda';
@@ -52,14 +54,15 @@ export default function CareAgenda({ initialFilter = 'Hoy', compact = false, eve
   const limpiar = (periodo: FiltroAgenda = 'Hoy') => { setFiltro(periodo); setMascotaId(null); setTipo('todos'); setLimite(30); };
   const ejecutar = guardado.ejecutar;
 
-  const tarjeta = (e: EventoAgenda) => {
+  const filtroAnimacion = JSON.stringify([filtro, mascotaId, tipo]);
+  const tarjeta = (e: EventoAgenda, index: number) => {
     const cuidado = CUIDADOS[e.tipo];
     const mascota = mascotas.find((m) => m.id === e.mascota_id);
     const vencido = Date.parse(e.fecha) < ahora;
     const futuro = Date.parse(e.fecha) > ahora;
     const expandido = !compact || abierto === e.clave;
     const hora = new Date(e.fecha).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
-    return <View key={e.clave} style={[styles.card, { borderLeftColor: cuidado.color }]}>
+    return <AnimatedSection key={e.clave} replayKey={filtroAnimacion} delay={140 + Math.min(index, 4) * 55} style={[styles.card, { borderLeftColor: cuidado.color }]}>
       <View style={styles.cardTop}>
         <View style={[styles.careIcon, { backgroundColor: cuidado.fondo }]}><Ionicons name={cuidado.icono} color={cuidado.color} size={20} /></View>
         <Text style={[styles.careType, { color: cuidado.color }]}>{cuidado.nombre}</Text>
@@ -72,10 +75,10 @@ export default function CareAgenda({ initialFilter = 'Hoy', compact = false, eve
         <Text style={styles.date}>{new Date(e.fecha).toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' })}</Text>
       </View>
       {expandido && !!e.detalle && <Text style={styles.description}>{e.detalle}</Text>}
-      {compact && <Pressable accessibilityRole="button" accessibilityLabel={`Ver acciones de ${e.titulo}`}
+      {compact && <AnimatedPressable accessibilityRole="button" accessibilityLabel={`Ver acciones de ${e.titulo}`}
         accessibilityState={{ expanded: expandido }} onPress={() => setAbierto(expandido ? null : e.clave)} style={styles.expand}>
         <Text style={styles.link}>{expandido ? 'Ocultar acciones' : 'Ver acciones'}</Text><Ionicons name={expandido ? 'chevron-up' : 'chevron-down'} size={16} color={AppColors.accent} />
-      </Pressable>}
+      </AnimatedPressable>}
       {expandido && <View style={styles.cardActions}>
         {e.tipo === 'cita' && <View style={styles.actionRow}>
           {futuro
@@ -98,25 +101,25 @@ export default function CareAgenda({ initialFilter = 'Hoy', compact = false, eve
           <Boton label="Editar o posponer" variante="secondary" icono="create-outline" disabled={guardado.guardando} onPress={() => router.push('/recordatorios')} />
         </View>}
       </View>}
-    </View>;
+    </AnimatedSection>;
   };
 
   return <View style={styles.section}>
-    {!compact && !eventoClave && <View style={styles.filters}>
+    {!compact && !eventoClave && <AnimatedSection delay={90} style={styles.filters}>
       <View style={styles.filterHeader}>
         <View style={styles.inline}><Ionicons name="options-outline" size={18} color={AppColors.accent} /><Text style={styles.filterTitle}>Filtrar cuidados</Text></View>
-        {hayFiltros && <Pressable accessibilityRole="button" accessibilityLabel="Restablecer filtros de agenda" onPress={() => limpiar()} style={styles.reset}><Text style={styles.link}>Restablecer</Text></Pressable>}
+        {hayFiltros && <AnimatedPressable accessibilityRole="button" accessibilityLabel="Restablecer filtros de agenda" onPress={() => limpiar()} style={styles.reset}><Text style={styles.link}>Restablecer</Text></AnimatedPressable>}
       </View>
       <View style={styles.periods}>{PERIODOS.map(({ nombre, icono }) => {
         const activo = filtro === nombre;
         const cantidad = filtrarAgenda(todos, nombre, mascotaId, ahora, tipo).length;
-        return <Pressable key={nombre} accessibilityRole="radio" accessibilityLabel={`${nombre}, ${cantidad} cuidados`}
+        return <AnimatedPressable key={nombre} accessibilityRole="radio" accessibilityLabel={`${nombre}, ${cantidad} cuidados`}
           accessibilityState={{ checked: activo }} onPress={() => { setFiltro(nombre); setLimite(30); }}
           style={[styles.period, activo && styles.periodActive]}>
           <Ionicons name={icono} size={18} color={activo ? AppColors.onPrimary : AppColors.textSecondary} />
           <Text style={[styles.periodLabel, activo && styles.white]}>{nombre}</Text>
           <View style={[styles.counter, activo && styles.counterActive]}><Text style={[styles.counterText, activo && styles.white]}>{cantidad}</Text></View>
-        </Pressable>;
+        </AnimatedPressable>;
       })}</View>
       <Text style={styles.filterLabel}>Mascota</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
@@ -132,23 +135,23 @@ export default function CareAgenda({ initialFilter = 'Hoy', compact = false, eve
       <Text style={styles.hint}>{filtro === 'Esta semana' ? 'De lunes a domingo, incluidos los cuidados que ya vencieron.'
         : filtro === 'Vencidos' ? 'Cuidados pendientes cuyo horario previsto ya pasó.'
           : filtro === 'Hoy' ? 'Todos los cuidados de hoy, incluidos los que ya vencieron.' : 'Todos tus cuidados pendientes, ordenados por fecha.'}</Text>
-    </View>}
+    </AnimatedSection>}
     <SaveFeedback {...guardado} />
-    {!eventoClave && sinFecha > 0 && <Pressable accessibilityRole="button" onPress={() => router.push('/recordatorios')} style={styles.undated}>
+    {!eventoClave && sinFecha > 0 && <AnimatedPressable accessibilityRole="button" onPress={() => router.push('/recordatorios')} style={styles.undated}>
       <View style={styles.undatedIcon}><Ionicons name="calendar-outline" size={20} color={AppColors.warning} /></View>
       <View style={styles.flex}><Text style={styles.undatedTitle}>{sinFecha} {sinFecha === 1 ? 'recordatorio sin fecha' : 'recordatorios sin fecha'}</Text><Text style={styles.hint}>Añade una fecha para verlo{sinFecha === 1 ? '' : 's'} en tu agenda.</Text></View>
       <Ionicons name="chevron-forward" size={18} color={AppColors.warning} />
-    </Pressable>}
+    </AnimatedPressable>}
     {!compact && <View style={styles.results}>
       <Text accessibilityLiveRegion="polite" style={styles.resultTitle}>{eventos.length} {eventos.length === 1 ? 'cuidado pendiente' : 'cuidados pendientes'}</Text>
       <Text style={styles.hint}>Por fecha y hora</Text>
     </View>}
-    {!eventos.length && <View style={styles.empty}>
+    {!eventos.length && <AnimatedSection delay={140} replayKey={filtroAnimacion} style={styles.empty}>
       <View style={styles.emptyIcon}><Ionicons name="checkmark-done-outline" size={28} color={AppColors.success} /></View>
       <Text style={styles.emptyTitle}>{eventoClave ? 'Este cuidado ya no está pendiente' : compact ? 'Todo al día por ahora' : 'Sin cuidados para estos filtros'}</Text>
       <Text style={styles.emptyDescription}>{eventoClave ? 'Puede haberse completado, eliminado o cambiado de fecha. Consulta la agenda para ver los cuidados actuales.' : compact ? 'No tienes cuidados de hoy ni vencidos por registrar.' : 'Puedes cambiar los filtros o añadir un nuevo cuidado.'}</Text>
-      {!compact && hayFiltros && <Pressable accessibilityRole="button" onPress={() => limpiar('Todos')} style={styles.reset}><Text style={styles.link}>Ver todos los cuidados</Text></Pressable>}
-    </View>}
+      {!compact && hayFiltros && <AnimatedPressable accessibilityRole="button" onPress={() => limpiar('Todos')} style={styles.reset}><Text style={styles.link}>Ver todos los cuidados</Text></AnimatedPressable>}
+    </AnimatedSection>}
     {compact ? <AdaptiveColumns singleColumn>{visibles.map(tarjeta)}</AdaptiveColumns>
       : agruparAgenda(visibles, ahora).map((grupo) => <View key={grupo.clave} style={styles.group}>
         <View style={styles.groupHeader}>
@@ -172,22 +175,22 @@ function Boton({ label, onPress, disabled = false, variante = 'primary', icono }
 
   const claro = variante === 'secondary' || variante === 'danger';
   const color = variante === 'danger' ? AppColors.danger : claro ? AppColors.accent : AppColors.onPrimary;
-  return <Pressable accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={onPress}
+  return <AnimatedPressable accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={onPress}
     style={({ pressed }) => [styles.button, variante === 'secondary' && styles.buttonSecondary, variante === 'danger' && styles.buttonDanger,
       variante === 'success' && styles.buttonSuccess, disabled && styles.disabled, pressed && !disabled && styles.pressed]}>
     <Ionicons name={icono} size={18} color={color} /><Text style={[styles.buttonText, { color }]}>{label}</Text>
-  </Pressable>;
+  </AnimatedPressable>;
 }
 
 function Opcion({ label, activo, onPress, icono, imagen, ampliar = false }: { label: string; activo: boolean; onPress: () => void; icono: Icono; imagen?: string | null; ampliar?: boolean }) {
   const AppColors = useAppColors();
   const styles = createStyles(AppColors);
 
-  return <Pressable accessibilityRole="radio" accessibilityState={{ checked: activo }} onPress={onPress} style={[styles.chip, ampliar && styles.typeChip, activo && styles.chipActive]}>
+  return <AnimatedPressable accessibilityRole="radio" accessibilityState={{ checked: activo }} onPress={onPress} style={[styles.chip, ampliar && styles.typeChip, activo && styles.chipActive]}>
     {imagen ? <PetImage url={imagen} size={22} /> : <Ionicons name={icono} size={16} color={activo ? AppColors.accent : AppColors.textSecondary} />}
     <Text style={[styles.chipText, activo && styles.chipTextActive]}>{label}</Text>
     {activo && <Ionicons name="checkmark" size={14} color={AppColors.accent} />}
-  </Pressable>;
+  </AnimatedPressable>;
 }
 
 const createStyles = (AppColors: AppPalette) => (StyleSheet.create({

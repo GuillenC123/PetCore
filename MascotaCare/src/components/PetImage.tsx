@@ -10,7 +10,8 @@ import type { AppPalette } from '@/constants/theme';
 // ============================================================================
 
 import { Image } from 'expo-image';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 
 interface PetImageProps {
@@ -40,8 +41,8 @@ export default function PetImage({ url, nombre, size = 56 }: PetImageProps) {
 
   // Sin foto: círculo con fondo suave celeste y un emoji de huella por defecto.
   return (
-    <View style={[styles.placeholder, { width: size, height: size, borderRadius: size / 2 }]}>
-      <Text style={{ fontSize: size * 0.45 }}>🐾</Text>
+    <View accessible accessibilityLabel={nombre ? `Foto de ${nombre} sin añadir` : 'Sin foto de mascota'} style={[styles.placeholder, { width: size, height: size, borderRadius: size / 2 }]}>
+      <Ionicons name="paw" size={size * 0.46} color={AppColors.teal} />
     </View>
   );
 }

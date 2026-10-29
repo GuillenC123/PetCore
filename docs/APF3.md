@@ -55,7 +55,7 @@ las pruebas con adaptadores no sustituyen esa evidencia.
 3. Rechazar el permiso de cámara y verificar que la galería sigue utilizable.
    Con el permiso bloqueado, abrir Ajustes y regresar a PetCore.
 4. Fotografiar un comprobante vertical y comprobar que no se recorta al centro.
-5. En Perfil, activar avisos. Rechazar el permiso y comprobar la explicación.
+5. En Perfil → Configuración, activar avisos. Rechazar el permiso y comprobar la explicación.
    Después permitirlo desde el sistema y volver a la app.
 6. Pulsar Probar aviso en 5 segundos; comprobar entrega en primer plano y luego
    repetir con la app en segundo plano. Revisar volumen, No molestar y batería.

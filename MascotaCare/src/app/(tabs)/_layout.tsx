@@ -1,3 +1,4 @@
+import AnimatedPressable from '@/components/AnimatedPressable';
 import { useAppColors } from '@/context/AppearanceContext';
 import type { AppPalette } from '@/constants/theme';
 // ============================================================================
@@ -18,7 +19,7 @@ import type { AppPalette } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/tabs';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTabletLayout } from '@/hooks/use-tablet-layout';
@@ -67,7 +68,7 @@ function CustomTabBar({ state, descriptors, emitter, navigateToTab }: BottomTabB
         };
 
         return (
-          <Pressable
+          <AnimatedPressable
             accessibilityRole="tab"
             accessibilityLabel={options.title ?? route.name}
             key={route.key}
@@ -86,7 +87,7 @@ function CustomTabBar({ state, descriptors, emitter, navigateToTab }: BottomTabB
                 {options.title ?? route.name}
               </Text>
             </View>
-          </Pressable>
+          </AnimatedPressable>
         );
       })}
       </ScrollView>
@@ -97,7 +98,7 @@ function CustomTabBar({ state, descriptors, emitter, navigateToTab }: BottomTabB
 // Mapa de cada pestaña (route.name) a su ícono (Ionicons).
 const TAB_ICONOS: Record<string, keyof typeof Ionicons.glyphMap> = {
   index: 'home',
-  mascotas: 'medical',
+  mascotas: 'paw',
   citas: 'calendar',
   perfil: 'person',
 };
@@ -131,14 +132,16 @@ const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
     backgroundColor: AppColors.surface,
-    borderTopLeftRadius: 22,
+    borderTopWidth: 1,
+    borderColor: AppColors.border,
+    borderTopLeftRadius: 26,
     borderTopRightRadius: 22,
     paddingHorizontal: 12,
     paddingTop: 10,
     // Sombra hacia arriba para separar de la lista.
     elevation: 12,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.04,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: -4 },
   },

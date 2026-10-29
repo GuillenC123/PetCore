@@ -3,7 +3,7 @@ import type { AppPalette } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import PetScreen from '@/components/PetScreen';
 import { useAuth } from '@/context/AuthContext';
 import { HealthEditProvider, useNavegacionSalud } from '@/context/HealthEditContext';
 import { useTabletLayout } from '@/hooks/use-tablet-layout';
@@ -28,12 +28,12 @@ export default function SeccionSaludScreen() {
   const { seccion, mascotaId } = useLocalSearchParams<{ seccion?: string; mascotaId?: string }>();
   const { mascotas } = useAuth();
   const mascota = mascotas.find((m) => String(m.id) === mascotaId);
-  if (!esSeccionSalud(seccion) || !mascota) return <SafeAreaView style={styles.safe}>
+  if (!esSeccionSalud(seccion) || !mascota) return <PetScreen style={styles.safe}>
     <View style={styles.missing}><Text style={styles.title}>{mascota ? 'Sección no encontrada' : 'Mascota no encontrada'}</Text>
       <Text style={styles.description}>Vuelve a la ficha y selecciona una mascota registrada.</Text>
       <Pressable accessibilityRole="button" onPress={() => router.replace('/mascotas')} style={styles.returnButton}><Text style={styles.returnText}>Volver a la ficha de salud</Text></Pressable>
     </View>
-  </SafeAreaView>;
+  </PetScreen>;
   return <HealthEditProvider key={`${mascota.id}-${seccion}`}>
     <Contenido mascota={mascota} seccion={seccion} />
   </HealthEditProvider>;
@@ -50,7 +50,7 @@ function Contenido({ mascota, seccion }: { mascota: Mascota; seccion: SeccionSal
     if (router.canGoBack()) router.back();
     else router.replace({ pathname: '/mascotas', params: { mascotaId: String(mascota.id) } });
   });
-  return <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
+  return <PetScreen style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
     <View style={styles.header}>
       <Pressable accessibilityRole="button" accessibilityLabel="Volver a la ficha de salud" disabled={ocupado} onPress={volver} style={styles.back}>
         <Ionicons name="arrow-back" size={23} color={AppColors.text} />
@@ -82,7 +82,7 @@ function Contenido({ mascota, seccion }: { mascota: Mascota; seccion: SeccionSal
         </ScrollView>
       </View>
     </KeyboardAvoidingView>
-  </SafeAreaView>;
+  </PetScreen>;
 }
 const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   safe: { flex: 1, backgroundColor: AppColors.background }, flex: { flex: 1, minWidth: 0 },

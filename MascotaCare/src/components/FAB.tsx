@@ -1,3 +1,4 @@
+import AnimatedPressable from '@/components/AnimatedPressable';
 import { useAppColors } from '@/context/AppearanceContext';
 import type { AppPalette } from '@/constants/theme';
 // ============================================================================
@@ -9,7 +10,7 @@ import type { AppPalette } from '@/constants/theme';
 // ============================================================================
 
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 
 interface FABProps {
@@ -22,13 +23,13 @@ export default function FAB({ onPress }: FABProps) {
   const styles = createStyles(AppColors);
 
   return (
-    <Pressable
+    <AnimatedPressable
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [styles.fab, pressed && styles.pressed]}
       accessibilityLabel="Agregar">
       <Ionicons name="add" size={30} color={AppColors.onPrimary} />
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
