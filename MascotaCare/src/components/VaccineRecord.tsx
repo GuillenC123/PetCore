@@ -5,24 +5,43 @@ import { useFormularioSalud } from '@/context/HealthEditContext';
 import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import PhotoField from './PhotoField';
-import type { Identificador, Mascota, RegistroCarnet  } from '@/types';
+import type { Cita, Identificador, Mascota, RegistroCarnet } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { useAhora } from '@/hooks/use-ahora';
 import { estadoProximo, pendientesCarnet } from '@/utils/carnet';
 import { interpretarFechaVisita } from '@/utils/citas';
 import { fechaPesoHoy } from '@/utils/peso';
+import { etiquetaTipoVisita } from '@/utils/tipos-visita';
 import Badge from './Badge';
 import FormInput from './FormInput';
 
-type Edicion = { datos?: RegistroCarnet; aplicar?: boolean; anterior?: RegistroCarnet };
+type VisitaAplicacion = Cita & { tipo_visita: 'vacunacion' | 'desparasitacion' };
+type Edicion = { datos?: RegistroCarnet; aplicar?: boolean; anterior?: RegistroCarnet;
+  tipoInicial?: RegistroCarnet['tipo']; fechaInicial?: string; visitaOrigen?: { id: Identificador; titulo: string } };
 const tipoLabel = (r: RegistroCarnet) => r.tipo === 'vacuna' ? 'Vacuna' : 'Desparasitación';
 
-export default function VaccineRecord({ mascota }: { mascota: Mascota }) {
+function esVisitaAplicacion(cita: Cita, mascotaId: Identificador): cita is VisitaAplicacion {
+  return cita.mascota_id === mascotaId && cita.estado === 'completado' &&
+    (cita.tipo_visita === 'vacunacion' || cita.tipo_visita === 'desparasitacion') &&
+    Number.isFinite(Date.parse(cita.fecha_hora)) && Date.parse(cita.fecha_hora) <= Date.now();
+}
+
+function edicionDesdeVisita(cita: VisitaAplicacion): Edicion {
+  return { aplicar: true, tipoInicial: cita.tipo_visita === 'vacunacion' ? 'vacuna' : 'desparasitacion',
+    fechaInicial: fechaPesoHoy(new Date(cita.fecha_hora)), visitaOrigen: { id: cita.id, titulo: cita.titulo } };
+}
+
+export default function VaccineRecord({ mascota, citaId }: { mascota: Mascota; citaId?: string }) {
   const AppColors = useAppColors();
   const styles = createStyles(AppColors);
 
+  const { citas } = useAuth();
+  const visitasRealizadas = citas.filter((cita): cita is VisitaAplicacion => esVisitaAplicacion(cita, mascota.id))
+    .sort((a, b) => Date.parse(b.fecha_hora) - Date.parse(a.fecha_hora));
+  const visitaOrigen = visitasRealizadas.find((cita) => String(cita.id) === citaId);
   const ahora = useAhora();
-  const [editor, setEditor] = useState<Edicion | null>(null);
+  // La ruta remonta el componente al cambiar de cita. No se abre otra vez al guardar o actualizar los datos.
+  const [editor, setEditor] = useState<Edicion | null>(() => visitaOrigen ? edicionDesdeVisita(visitaOrigen) : null);
   const [foto, setFoto] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState('');
   const registros = mascota.carnet ?? [];
@@ -31,9 +50,20 @@ export default function VaccineRecord({ mascota }: { mascota: Mascota }) {
     interpretarFechaVisita(b.fecha_aplicacion!, '00:00')!.getTime() - interpretarFechaVisita(a.fecha_aplicacion!, '00:00')!.getTime());
   return <View style={styles.section}>
     <Text style={styles.title}>Carnet de vacunas y desparasitación</Text>
+    {citaId && !visitaOrigen && <Text style={styles.text}>No se pudo preparar el registro desde esa visita. Debe ser una vacunación o desparasitación realizada de {mascota.nombre}. Puedes añadir un registro manual.</Text>}
     {editor ? <Formulario mascotaId={mascota.id} edicion={editor} cerrar={(guardado) => { setEditor(null); setMensaje(guardado ? 'Carnet guardado.' : ''); }} /> : <>
       <Boton label="Añadir registro" onPress={() => { setMensaje(''); setEditor({}); }} />
       {!!mensaje && <Text accessibilityRole="alert" style={styles.text}>{mensaje}</Text>}
+      {visitasRealizadas.length > 0 && <View style={styles.card}>
+        <Text style={styles.label}>Visitas realizadas</Text>
+        <Text style={styles.text}>Puedes completar el carnet desde una visita de vacunación o desparasitación. Revisa el historial para evitar registrar la misma aplicación dos veces.</Text>
+        {(visitaOrigen ? [visitaOrigen, ...visitasRealizadas.filter((cita) => cita.id !== visitaOrigen.id)] : visitasRealizadas).slice(0, 5).map((cita) => <View key={cita.id} style={styles.completedVisit}>
+          <Text style={styles.label}>{etiquetaTipoVisita(cita.tipo_visita)} · {fechaPesoHoy(new Date(cita.fecha_hora))}</Text>
+          <Text style={styles.text}>{cita.titulo}</Text>
+          <Boton label="Registrar aplicación de esta visita" accessibilityLabel={`Registrar aplicación de ${cita.titulo}, ${fechaPesoHoy(new Date(cita.fecha_hora))}`}
+            onPress={() => { setMensaje(''); setEditor(edicionDesdeVisita(cita)); }} />
+        </View>)}
+      </View>}
       <Text style={styles.label}>Próximas aplicaciones</Text>
       {!pendientes.length && <Text style={styles.text}>No hay próximas fechas registradas.</Text>}
       {pendientes.map((r) => {
@@ -76,10 +106,10 @@ function Formulario({ mascotaId, edicion, cerrar }: { mascotaId: Identificador; 
 
   const { guardarCarnet } = useAuth();
   const datos = edicion.datos;
-  const [tipo, setTipo] = useState<RegistroCarnet['tipo']>(datos?.tipo ?? edicion.anterior?.tipo ?? 'vacuna');
+  const [tipo, setTipo] = useState<RegistroCarnet['tipo']>(datos?.tipo ?? edicion.anterior?.tipo ?? edicion.tipoInicial ?? 'vacuna');
   const [nombre, setNombre] = useState(datos?.nombre ?? edicion.anterior?.nombre ?? '');
   const [aplicado, setAplicado] = useState(edicion.aplicar || !!datos?.fecha_aplicacion || !datos);
-  const [fecha, setFecha] = useState(datos?.fecha_aplicacion ?? fechaPesoHoy());
+  const [fecha, setFecha] = useState(datos?.fecha_aplicacion ?? edicion.fechaInicial ?? fechaPesoHoy());
   const [proxima, setProxima] = useState(edicion.aplicar ? '' : datos?.proxima_fecha ?? '');
   const [foto, setFoto] = useState<string | null>(datos?.comprobante ?? null);
   const [error, setError] = useState('');
@@ -101,6 +131,11 @@ function Formulario({ mascotaId, edicion, cerrar }: { mascotaId: Identificador; 
   };
   return <View style={styles.card}>
     <Text style={styles.label}>{datos ? 'Actualizar registro' : 'Nuevo registro'}</Text>
+    {edicion.visitaOrigen && <View style={styles.originNotice}>
+      <Text style={styles.label}>Desde una visita realizada</Text>
+      <Text style={styles.text}>{edicion.visitaOrigen.titulo} · {edicion.fechaInicial}</Text>
+      <Text style={styles.text}>Confirma el producto aplicado y la fecha. El nombre de la vacuna o desparasitante se completa con la información del veterinario.</Text>
+    </View>}
     <View style={styles.options}>
       <Opcion disabled={guardando} label="Vacuna" activo={tipo === 'vacuna'} onPress={() => setTipo('vacuna')} />
       <Opcion disabled={guardando} label="Desparasitación" activo={tipo === 'desparasitacion'} onPress={() => setTipo('desparasitacion')} />
@@ -126,11 +161,11 @@ function Formulario({ mascotaId, edicion, cerrar }: { mascotaId: Identificador; 
   </View>;
 }
 
-function Boton({ label, onPress, disabled = false }: { label: string; onPress: () => void; disabled?: boolean }) {
+function Boton({ label, onPress, disabled = false, accessibilityLabel }: { label: string; onPress: () => void; disabled?: boolean; accessibilityLabel?: string }) {
   const AppColors = useAppColors();
   const styles = createStyles(AppColors);
 
-  return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={[styles.button, disabled && { opacity: 0.5 }]}><Text style={styles.buttonText}>{label}</Text></Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel ?? label} disabled={disabled} onPress={onPress} style={[styles.button, disabled && { opacity: 0.5 }]}><Text style={styles.buttonText}>{label}</Text></Pressable>;
 }
 function Opcion({ label, activo, onPress, disabled = false }: { label: string; activo: boolean; onPress: () => void; disabled?: boolean }) {
   const AppColors = useAppColors();
@@ -142,6 +177,8 @@ const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   section: { gap: 14 }, title: { fontSize: 18, fontWeight: '700', color: AppColors.text },
   label: { fontSize: 15, fontWeight: '600', color: AppColors.text }, text: { fontSize: 14, lineHeight: 21, color: AppColors.textSecondary },
   card: { gap: 12, padding: 14, borderWidth: 1, borderColor: AppColors.textMuted, borderRadius: 14 },
+  completedVisit: { gap: 9, paddingTop: 12, borderTopWidth: 1, borderTopColor: AppColors.border },
+  originNotice: { padding: 12, borderRadius: 12, gap: 6, backgroundColor: AppColors.infoSoft },
   button: { padding: 12, borderRadius: 12, backgroundColor: AppColors.primaryDark, alignItems: 'center' }, buttonText: { color: AppColors.onPrimary, fontWeight: '700' },
   options: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, option: { padding: 12, borderWidth: 1, borderColor: AppColors.textMuted, borderRadius: 12 }, active: { backgroundColor: AppColors.infoSoft, borderColor: AppColors.primaryDark },
   preview: { width: '100%', height: 180 }, link: { color: AppColors.accent, paddingVertical: 12, fontWeight: '600' },

@@ -11,6 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useAhora } from '@/hooks/use-ahora';
 import { agruparAgenda, crearAgenda, filtrarAgenda, type EventoAgenda, type FiltroAgenda, type FiltroTipoAgenda } from '@/utils/agenda';
 import { fechaRecordatorio } from '@/utils/recordatorios';
+import { etiquetaTipoVisita } from '@/utils/tipos-visita';
 import { useAccionGuardado } from '@/hooks/use-accion-guardado';
 import SaveFeedback from './SaveFeedback';
 import PetImage from './PetImage';
@@ -44,6 +45,9 @@ export default function CareAgenda({ initialFilter = 'Hoy', compact = false, eve
   const guardado = useAccionGuardado();
   const [limite, setLimite] = useState(30);
   const [abierto, setAbierto] = useState<string | null>(null);
+  const [aplicacionPendiente, setAplicacionPendiente] = useState<{
+    citaId: Identificador; mascotaId: Identificador; nombre: string;
+  } | null>(null);
   const todos = crearAgenda(citas, tratamientos, recordatorios);
   const finHoy = new Date(ahora); finHoy.setHours(23, 59, 59, 999);
   const eventos = eventoClave ? todos.filter((evento) => evento.clave === eventoClave) : compact ? todos.filter((e) => Date.parse(e.fecha) <= finHoy.getTime()) : filtrarAgenda(todos, filtro, mascotaId, ahora, tipo);
@@ -53,6 +57,14 @@ export default function CareAgenda({ initialFilter = 'Hoy', compact = false, eve
   const hayFiltros = filtro !== 'Hoy' || mascotaId !== null || tipo !== 'todos';
   const limpiar = (periodo: FiltroAgenda = 'Hoy') => { setFiltro(periodo); setMascotaId(null); setTipo('todos'); setLimite(30); };
   const ejecutar = guardado.ejecutar;
+  const marcarRealizada = (evento: EventoAgenda) => ejecutar(async () => {
+    if (evento.tipo !== 'cita') return;
+    await completarCita(evento.id);
+    if (evento.mascota_id !== null && (evento.tipo_visita === 'vacunacion' || evento.tipo_visita === 'desparasitacion')) {
+      setAplicacionPendiente({ citaId: evento.id, mascotaId: evento.mascota_id,
+        nombre: mascotas.find((mascota) => mascota.id === evento.mascota_id)?.nombre ?? 'tu mascota' });
+    }
+  });
 
   const filtroAnimacion = JSON.stringify([filtro, mascotaId, tipo]);
   const tarjeta = (e: EventoAgenda, index: number) => {
@@ -65,7 +77,7 @@ export default function CareAgenda({ initialFilter = 'Hoy', compact = false, eve
     return <AnimatedSection key={e.clave} replayKey={filtroAnimacion} delay={140 + Math.min(index, 4) * 55} style={[styles.card, { borderLeftColor: cuidado.color }]}>
       <View style={styles.cardTop}>
         <View style={[styles.careIcon, { backgroundColor: cuidado.fondo }]}><Ionicons name={cuidado.icono} color={cuidado.color} size={20} /></View>
-        <Text style={[styles.careType, { color: cuidado.color }]}>{cuidado.nombre}</Text>
+        <Text style={[styles.careType, { color: cuidado.color }]}>{e.tipo === 'cita' ? etiquetaTipoVisita(e.tipo_visita) : cuidado.nombre}</Text>
         {vencido && <View style={styles.overdueBadge}><Text style={styles.overdueText}>Vencido</Text></View>}
       </View>
       <Text style={styles.eventTitle} numberOfLines={compact && !expandido ? 2 : undefined}>{e.titulo}</Text>
@@ -83,7 +95,7 @@ export default function CareAgenda({ initialFilter = 'Hoy', compact = false, eve
         {e.tipo === 'cita' && <View style={styles.actionRow}>
           {futuro
             ? <Boton label="Editar visita" icono="create-outline" disabled={guardado.guardando} onPress={() => router.push({ pathname: '/editar-cita' as never, params: { id: String(e.id) } })} />
-            : <Boton label="Marcar realizada" icono="checkmark-circle-outline" disabled={guardado.guardando} onPress={() => ejecutar(() => completarCita(e.id))} />}
+            : <Boton label="Marcar realizada" icono="checkmark-circle-outline" disabled={guardado.guardando} onPress={() => marcarRealizada(e)} />}
           <Boton label="Cancelar visita" variante="danger" icono="close-circle-outline" disabled={guardado.guardando} onPress={() => Alert.alert(
             'Cancelar visita', 'La cita y su recordatorio dejarán de aparecer como pendientes.',
             [{ text: 'Volver', style: 'cancel' }, { text: 'Cancelar visita', style: 'destructive', onPress: () => ejecutar(() => cancelarCita(e.id)) }],
@@ -137,6 +149,19 @@ export default function CareAgenda({ initialFilter = 'Hoy', compact = false, eve
           : filtro === 'Hoy' ? 'Todos los cuidados de hoy, incluidos los que ya vencieron.' : 'Todos tus cuidados pendientes, ordenados por fecha.'}</Text>
     </AnimatedSection>}
     <SaveFeedback {...guardado} />
+    {aplicacionPendiente && <View style={styles.applicationOffer}>
+      <Text accessibilityRole="header" style={styles.resultTitle}>Visita de {aplicacionPendiente.nombre} realizada</Text>
+      <Text style={styles.description}>Si se realizó la vacunación o desparasitación, puedes añadir la aplicación al carnet. El registro se guardará solo cuando lo confirmes.</Text>
+      <View style={styles.actionRow}>
+        <Boton label="Registrar aplicación en el carnet" icono="shield-checkmark-outline" onPress={() => {
+          const pendiente = aplicacionPendiente;
+          setAplicacionPendiente(null);
+          router.push({ pathname: '/salud/[seccion]', params: { seccion: 'vacunas', mascotaId: String(pendiente.mascotaId), citaId: String(pendiente.citaId) } });
+        }} />
+        <Boton label="Más tarde" variante="secondary" icono="time-outline" onPress={() => setAplicacionPendiente(null)} />
+      </View>
+      <Text style={styles.hint}>También puedes retomarlo desde Ficha de salud → Vacunas y desparasitación.</Text>
+    </View>}
     {!eventoClave && sinFecha > 0 && <AnimatedPressable accessibilityRole="button" onPress={() => router.push('/recordatorios')} style={styles.undated}>
       <View style={styles.undatedIcon}><Ionicons name="calendar-outline" size={20} color={AppColors.warning} /></View>
       <View style={styles.flex}><Text style={styles.undatedTitle}>{sinFecha} {sinFecha === 1 ? 'recordatorio sin fecha' : 'recordatorios sin fecha'}</Text><Text style={styles.hint}>Añade una fecha para verlo{sinFecha === 1 ? '' : 's'} en tu agenda.</Text></View>
@@ -213,6 +238,7 @@ const createStyles = (AppColors: AppPalette) => (StyleSheet.create({
   hint: { fontSize: 12, lineHeight: 18, color: AppColors.textSecondary },
   results: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 },
   resultTitle: { color: AppColors.text, fontSize: 16, fontWeight: '700' },
+  applicationOffer: { padding: 18, gap: 12, borderRadius: 18, backgroundColor: AppColors.infoSoft, borderWidth: 1, borderColor: AppColors.border },
   group: { gap: 12 }, groupHeader: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   groupDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: AppColors.primaryDark }, groupDotOverdue: { backgroundColor: AppColors.danger },
   groupTitle: { fontSize: 16, fontWeight: '700', color: AppColors.text }, groupCount: { fontSize: 12, fontWeight: '600', color: AppColors.textSecondary, backgroundColor: AppColors.border, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },

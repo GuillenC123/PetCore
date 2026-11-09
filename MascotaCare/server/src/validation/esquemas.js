@@ -21,6 +21,7 @@ const mascota = {
 };
 const cita = {
   titulo: cadena(200),
+  tipo_visita: enumeracion(['consulta_malestar', 'control_preventivo', 'vacunacion', 'desparasitacion', 'seguimiento', 'otro']),
   fecha_hora: campo(fechaHora, 'Ingresa una fecha y hora ISO válida con zona horaria.'),
   doctor: cadena(200, 0, { nullable: true }),
   clinica: cadena(200, 0, { nullable: true }),

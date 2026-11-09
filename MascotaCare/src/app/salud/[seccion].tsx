@@ -25,7 +25,7 @@ export default function SeccionSaludScreen() {
   const AppColors = useAppColors();
   const styles = createStyles(AppColors);
 
-  const { seccion, mascotaId } = useLocalSearchParams<{ seccion?: string; mascotaId?: string }>();
+  const { seccion, mascotaId, citaId } = useLocalSearchParams<{ seccion?: string; mascotaId?: string; citaId?: string }>();
   const { mascotas } = useAuth();
   const mascota = mascotas.find((m) => String(m.id) === mascotaId);
   if (!esSeccionSalud(seccion) || !mascota) return <PetScreen style={styles.safe}>
@@ -35,11 +35,11 @@ export default function SeccionSaludScreen() {
     </View>
   </PetScreen>;
   return <HealthEditProvider key={`${mascota.id}-${seccion}`}>
-    <Contenido mascota={mascota} seccion={seccion} />
+    <Contenido mascota={mascota} seccion={seccion} citaId={citaId} />
   </HealthEditProvider>;
 }
 
-function Contenido({ mascota, seccion }: { mascota: Mascota; seccion: SeccionSalud }) {
+function Contenido({ mascota, seccion, citaId }: { mascota: Mascota; seccion: SeccionSalud; citaId?: string }) {
   const AppColors = useAppColors();
   const styles = createStyles(AppColors);
 
@@ -75,7 +75,7 @@ function Contenido({ mascota, seccion }: { mascota: Mascota; seccion: SeccionSal
           <View style={styles.card}>
             {seccion === 'datos' && <HealthData mascota={mascota} />}
             {seccion === 'peso' && <WeightTracker mascota={mascota} />}
-            {seccion === 'vacunas' && <VaccineRecord mascota={mascota} />}
+            {seccion === 'vacunas' && <VaccineRecord key={`${mascota.id}-${citaId ?? 'manual'}`} mascota={mascota} citaId={citaId} />}
             {seccion === 'tratamientos' && <Treatments mascotaId={mascota.id} nombre={mascota.nombre} />}
             {seccion === 'historial' && <HealthTimeline mascota={mascota} />}
           </View>

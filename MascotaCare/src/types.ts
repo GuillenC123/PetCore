@@ -63,6 +63,9 @@ export interface EstadoCargaDatos {
 /** Estado de una cita veterinaria. */
 export type EstadoCita = 'confirmado' | 'pendiente' | 'programado' | 'cancelado' | 'completado';
 
+/** Motivo de la visita, independiente de su estado y de la salud de la mascota. */
+export type TipoVisita = 'consulta_malestar' | 'control_preventivo' | 'vacunacion' | 'desparasitacion' | 'seguimiento' | 'otro';
+
 /** Tipo de un recordatorio. */
 export type TipoRecordatorio = 'vacuna' | 'alimento' | 'cita' | 'dosis' | 'general';
 
@@ -118,6 +121,8 @@ export interface Mascota {
 
 export interface Cita {
   id: Identificador;
+  /** Ausente en registros/cachés anteriores; no se infiere a partir del título. */
+  tipo_visita?: TipoVisita;
   titulo: string;
   /** Fecha y hora como string ISO (ej. "2026-09-01T15:30:00Z"). */
   fecha_hora: string;

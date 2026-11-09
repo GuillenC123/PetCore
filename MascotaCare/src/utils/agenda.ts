@@ -1,13 +1,14 @@
-import type { Cita, Identificador, Recordatorio, Tratamiento } from '../types';
+import type { Cita, Identificador, Recordatorio, Tratamiento, TipoVisita } from '../types';
 import { fechaRecordatorio } from './recordatorios';
 
 export type EventoAgenda = {
   clave: string; mascota_id: Identificador | null; titulo: string; detalle: string; fecha: string;
-} & ({ tipo: 'medicamento'; id: number } | { tipo: 'cita' | 'recordatorio'; id: Identificador });
+} & ({ tipo: 'medicamento'; id: number } | { tipo: 'cita'; id: Identificador; tipo_visita?: TipoVisita } | { tipo: 'recordatorio'; id: Identificador });
 export function crearAgenda(citas: Cita[], tratamientos: Tratamiento[], recordatorios: Recordatorio[]): EventoAgenda[] {
   const eventos: EventoAgenda[] = [];
   citas.filter((c) => c.estado !== 'cancelado' && c.estado !== 'completado').forEach((c) => eventos.push({
     clave: `cita-${c.id}`, tipo: 'cita', id: c.id, mascota_id: c.mascota_id, titulo: c.titulo,
+    ...(c.tipo_visita === undefined ? {} : { tipo_visita: c.tipo_visita }),
     detalle: [c.doctor, c.clinica].filter(Boolean).join(' · '), fecha: c.fecha_hora,
   }));
   tratamientos.forEach((t) => t.tomas.filter((toma) => toma.estado === 'pendiente').forEach((toma) => eventos.push({

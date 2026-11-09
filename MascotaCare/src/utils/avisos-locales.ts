@@ -1,5 +1,6 @@
 import type { Cita, Mascota, Recordatorio, Tratamiento } from '@/types';
 import { crearAgenda } from './agenda';
+import { etiquetaTipoVisita } from './tipos-visita';
 
 export const MAX_AVISOS = 50; // Reserva margen respecto al límite de iOS.
 export interface AvisoLocal {
@@ -21,7 +22,9 @@ export function crearAvisosLocales(owner: string, mascotas: Mascota[], citas: Ci
     // Los cuidados sin hora avisan a las 09:00 locales, en lugar de medianoche.
     if (recordatorio?.vence_en && /^\d{4}-\d{2}-\d{2}$/.test(recordatorio.vence_en)) fecha = new Date(`${recordatorio.vence_en}T09:00:00`).getTime();
     const mascota = mascotas.find((m) => String(m.id) === String(evento.mascota_id));
-    const title = `${tipos[evento.tipo]}${mascota ? ` · ${mascota.nombre}` : ''}`;
+    const tipoAviso = evento.tipo === 'cita' && evento.tipo_visita && evento.tipo_visita !== 'otro'
+      ? etiquetaTipoVisita(evento.tipo_visita) : tipos[evento.tipo];
+    const title = `${tipoAviso}${mascota ? ` · ${mascota.nombre}` : ''}`;
     const body = evento.titulo.slice(0, 180);
     const firma = JSON.stringify([fecha, title, body]);
     return { identifier: identificadorAviso(owner, evento.clave), fecha, title, body,

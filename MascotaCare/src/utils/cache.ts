@@ -1,5 +1,6 @@
 import type { Cita, DatosApp, Mascota, Recordatorio } from '../types';
 import { normalizarIdentificador } from './identificadores';
+import { esTipoVisita } from './tipos-visita';
 
 export function objetoCache(valor: unknown): Record<string, unknown> {
   if (valor === null || typeof valor !== 'object' || Array.isArray(valor)) {
@@ -56,6 +57,10 @@ function citaCache(valor: unknown): Cita {
     estado: enumeracion(dato.estado, ['confirmado', 'pendiente', 'programado', 'cancelado', 'completado']),
   };
   if (dato.mascota_nombre !== undefined) cita.mascota_nombre = texto(dato.mascota_nombre);
+  if (dato.tipo_visita !== undefined) {
+    if (!esTipoVisita(dato.tipo_visita)) throw new Error('Tipo de visita inválido en la caché.');
+    cita.tipo_visita = dato.tipo_visita;
+  }
   return cita;
 }
 

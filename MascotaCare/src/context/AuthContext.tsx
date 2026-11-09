@@ -22,6 +22,7 @@ import { esIdentificadorRemoto } from '@/utils/identificadores';
 import { validarObservacion } from '@/utils/historial';
 import { validarCarnet } from '@/utils/carnet';
 import { interpretarFechaVisita } from '@/utils/citas';
+import { esTipoVisita, etiquetaTipoVisita } from '@/utils/tipos-visita';
 import { aplicarRegistroPeso, crearRegistroPeso, fechaPesoHoy } from '@/utils/peso';
 import { crearTratamiento, registrarToma, type NuevoTratamiento } from '@/utils/tratamientos';
 import { validarFichaSalud, type DatosFichaSalud } from '@/utils/salud';
@@ -60,6 +61,7 @@ import type {
   Recordatorio,
   Usuario,
   EstadoMascota,
+  TipoVisita,
 } from '@/types';
 
 // ---------------------------------------------------------------------------
@@ -81,7 +83,7 @@ function mensajeServidorNoDisponible(): string {
 interface AuthContextValue {
   actualizarFotoMascota: (id: Identificador, imagen: string | null) => Promise<void>;
   completarCita: (id: Identificador) => Promise<void>;
-  actualizarCita: (id: Identificador, datos: Partial<Pick<Cita, 'titulo' | 'fecha_hora'>>) => Promise<void>;
+  actualizarCita: (id: Identificador, datos: Partial<Pick<Cita, 'titulo' | 'fecha_hora' | 'tipo_visita'>>) => Promise<void>;
   cancelarCita: (id: Identificador) => Promise<void>;
   agregarObservacion: (mascotaId: Identificador, datos: Omit<ObservacionSalud, 'id'>) => Promise<void>;
   adjuntarHistorial: (mascotaId: Identificador, clave: string, adjuntos: AdjuntoSalud[]) => void;
@@ -110,7 +112,7 @@ interface AuthContextValue {
   eliminarRecordatorio: (id: Identificador) => Promise<void>;
   /** Añade una mascota; con la API activa la persiste en la BD. */
   agregarMascota: (datos: Omit<Mascota, 'id'>) => Promise<Mascota>;
-  agregarCita: (datos: { mascota_id: Identificador; motivo: string; fecha_hora: string }) => Promise<void>;
+  agregarCita: (datos: { mascota_id: Identificador; motivo: string; fecha_hora: string; tipo_visita?: TipoVisita }) => Promise<void>;
   actualizarPesoMascota: (id: Identificador, peso: number | null) => Promise<void>;
   registrarPeso: (id: Identificador, peso: number, fecha: string) => Promise<void>;
   actualizarFichaSalud: (id: Identificador, datos: DatosFichaSalud) => Promise<void>;
@@ -250,9 +252,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setCitas((prev) => prev.map((c) => c.id === id ? { ...c, estado: 'completado' } : c));
     setRecordatorios((prev) => prev.map((r) => r.cita_id === id ? { ...r, completado: true } : r));
   }, [citas, recordatorios, token, conectado, confirmarRecordatorio]);
-  const actualizarCita = React.useCallback(async (id: Identificador, datos: Partial<Pick<Cita, 'titulo' | 'fecha_hora' | 'estado'>>) => {
+  const actualizarCita = React.useCallback(async (id: Identificador, datos: Partial<Pick<Cita, 'titulo' | 'fecha_hora' | 'estado' | 'tipo_visita'>>) => {
     const cita = citas.find((c) => c.id === id);
     if (!cita || cita.estado === 'cancelado' || cita.estado === 'completado') throw new Error('La cita ya no se puede editar.');
+    if (datos.tipo_visita !== undefined && !esTipoVisita(datos.tipo_visita)) throw new Error('Selecciona un tipo de visita válido.');
     const titulo = datos.titulo?.trim();
     if (titulo !== undefined && (!titulo || titulo.length > 200)) throw new Error('Escribe un motivo de hasta 200 caracteres.');
     if (datos.fecha_hora !== undefined && (!Number.isFinite(Date.parse(datos.fecha_hora)) || Date.parse(datos.fecha_hora) <= Date.now())) {
@@ -444,34 +447,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [recordatorios, token, conectado]);
 
   // Las visitas creadas: persisten en BD si la API está activa.
-  const agregarCita = React.useCallback(async (datos: { mascota_id: Identificador; motivo: string; fecha_hora: string }) => {
+  const agregarCita = React.useCallback(async (datos: { mascota_id: Identificador; motivo: string; fecha_hora: string; tipo_visita?: TipoVisita }) => {
     const mascota = mascotas.find((m) => m.id === datos.mascota_id);
     if (!mascota) throw new Error('Selecciona una mascota registrada.');
     const fecha = new Date(datos.fecha_hora);
-    const motivo = datos.motivo.trim();
-    if (!motivo || motivo.length > 200) throw new Error('Escribe un motivo de hasta 200 caracteres.');
+    const tipoVisita = datos.tipo_visita ?? 'otro';
+    if (!esTipoVisita(tipoVisita)) throw new Error('Selecciona un tipo de visita válido.');
+    const detalle = datos.motivo.trim();
+    if ((!detalle && tipoVisita === 'otro') || detalle.length > 200) throw new Error('Escribe un motivo de hasta 200 caracteres.');
+    const motivo = detalle || etiquetaTipoVisita(tipoVisita);
     if (!Number.isFinite(fecha.getTime()) || fecha.getTime() <= Date.now()) {
       throw new Error('Selecciona una fecha y hora futuras.');
     }
 
+    const sesion = versionSesion.current;
     if (token && conectado) {
       const programada = await apiCrearCita(token, {
         titulo: motivo,
+        tipo_visita: tipoVisita,
         mascota_id: mascota.id,
         fecha_hora: fecha.toISOString(),
         doctor: null,
         clinica: null,
         estado: 'programado',
       });
+      if (sesion !== versionSesion.current) throw new Error('La sesión ha cambiado.');
       setHayCambiosLocales(true);
-      cambiosLocales.current.mascotas.add(String(mascota.id));
       cambiosLocales.current.citas.add(String(programada.cita.id));
       cambiosLocales.current.recordatorios.add(String(programada.recordatorio.id));
-      setMascotas((prev) => prev.map((m) => m.id === mascota.id ? {
-        ...m, ...programada.mascota, estado_salud: 'malestar',
-        cuidados_registrados: m.estado === 'en_tratamiento' || m.estado === 'vacuna_pendiente'
-          ? [...new Set([...(m.cuidados_registrados ?? []), m.estado])] : m.cuidados_registrados,
-      } : m));
       setCitas((prev) => [...prev, { ...programada.cita, mascota_nombre: mascota.nombre }]);
       setRecordatorios((prev) => [...prev, { ...programada.recordatorio, mascota_nombre: mascota.nombre }]);
       return;
@@ -479,18 +482,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const id = proximaVisitaId.current--;
     setHayCambiosLocales(true);
-    cambiosLocales.current.mascotas.add(String(mascota.id));
-    setMascotas((prev) => prev.map((m) => m.id === mascota.id ? {
-      ...m, estado: 'malestar', estado_salud: 'malestar',
-      cuidados_registrados: m.estado === 'en_tratamiento' || m.estado === 'vacuna_pendiente'
-        ? [...new Set([...(m.cuidados_registrados ?? []), m.estado])] : m.cuidados_registrados,
-    } : m));
     cambiosLocales.current.citas.add(String(id));
     cambiosLocales.current.recordatorios.add(String(id));
     recordatoriosLocales.current.add(id);
     setCitas((prev) => [...prev, {
       id, mascota_id: mascota.id, mascota_nombre: mascota.nombre,
-      titulo: motivo, fecha_hora: fecha.toISOString(),
+      titulo: motivo, tipo_visita: tipoVisita, fecha_hora: fecha.toISOString(),
       doctor: null, clinica: null, estado: 'programado',
     }]);
     setRecordatorios((prev) => [...prev, {

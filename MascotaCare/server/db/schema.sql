@@ -109,10 +109,11 @@ CREATE TABLE IF NOT EXISTS CitaMedica (
     usuario_id     BIGINT       NOT NULL,
     mascota_id     BIGINT       NOT NULL,
     titulo         VARCHAR(200) NOT NULL,
+    tipo_visita    VARCHAR(32)  NOT NULL DEFAULT 'otro',
     fecha_hora     TIMESTAMPTZ  NOT NULL,
     doctor         VARCHAR(200),
     clinica        VARCHAR(200),
-    estado         estado_cita  NOT NULL DEFAULT 'pendiente',
+    estado         estado_cita  NOT NULL DEFAULT 'programado',
     creado_en      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
 
     CONSTRAINT fk_cita_usuario
@@ -120,6 +121,24 @@ CREATE TABLE IF NOT EXISTS CitaMedica (
     CONSTRAINT fk_cita_mascota
         FOREIGN KEY (mascota_id) REFERENCES Mascota (id) ON DELETE CASCADE
 );
+
+-- Compatible con instalaciones existentes: no se reclasifican citas por su título.
+ALTER TABLE CitaMedica
+    ADD COLUMN IF NOT EXISTS tipo_visita VARCHAR(32) NOT NULL DEFAULT 'otro';
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'chk_cita_tipo_visita' AND conrelid = 'citamedica'::regclass
+    ) THEN
+        ALTER TABLE CitaMedica ADD CONSTRAINT chk_cita_tipo_visita
+            CHECK (tipo_visita IN (
+                'consulta_malestar', 'control_preventivo', 'vacunacion',
+                'desparasitacion', 'seguimiento', 'otro'
+            ));
+    END IF;
+END $$;
+ALTER TABLE CitaMedica ALTER COLUMN estado SET DEFAULT 'programado';
 
 -- REGLA DE NEGOCIO: Una cita cancelada/completada solo puede pasar a otro
 -- estado "no activo", nunca volver a pendiente/programado/confirmado.

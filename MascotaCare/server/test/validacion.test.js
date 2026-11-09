@@ -82,6 +82,10 @@ test('validación de las rutas HTTP', async (t) => {
     ['POST', '/citas', { ...cita, fecha_hora: '2026-09-06T10:30:00' }],
     ['PUT', '/citas/1', { fecha_hora: 123 }],
     ['PUT', '/citas/1', { estado: false }],
+    ['POST', '/citas', { ...cita, tipo_visita: 'vacuna' }],
+    ['POST', '/citas', { ...cita, tipo_visita: null }],
+    ['PUT', '/citas/1', { tipo_visita: 'desconocido' }],
+    ['PUT', '/citas/1', { tipo_visita: ['vacunacion'] }],
     ['PUT', '/recordatorios/1', { completado: 'false' }],
     ['PUT', '/recordatorios/1', { completado: null }],
     ['PUT', '/recordatorios/1', { vence_en: '2025-02-29' }],
@@ -164,31 +168,76 @@ test('validación de las rutas HTTP', async (t) => {
     assert.equal((await enviar('POST', '/citas', cita)).status, 400);
     assert.equal((await enviar('POST', '/citas', cita)).status, 201);
   });
-  await t.test('crea de forma atómica cita, recordatorio y estado malestar', async () => {
+  const tiposVisita = ['consulta_malestar', 'control_preventivo', 'vacunacion', 'desparasitacion', 'seguimiento', 'otro'];
+  for (const tipoVisita of tiposVisita) {
+    for (const estadoSalud of ['saludable', 'malestar', 'vacuna_pendiente', 'en_tratamiento']) {
+      await t.test(`crea ${tipoVisita} y conserva la mascota ${estadoSalud}`, async () => {
+        consultas.length = 0;
+        const citaCreada = { id: '10', ...cita, estado: 'programado', doctor: null, clinica: null, tipo_visita: tipoVisita };
+        const recordatorioCreado = { id: '11', mascota_id: '1', cita_id: '10', titulo: 'Visita veterinaria', descripcion: 'Control', tipo: 'cita', vence_en: cita.fecha_hora, completado: false };
+        const mascotaActual = { id: '1', nombre: 'Luna', raza: 'Mestiza', especie: 'Perro', edad: '3 años', estado: estadoSalud, imagen: null };
+        resultados = [
+          { rowCount: 1, rows: [mascotaActual] },
+          { rowCount: 1, rows: [citaCreada] },
+          { rowCount: 1, rows: [recordatorioCreado] },
+        ];
+        const respuesta = await enviar('POST', '/citas', { ...cita, tipo_visita: tipoVisita });
+        assert.equal(respuesta.status, 201);
+        assert.deepEqual(await respuesta.json(), {
+          cita: citaCreada, recordatorio: recordatorioCreado, mascota: mascotaActual,
+        });
+        assert.deepEqual(consultas[2].parametros.slice(6), ['programado', tipoVisita]);
+        assert.match(consultas[0].sql, /^BEGIN$/);
+        assert.match(consultas[1].sql, /FOR UPDATE/);
+        assert.match(consultas[3].sql, /INSERT INTO Recordatorio/);
+        assert.match(consultas[4].sql, /^COMMIT$/);
+        assert.ok(consultas.every((consulta) => !/UPDATE\s+Mascota/i.test(consulta.sql)), 'Una cita no debe cambiar la salud');
+      });
+    }
+  }
+  await t.test('admite clientes antiguos sin tipo y conserva el estado de cita solicitado', async () => {
     consultas.length = 0;
-    const citaCreada = { id: '10', ...cita, estado: 'programado', doctor: null, clinica: null };
-    const recordatorioCreado = { id: '11', mascota_id: '1', cita_id: '10', titulo: 'Visita veterinaria', descripcion: 'Control', tipo: 'cita', vence_en: '2026-09-06', completado: false };
-    const mascotaActualizada = { id: '1', nombre: 'Luna', raza: 'Mestiza', especie: 'Perro', edad: '3 años', estado: 'malestar', imagen: null };
+    const antigua = { id: '10', ...cita, estado: 'confirmado', tipo_visita: 'otro' };
+    const mascotaActual = { id: '1', nombre: 'Luna', estado: 'saludable' };
     resultados = [
-      { rowCount: 1, rows: [{ id: '1', nombre: 'Luna' }] },
-      { rowCount: 1, rows: [citaCreada] },
-      { rowCount: 1, rows: [recordatorioCreado] },
-      { rowCount: 1, rows: [mascotaActualizada] },
+      { rowCount: 1, rows: [mascotaActual] },
+      { rowCount: 1, rows: [antigua] },
+      { rowCount: 1, rows: [{ id: '11', cita_id: '10' }] },
     ];
-    const respuesta = await enviar('POST', '/citas', { ...cita, estado: 'programado' });
+    const respuesta = await enviar('POST', '/citas', { ...cita, estado: 'confirmado' });
     assert.equal(respuesta.status, 201);
-    assert.deepEqual(await respuesta.json(), {
-      cita: citaCreada, recordatorio: recordatorioCreado, mascota: mascotaActualizada,
-    });
-    assert.match(consultas[0].sql, /^BEGIN$/);
-    assert.match(consultas[1].sql, /FOR UPDATE/);
-    assert.match(consultas[3].sql, /INSERT INTO Recordatorio/);
-    assert.match(consultas[4].sql, /estado = 'malestar'/);
-    assert.match(consultas[5].sql, /^COMMIT$/);
+    assert.equal((await respuesta.json()).cita.tipo_visita, 'otro');
+    assert.deepEqual(consultas[2].parametros.slice(6), ['confirmado', 'otro']);
+  });
+  await t.test('lista el tipo de visita de cada cita del usuario', async () => {
+    consultas.length = 0;
+    const citas = tiposVisita.map((tipo_visita, index) => ({ id: String(index + 1), ...cita, tipo_visita }));
+    resultados = [{ rowCount: citas.length, rows: citas }];
+    const respuesta = await enviar('GET', '/citas');
+    assert.equal(respuesta.status, 200);
+    assert.deepEqual(await respuesta.json(), citas);
+    assert.match(consultas[0].sql, /c\.tipo_visita/);
+    assert.deepEqual(consultas[0].parametros, ['1']);
+  });
+  await t.test('edita solamente el tipo de visita y conserva salud y recordatorio', async () => {
+    consultas.length = 0;
+    const editada = { id: '10', ...cita, tipo_visita: 'vacunacion', estado: 'programado' };
+    resultados = [
+      { rowCount: 1, rows: [{ id: '10', estado: 'programado' }] },
+      { rowCount: 1, rows: [editada] },
+      { rowCount: 1, rows: [{ id: '11', cita_id: '10', completado: false }] },
+    ];
+    const respuesta = await enviar('PUT', '/citas/10', { tipo_visita: 'vacunacion' });
+    assert.equal(respuesta.status, 200);
+    assert.equal((await respuesta.json()).tipo_visita, 'vacunacion');
+    assert.equal(consultas[2].parametros[7], 'vacunacion');
+    assert.match(consultas[2].sql, /tipo_visita = COALESCE\(\$8, tipo_visita\)/);
+    assert.ok(consultas.every((consulta) => !/UPDATE\s+Mascota/i.test(consulta.sql)));
+    assert.deepEqual(consultas[3].parametros.slice(2), [undefined, undefined, false]);
   });
   await t.test('completa de forma atómica una cita pasada y su recordatorio', async () => {
     consultas.length = 0;
-    const citaCompletada = { id: '10', mascota_id: '1', titulo: 'Control', fecha_hora: '2020-01-01T12:00:00.000Z', doctor: null, clinica: null, estado: 'completado' };
+    const citaCompletada = { id: '10', mascota_id: '1', tipo_visita: 'vacunacion', titulo: 'Control', fecha_hora: '2020-01-01T12:00:00.000Z', doctor: null, clinica: null, estado: 'completado' };
     const recordatorioCompletado = { id: '11', mascota_id: '1', cita_id: '10', titulo: 'Visita veterinaria', descripcion: 'Control', tipo: 'cita', vence_en: '2020-01-01T12:00:00.000Z', repeticion: 'ninguna', completado: true };
     resultados = [
       { rowCount: 1, rows: [{ id: '10', fecha_hora: citaCompletada.fecha_hora, estado: 'programado' }] },
@@ -203,6 +252,8 @@ test('validación de las rutas HTTP', async (t) => {
     assert.match(consultas[2].sql, /UPDATE CitaMedica SET estado = 'completado'/);
     assert.match(consultas[3].sql, /UPDATE Recordatorio SET completado = true/);
     assert.match(consultas[4].sql, /^COMMIT$/);
+    assert.match(consultas[2].sql, /RETURNING.*tipo_visita/);
+    assert.ok(consultas.every((consulta) => !/UPDATE\s+Mascota/i.test(consulta.sql)), 'Completar una vacuna no implica que la mascota esté saludable');
   });
   await t.test('no completa una cita futura', async () => {
     consultas.length = 0;

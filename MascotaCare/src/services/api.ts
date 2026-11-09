@@ -2,6 +2,7 @@
 import { Platform } from 'react-native';
 
 import { normalizarIdentificador } from '@/utils/identificadores';
+import { esTipoVisita } from '@/utils/tipos-visita';
 import type { ApiError, AuthResponse, CatalogoRazas, Cita, DatosApp, EstadoCita, EstadoMascota, Identificador, Mascota, ObservacionSalud, Recordatorio, RegistroCarnet, Tratamiento, Usuario } from '@/types';
 
 const HOST = Platform.select({ android: '10.0.2.2', default: 'localhost' });
@@ -103,7 +104,8 @@ function mascotaApi(dato: MascotaRespuesta): Mascota {
 
 function citaApi(dato: Cita): Cita {
   if (typeof dato.titulo !== 'string' || !Number.isFinite(Date.parse(dato.fecha_hora)) ||
-      !['confirmado', 'pendiente', 'programado', 'cancelado', 'completado'].includes(dato.estado)) {
+      !['confirmado', 'pendiente', 'programado', 'cancelado', 'completado'].includes(dato.estado) ||
+      (dato.tipo_visita !== undefined && !esTipoVisita(dato.tipo_visita))) {
     throw new Error('Cita inválida.');
   }
   return { ...dato, id: normalizarIdentificador(dato.id), mascota_id: normalizarIdentificador(dato.mascota_id) };
@@ -281,6 +283,7 @@ export async function apiActualizarSalud(token: string, id: Identificador, datos
 /** Cuerpo que acepta POST /api/citas. */
 export interface CitaNueva {
   titulo: string;
+  tipo_visita?: Cita['tipo_visita'];
   mascota_id: Identificador;
   fecha_hora: string;
   doctor?: string | null;
@@ -329,7 +332,7 @@ export async function apiCompletarCita(token: string, id: Identificador): Promis
 
 /** Edita o cancela una cita y mantiene sincronizado su recordatorio asociado. */
 export async function apiActualizarCita(token: string, id: Identificador,
-  datos: Partial<Pick<Cita, 'titulo' | 'fecha_hora' | 'doctor' | 'clinica' | 'estado'>>): Promise<CitaActualizada> {
+  datos: Partial<Pick<Cita, 'titulo' | 'fecha_hora' | 'doctor' | 'clinica' | 'estado' | 'tipo_visita'>>): Promise<CitaActualizada> {
   const respuesta = await request<Cita & { recordatorio?: Recordatorio | null }>(`/citas/${encodeURIComponent(id)}`, {
     method: 'PUT', headers: autorizar(token), body: JSON.stringify(datos),
   });

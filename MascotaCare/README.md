@@ -16,7 +16,7 @@ Aplicación para que los dueños organicen la salud y los cuidados de sus mascot
 - **Ayuda:** guía sobre cómo utilizar la aplicación.
 - **Acceso:** inicio de sesión y registro con validaciones y mensajes de error.
 
-Agendar una visita exige mascota, motivo y fecha futura. Se crean una cita y su recordatorio, y la mascota pasa a `malestar`. Posponer el aviso conserva la fecha de la visita. En Android/iOS se pueden activar los avisos locales del teléfono desde Perfil / Configuración.
+Agendar una visita exige mascota, tipo de visita y fecha futura. Se crean una cita y su recordatorio sin modificar el estado de salud. El motivo es opcional salvo en «Otro». Posponer el aviso conserva la fecha de la visita. En Android/iOS se pueden activar los avisos locales del teléfono desde Perfil / Configuración.
 
 ## Arquitectura y tecnologías
 
@@ -213,7 +213,7 @@ npm test --prefix server
 
 Las pruebas del servidor recorren rutas HTTP y sustituyen PostgreSQL; no verifican una base de datos real. El lint de Expo tiene como alcance predeterminado el frontend.
 
-Para los diecinueve scripts del frontend en PowerShell:
+Para los veinte scripts del frontend en PowerShell:
 
 ```powershell
 $falloPruebas = $false
@@ -431,3 +431,18 @@ los archivos de node_modules. `test-notificaciones-expo-go.cjs` recorre las
 dependencias reales de Android/iOS y comprueba que esta API no carga módulos
 push; debe mantenerse al actualizar la dependencia. Un error temporal al
 consultar permisos no borra la preferencia de avisos y se limpia al reintentar.
+
+## Tipos de visita y salud independiente
+
+Al crear o editar una visita se puede elegir consulta por malestar, control preventivo,
+vacunación, desparasitación, seguimiento u otro. La agenda, el historial y los avisos
+conservan ese tipo; las citas antiguas se mantienen como `otro`, sin deducir su motivo.
+Los estados visibles de una visita son Programada, Realizada y Cancelada; se conservan
+los valores antiguos de API para compatibilidad. Crear o completar visitas nunca cambia
+la salud de la mascota ni registra por sí solo una aplicación en el carnet.
+
+Tras completar una vacunación o desparasitación, se ofrece abrir el carnet con la
+mascota, el tipo y la fecha de la visita. El usuario confirma los datos de la aplicación.
+La migración incremental `server/db/migrations/007-tipos-visita.sql` debe aplicarse
+antes de ejecutar esta versión contra una base existente. No modifica estados de salud
+ni reclasifica citas antiguas por su título.

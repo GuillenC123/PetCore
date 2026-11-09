@@ -45,15 +45,13 @@ export function configurarEstadoMascota(estado: EstadoMascota): EstadoMascotaUI 
 export function configurarEstadoCita(estado: EstadoCita): EstadoMascotaUI {
   switch (estado) {
     case 'confirmado':
-      return { label: 'Confirmado', tone: 'info' };
     case 'pendiente':
-      return { label: 'Pendiente', tone: 'danger' };
     case 'programado':
-      return { label: 'Programado', tone: 'success' };
+      return { label: 'Programada', tone: 'info' };
     case 'cancelado':
-      return { label: 'Cancelado', tone: 'neutral' };
+      return { label: 'Cancelada', tone: 'neutral' };
     case 'completado':
-      return { label: 'Completado', tone: 'neutral' };
+      return { label: 'Realizada', tone: 'success' };
     default:
       return { label: estado, tone: 'neutral' };
   }

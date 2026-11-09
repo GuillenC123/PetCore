@@ -16,6 +16,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { Cita } from '@/types';
 import { colorDeTono, configurarEstadoCita, formatearFechaCita } from '@/utils/estados';
 import Badge from './Badge';
+import { etiquetaTipoVisita } from '@/utils/tipos-visita';
 
 interface AppointmentCardProps {
   /** Cita a representar. */
@@ -33,7 +34,7 @@ export default function AppointmentCard({ cita }: AppointmentCardProps) {
 
   return (
     <View style={[styles.card, { borderLeftColor: colorAcento }]}>
-      {!!cita.mascota_nombre && <Text style={styles.titulo}>{cita.mascota_nombre} · Visita veterinaria</Text>}
+      <Text style={styles.titulo}>{[cita.mascota_nombre, etiquetaTipoVisita(cita.tipo_visita)].filter(Boolean).join(' · ')}</Text>
       {/* ---- Fila superior: título + badge ---- */}
       <View style={styles.filaTop}>
         <Text style={styles.titulo}>

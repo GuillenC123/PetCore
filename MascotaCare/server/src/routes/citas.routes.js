@@ -29,7 +29,7 @@ router.get('/', validar(esquemas.filtroCitas, { origen: 'query' }), async (req, 
     // Si se pasa "mascota_id", filtramos también por esa mascota.
     const parametros = [req.usuario.id];
     let sql = `
-      SELECT c.id, c.titulo, c.fecha_hora, c.doctor, c.clinica, c.estado,
+      SELECT c.id, c.titulo, c.fecha_hora, c.doctor, c.clinica, c.estado, c.tipo_visita,
              m.nombre AS mascota_nombre, c.mascota_id
       FROM CitaMedica c
       JOIN Mascota m ON m.id = c.mascota_id
@@ -51,20 +51,20 @@ router.get('/', validar(esquemas.filtroCitas, { origen: 'query' }), async (req, 
 });
 
 // ---------------------------------------------------------------------------
-// CREAR CITA, SU RECORDATORIO Y EL ESTADO DE LA MASCOTA
+// CREAR CITA Y SU RECORDATORIO SIN ALTERAR LA SALUD DE LA MASCOTA
 // ---------------------------------------------------------------------------
 router.post('/', validar(esquemas.crearCita, { obligatorios: ['titulo', 'mascota_id', 'fecha_hora'] }), async (req, res) => {
   let conexion;
   let transaccionActiva = false;
   try {
-    const { titulo, mascota_id, fecha_hora, doctor, clinica, estado } = req.body;
+    const { titulo, mascota_id, fecha_hora, doctor, clinica, estado, tipo_visita } = req.body;
     conexion = await pool.connect();
     await conexion.query('BEGIN');
     transaccionActiva = true;
 
-    // El bloqueo evita que dos citas simultáneas creen estados incoherentes.
+    // Verifica la pertenencia y conserva una instantánea de la mascota sin modificarla.
     const mascota = await conexion.query(
-      'SELECT id, nombre FROM Mascota WHERE id = $1 AND usuario_id = $2 FOR UPDATE',
+      `SELECT ${columnasMascota} FROM Mascota WHERE id = $1 AND usuario_id = $2 FOR UPDATE`,
       [mascota_id, req.usuario.id]
     );
     if (mascota.rowCount === 0) {
@@ -74,10 +74,10 @@ router.post('/', validar(esquemas.crearCita, { obligatorios: ['titulo', 'mascota
     }
 
     const cita = await conexion.query(
-      `INSERT INTO CitaMedica (usuario_id, mascota_id, titulo, fecha_hora, doctor, clinica, estado)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, titulo, fecha_hora, doctor, clinica, estado, mascota_id`,
-      [req.usuario.id, mascota_id, titulo, new Date(fecha_hora), doctor, clinica, estado || 'pendiente']
+      `INSERT INTO CitaMedica (usuario_id, mascota_id, titulo, fecha_hora, doctor, clinica, estado, tipo_visita)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id, titulo, fecha_hora, doctor, clinica, estado, mascota_id, tipo_visita`,
+      [req.usuario.id, mascota_id, titulo, new Date(fecha_hora), doctor, clinica, estado || 'programado', tipo_visita || 'otro']
     );
     const recordatorio = await conexion.query(
       `INSERT INTO Recordatorio (usuario_id, mascota_id, cita_id, titulo, descripcion, tipo, vence_en)
@@ -85,17 +85,10 @@ router.post('/', validar(esquemas.crearCita, { obligatorios: ['titulo', 'mascota
        RETURNING id, titulo, descripcion, tipo, vence_en, repeticion, ultima_realizacion, dia_repeticion, completado, mascota_id, cita_id`,
       [req.usuario.id, mascota_id, cita.rows[0].id, titulo, fecha_hora]
     );
-    const mascotaActualizada = await conexion.query(
-      `UPDATE Mascota SET estado = 'malestar'
-       WHERE id = $1 AND usuario_id = $2
-       RETURNING ${columnasMascota}`,
-      [mascota_id, req.usuario.id]
-    );
-
     await conexion.query('COMMIT');
     transaccionActiva = false;
     res.status(201).json({
-      cita: cita.rows[0], recordatorio: recordatorio.rows[0], mascota: mascotaActualizada.rows[0],
+      cita: cita.rows[0], recordatorio: recordatorio.rows[0], mascota: mascota.rows[0],
     });
   } catch (err) {
     if (conexion && transaccionActiva) await conexion.query('ROLLBACK');
@@ -140,7 +133,7 @@ router.post('/:id/completar', async (req, res) => {
     const cita = await conexion.query(
       `UPDATE CitaMedica SET estado = 'completado'
        WHERE id = $1 AND usuario_id = $2
-       RETURNING id, titulo, fecha_hora, doctor, clinica, estado, mascota_id`,
+       RETURNING id, titulo, fecha_hora, doctor, clinica, estado, mascota_id, tipo_visita`,
       [req.params.id, req.usuario.id]
     );
     const recordatorio = await conexion.query(
@@ -168,7 +161,7 @@ router.put('/:id', validar(esquemas.cita, { parcial: true }), async (req, res) =
   let conexion;
   let transaccionActiva = false;
   try {
-    const { titulo, fecha_hora, doctor, clinica, estado } = req.body;
+    const { titulo, fecha_hora, doctor, clinica, estado, tipo_visita } = req.body;
     conexion = await pool.connect();
     await conexion.query('BEGIN');
     transaccionActiva = true;
@@ -193,10 +186,11 @@ router.put('/:id', validar(esquemas.cita, { parcial: true }), async (req, res) =
           fecha_hora = COALESCE($4, fecha_hora),
           doctor     = COALESCE($5, doctor),
           clinica    = COALESCE($6, clinica),
-          estado     = COALESCE($7, estado)
+          estado     = COALESCE($7, estado),
+          tipo_visita = COALESCE($8, tipo_visita)
        WHERE id = $1 AND usuario_id = $2
-       RETURNING id, titulo, fecha_hora, doctor, clinica, estado, mascota_id`,
-      [req.params.id, req.usuario.id, titulo, fecha_hora ? new Date(fecha_hora) : null, doctor, clinica, estado]
+       RETURNING id, titulo, fecha_hora, doctor, clinica, estado, mascota_id, tipo_visita`,
+      [req.params.id, req.usuario.id, titulo, fecha_hora ? new Date(fecha_hora) : null, doctor, clinica, estado, tipo_visita]
     );
     const completarAviso = estado === 'cancelado' || estado === 'completado';
     const recordatorio = await conexion.query(

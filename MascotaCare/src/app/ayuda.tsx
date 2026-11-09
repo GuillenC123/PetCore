@@ -25,7 +25,7 @@ const secciones: {
   {
     titulo: 'Estados de salud y cuidados',
     icono: 'heart-outline',
-    descripcion: 'La sección Salud muestra Saludable, Malestar o Salud sin registrar. Los cuidados aparecen en etiquetas independientes: En tratamiento, Vacuna pendiente y Desparasitación pendiente. Pueden mostrarse al mismo tiempo. Una vacuna pendiente se señala como vencida cuando pasa su fecha. Al agendar una visita por malestar, la mascota cambia a Malestar sin perder sus cuidados registrados.',
+    descripcion: 'La sección Salud muestra Saludable, Malestar o Salud sin registrar. Los cuidados aparecen en etiquetas independientes: En tratamiento, Vacuna pendiente y Desparasitación pendiente. Pueden mostrarse al mismo tiempo. Una vacuna pendiente se señala como vencida cuando pasa su fecha. Agendar o completar una visita no cambia la salud de la mascota. El tipo de visita y su estado son independientes de la salud y de los cuidados pendientes.',
   },
   {
     titulo: 'Tratamientos y medicamentos',
@@ -50,7 +50,7 @@ const secciones: {
   {
     titulo: 'Agenda de cuidados',
     icono: 'calendar-outline',
-    descripcion: 'Agenda reúne visitas, tomas pendientes y recordatorios. Filtra por mascota y por Hoy, Esta semana (lunes a domingo), Vencidos o Todos. Marca visitas realizadas y tomas administradas u omitidas desde sus tarjetas. Puedes editar o cancelar una visita futura; al hacerlo, su aviso también se actualiza o deja de estar pendiente. Usa Añadir visita veterinaria para agendar.',
+    descripcion: 'Agenda reúne visitas, tomas pendientes y recordatorios. Filtra por mascota y por Hoy, Esta semana (lunes a domingo), Vencidos o Todos. Marca visitas realizadas y tomas administradas u omitidas desde sus tarjetas. Puedes editar o cancelar una visita futura; al hacerlo, su aviso también se actualiza o deja de estar pendiente. Al agendar elige consulta por malestar, control preventivo, vacunación, desparasitación, seguimiento u otro. Al completar una vacunación o desparasitación puedes abrir el carnet para registrar la aplicación; requiere tu confirmación.',
   },
   {
     titulo: 'Historial de salud',

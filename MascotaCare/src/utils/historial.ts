@@ -1,6 +1,7 @@
 import type { AdjuntoSalud, Cita, Mascota, Tratamiento, ObservacionSalud } from '../types';
 import { interpretarFechaVisita } from './citas';
 import { validarTexto } from './validaciones';
+import { etiquetaTipoVisita } from './tipos-visita';
 
 export interface EventoSalud { clave: string; tipo: string; titulo: string; detalle: string; fecha: string; adjuntos: AdjuntoSalud[] }
 export function validarObservacion(datos: Omit<ObservacionSalud, 'id'>, ahora = Date.now()) {
@@ -11,7 +12,7 @@ export function validarObservacion(datos: Omit<ObservacionSalud, 'id'>, ahora = 
 export function crearHistorial(mascota: Mascota, citas: Cita[], tratamientos: Tratamiento[], ahora = Date.now()): EventoSalud[] {
   const eventos: EventoSalud[] = [];
   citas.filter((c) => c.mascota_id === mascota.id && c.estado === 'completado').forEach((c) => eventos.push({
-    clave: `cita-${c.id}`, tipo: 'Consulta', titulo: c.titulo, detalle: [c.doctor, c.clinica].filter(Boolean).join(' · '), fecha: c.fecha_hora, adjuntos: [],
+    clave: `cita-${c.id}`, tipo: c.tipo_visita ? etiquetaTipoVisita(c.tipo_visita) : 'Consulta', titulo: c.titulo, detalle: [c.doctor, c.clinica].filter(Boolean).join(' · '), fecha: c.fecha_hora, adjuntos: [],
   }));
   (mascota.carnet ?? []).filter((r) => r.fecha_aplicacion).forEach((r) => eventos.push({
     clave: `carnet-${r.id}`, tipo: r.tipo === 'vacuna' ? 'Vacuna' : 'Desparasitación', titulo: r.nombre,

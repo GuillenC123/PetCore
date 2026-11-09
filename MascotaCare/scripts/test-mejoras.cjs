@@ -49,9 +49,9 @@ async function main() {
   await assert.rejects(ctx.tacharRecordatorio(1,false), /se est/);
   resolver(); await pendiente;
   assert.equal(memoria[5][0].completado,false);
-  await ctx.agregarCita({mascota_id:1,motivo:'Malestar',fecha_hora:new Date(Date.now()+86400000).toISOString()});
-  assert.equal(memoria[3][0].estado_salud,'malestar');
-  assert.ok(memoria[3][0].cuidados_registrados.includes('vacuna_pendiente'));
+  const mascotaAntes = structuredClone(memoria[3][0]);
+  await ctx.agregarCita({mascota_id:1,motivo:'Malestar',tipo_visita:'consulta_malestar',fecha_hora:new Date(Date.now()+86400000).toISOString()});
+  assert.deepEqual(memoria[3][0], mascotaAntes, 'Crear una visita conserva salud y cuidados, incluso con una respuesta antigua de API.');
   assert.equal(memoria[4][0].id,50);
   assert.equal(memoria[5].at(-1).cita_id,50);
   // Una respuesta tardía no cambia los datos de otra sesión.
